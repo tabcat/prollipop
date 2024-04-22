@@ -1,5 +1,9 @@
 ## Learning Resources:
 
+- [Prolly Trees](https://www.dolthub.com/blog/2024-03-03-prolly-trees/)
+  - author: [Tim Sehn](https://github.com/timsehn)
+  - relevance: great introduction to prolly-trees
+
 - [Prolly Tree PoC and technical writeup](https://github.com/waku-org/research/issues/78)
   - author: [ABresting](https://github.com/ABresting)
   - implementation: [Prolly-tree-Waku-Message](https://github.com/ABresting/Prolly-Tree-Waku-Message)

@@ -1,3 +1,13 @@
+## Data-structure
+
+This package implements a modded prolly-tree in Typescript.
+
+mods:
+
+- (number, uint8array) tuples for keys
+- right-side backbone
+- content-defined boundaries instead of rolling-hash
+
 ## Learning Resources:
 
 - [Prolly Trees](https://www.dolthub.com/blog/2024-03-03-prolly-trees/)

@@ -1,0 +1,98 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@ipld/dag-cbor':
+        specifier: ^9.2.0
+        version: 9.2.0
+      '@noble/hashes':
+        specifier: ^1.3.3
+        version: 1.4.0
+      '@tabcat/ordered-sets':
+        specifier: ^4.0.1
+        version: 4.0.1
+      cborg:
+        specifier: ^4.1.0
+        version: 4.2.0
+      interface-blockstore:
+        specifier: ^5.2.10
+        version: 5.2.10
+      multiformats:
+        specifier: ^13.1.0
+        version: 13.1.0
+      uint8arrays:
+        specifier: ^5.0.2
+        version: 5.0.3
+    devDependencies:
+      typescript:
+        specifier: ^5.4.5
+        version: 5.4.5
+
+packages:
+
+  '@ipld/dag-cbor@9.2.0':
+    resolution: {integrity: sha512-N14oMy0q4gM6OuZkIpisKe0JBSjf1Jb39VI+7jMLiWX9124u1Z3Fdj/Tag1NA0cVxxqWDh0CqsjcVfOKtelPDA==}
+    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+
+  '@noble/hashes@1.4.0':
+    resolution: {integrity: sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==}
+    engines: {node: '>= 16'}
+
+  '@tabcat/ordered-sets@4.0.1':
+    resolution: {integrity: sha512-Oe9CVgk6zuwDY9H6dAGBnzrMw2YfIbWy9HVXDvkZiUSU03b5TDKm+zCHdqDvK0T66Y1L+t5tetPpY+JBF227Nw==}
+    engines: {node: '>=20'}
+
+  cborg@4.2.0:
+    resolution: {integrity: sha512-q6cFW5m3KxfP/9xGI3yGLaC1l5DP6DWM9IvjiJojnIwohL5CQDl02EXViPV852mOfQo+7PJGPN01MI87vFGzyA==}
+    hasBin: true
+
+  interface-blockstore@5.2.10:
+    resolution: {integrity: sha512-9K48hTvBCGsKVD3pF4ILgDcf+W2P/gq0oxLcsHGB6E6W6nDutYkzR+7k7bCs9REHrBEfKzcVDEKieiuNM9WRZg==}
+
+  interface-store@5.1.8:
+    resolution: {integrity: sha512-7na81Uxkl0vqk0CBPO5PvyTkdaJBaezwUJGsMOz7riPOq0rJt+7W31iaopaMICWea/iykUsvNlPx/Tc+MxC3/w==}
+
+  multiformats@13.1.0:
+    resolution: {integrity: sha512-HzdtdBwxsIkzpeXzhQ5mAhhuxcHbjEHH+JQoxt7hG/2HGFjjwyolLo7hbaexcnhoEuV4e0TNJ8kkpMjiEYY4VQ==}
+
+  typescript@5.4.5:
+    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  uint8arrays@5.0.3:
+    resolution: {integrity: sha512-6LBuKji28kHjgPJMkQ6GDaBb1lRwIhyOYq6pDGwYMoDPfImE9SkuYENVmR0yu9yGgs2clHUSY9fKDukR+AXfqQ==}
+
+snapshots:
+
+  '@ipld/dag-cbor@9.2.0':
+    dependencies:
+      cborg: 4.2.0
+      multiformats: 13.1.0
+
+  '@noble/hashes@1.4.0': {}
+
+  '@tabcat/ordered-sets@4.0.1': {}
+
+  cborg@4.2.0: {}
+
+  interface-blockstore@5.2.10:
+    dependencies:
+      interface-store: 5.1.8
+      multiformats: 13.1.0
+
+  interface-store@5.1.8: {}
+
+  multiformats@13.1.0: {}
+
+  typescript@5.4.5: {}
+
+  uint8arrays@5.0.3:
+    dependencies:
+      multiformats: 13.1.0

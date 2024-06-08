@@ -1,9 +1,14 @@
 /**
- * default codec for buckets is dag-cbor
+ * The default codec to encode buckets and nodes is dag-cbor.
  */
 
-import * as cbor from "cborg";
-import type { BlockCodec, ByteView } from "multiformats";
+import cbor from "cborg";
+import type {
+  BlockCodec,
+  ByteView,
+  ArrayBufferView,
+  MultihashHasher,
+} from "multiformats";
 import {
   name,
   code,
@@ -12,19 +17,32 @@ import {
   decodeOptions,
   encodeOptions,
 } from "@ipld/dag-cbor";
+import { Prefix } from "./bucket";
 
-export const encode = <T>(value: T) =>
-  cbor.encode(value, encodeOptions) as ByteView<T>;
+type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
-export const decode = (bytes: Uint8Array) =>
-  cbor.decode(bytes, decodeOptions) as unknown;
+const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
+  bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
-export const decodeFirst = (bytes: Uint8Array) =>
-  cbor.decodeFirst(bytes, decodeOptions) as [unknown, Uint8Array];
-
-export const codec: <T>() => BlockCodec<typeof code, T> = () => ({
+export const blockCodecPlus: <T>() => BlockCodecPlus<typeof code, T> = () => ({
   name,
   code,
-  encode: _encode,
-  decode: _decode,
+  encode: <T>(value: T) => cbor.encode(value, encodeOptions) as ByteView<T>,
+  decode: <T>(bytes: Bytes<T>) =>
+    cbor.decode(handleBuffer(bytes), decodeOptions),
+  decodeFirst: <T>(bytes: Bytes<T[]>): [T, ByteView<T[]>] =>
+    cbor.decodeFirst(handleBuffer(bytes), decodeOptions),
 });
+
+export interface BlockCodecPlus<Code extends number, T>
+  extends BlockCodec<Code, T> {
+  decodeFirst(bytes: Bytes<T[]>): [T, ByteView<T[]>];
+}
+
+export const matchesBucketPrefix =
+  <T, Code extends number, Alg extends number>(
+    codec: BlockCodecPlus<Code, T>,
+    hasher: MultihashHasher<Alg>
+  ) =>
+  (prefix: Prefix): boolean =>
+    prefix.mc === codec.code && prefix.mh === hasher.code;

@@ -1,5 +1,5 @@
 {
-  "name": "@tabcat/dd-tree",
+  "name": "prollipop",
   "version": "1.0.0",
   "description": "modded prolly-tree with (number, uint8array) tuples for keys",
   "type": "module",

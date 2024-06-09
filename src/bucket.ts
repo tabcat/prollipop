@@ -135,14 +135,12 @@ export function decode<Code extends number, Alg extends number>(
 
   const nodes: Node[] = [];
 
-  let node: Node;
   while (decoded[1].length > 0) {
     try {
-      [node, decoded[1]] = decodeNodeFirst(decoded[1], codec);
+      [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1], codec);
     } catch {
       throw new Error("error decoding nodes from bucket");
     }
-    nodes.push(node);
   }
 
   return new DefaultBucket<Code, Alg>(

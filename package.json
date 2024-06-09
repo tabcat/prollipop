@@ -1,10 +1,11 @@
 {
   "name": "prollipop",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "modded prolly-tree with (number, uint8array) tuples for keys",
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "files": [],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

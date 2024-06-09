@@ -1,5 +1,4 @@
 import { encodeOptions, decodeOptions } from "@ipld/dag-cbor";
-import { sha256 as hashfn } from "@noble/hashes/sha256";
 import * as cbor from "cborg";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
@@ -9,52 +8,93 @@ import {
   type Node,
 } from "./node.js";
 import type { Blockstore } from "interface-blockstore";
-import type { ByteView } from "multiformats/interface";
+import type { ByteView, SyncMultihashHasher } from "multiformats/interface";
+import {
+  BlockCodecPlus,
+  blockCodecPlus,
+  matchesBucketPrefix,
+} from "./codec.js";
 
 export interface Prefix {
   level: number;
-  average: number;
-  mh: number;
-  mc: number;
+  average: number; // same for all buckets of the same tree
+  mh: number; // same for all buckets of the same tree
+  mc: number; // same for all buckets of the same tree
 }
 
-export class Bucket {
+const codec = blockCodecPlus<Prefix>();
+
+export interface Bucket {
+  readonly prefix: Prefix;
+  readonly nodes: Node[];
+  getBytes(): Uint8Array;
+  getCID(): CID;
+  getHash(): Uint8Array;
+}
+
+export class DefaultBucket<Code extends number, Alg extends number>
+  implements Bucket
+{
+  #codec: BlockCodecPlus<Code, Prefix>;
+  #hasher: SyncMultihashHasher<Alg>;
+  #bytes?: Uint8Array;
+  #hash?: Uint8Array;
+
   constructor(
     readonly prefix: Prefix,
     readonly nodes: Node[],
-    readonly bytes?: ByteView<EncodedBucket>,
-    public cid?: CID
-  ) {}
-
-  getBytes(): Uint8Array {
-    if (this.bytes == null) {
-      return encode(this);
+    codec: BlockCodecPlus<Code, Prefix>,
+    hasher: SyncMultihashHasher<Alg>,
+    bytes?: ByteView<EncodedBucket>,
+    hash?: Uint8Array
+  ) {
+    if (!matchesBucketPrefix(codec, hasher)(prefix)) {
+      throw new Error("codec or hasher is mismatched to prefix");
     }
 
-    return this.bytes;
+    this.#codec = codec;
+    this.#hasher = hasher;
+    this.#bytes = bytes;
+    this.#hash = hash;
+  }
+
+  getBytes(): Uint8Array {
+    if (this.#bytes == null) {
+      this.#bytes = encode(this, this.#codec);
+    }
+
+    return this.#bytes;
+  }
+
+  getHash(): Uint8Array {
+    if (this.#hash == null) {
+      this.#hash = this.#hasher.digest(this.getBytes()).digest;
+    }
+
+    return this.#hash;
   }
 
   getCID(): CID {
-    if (this.cid == null) {
-      this.cid = digest2cid(this.prefix)(digest(this.getBytes()));
-    }
-
-    return this.cid;
+    return digest2cid(this.prefix)(this.getHash());
   }
 }
 
 export type EncodedBucket = [Prefix, ...EncodedNode[]];
 
-export function encode(bucket: Bucket): ByteView<EncodedBucket> {
-  const encodedPrefix = cbor.encode(bucket.prefix, encodeOptions);
+export function encode<Code extends number>(
+  bucket: Bucket,
+  codec: BlockCodecPlus<Code, any>
+): ByteView<EncodedBucket> {
+  const encodedPrefix: ByteView<Prefix> = codec.encode(bucket.prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
   for (const node of bucket.nodes) {
-    const bytes: ByteView<EncodedNode> = cbor.encode(
-      [node.timestamp, node.hash, node.message],
-      encodeOptions
-    );
+    const bytes: ByteView<EncodedNode> = codec.encode([
+      node.timestamp,
+      node.hash,
+      node.message,
+    ]);
     bytedNodes.push(bytes);
     len += bytes.length;
   }
@@ -76,61 +116,74 @@ export function encode(bucket: Bucket): ByteView<EncodedBucket> {
   return encodedBucket;
 }
 
-export function decode(
-  bytes: ByteView<unknown>,
-  cid: CID
+export function decode<Code extends number, Alg extends number>(
+  bytes: ByteView<EncodedBucket>,
+  hash: Uint8Array,
+  codec: BlockCodecPlus<Code, any>,
+  hasher: SyncMultihashHasher<Alg>
 ): Bucket {
-  let decoded: [unknown, ByteView<unknown>];
-
+  let decoded: [Prefix, ByteView<EncodedNode[]>];
   try {
-    decoded = cbor.decodeFirst(bytes, decodeOptions);
+    decoded = codec.decodeFirst(bytes);
   } catch (e) {
     throw new Error("failed to decode bucket");
   }
 
   // do some verification here
-  const prefix: Prefix = decoded[0] as any;
-
-  const encodedNodes = decoded[1];
+  const prefix: Prefix = decoded[0];
 
   const nodes: Node[] = [];
 
-  let node: Node, remainder: ByteView<EncodedNode[]>;
-
-  while (bytes.length > 0) {
+  let node: Node;
+  while (decoded[1].length > 0) {
     try {
-      [node, remainder] = decodeNodeFirst(bytes);
-      // do some verification of node here
+      [node, decoded[1]] = decodeNodeFirst(decoded[1], codec);
     } catch {
       throw new Error("error decoding nodes from bucket");
     }
     nodes.push(node);
-    bytes = remainder;
   }
 
-  return new Bucket(prefix, nodes, bytes as ByteView<EncodedBucket>, cid);
+  return new DefaultBucket<Code, Alg>(
+    prefix,
+    nodes,
+    codec,
+    hasher,
+    bytes as ByteView<EncodedBucket>,
+    hash
+  );
 }
 
-export const digest: (bytes: ByteView<EncodedBucket>) => Uint8Array = hashfn;
-export const digest2cid = (prefix: Prefix) => (digest: Uint8Array): CID =>
-  CID.createV1(prefix.mc, createMultihashDigest(prefix.mh, digest));
-export const cid2digest = (cid: CID): Uint8Array => cid.multihash.digest
+export const digest2cid =
+  <Alg extends number>(prefix: Prefix) =>
+  (digest: Uint8Array): CID =>
+    CID.createV1(prefix.mc, createMultihashDigest(prefix.mh, digest));
 
-export async function loadBucket(
+export const cid2digest = (cid: CID): Uint8Array => cid.multihash.digest;
+
+export const createEmptyBucket = <Code extends number, Alg extends number>(
+  prefix: Prefix,
+  codec: BlockCodecPlus<Code, any>,
+  hasher: SyncMultihashHasher<Alg>
+): Bucket => new DefaultBucket(prefix, [], codec, hasher);
+
+export async function loadBucket<Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  cid: CID,
-  expectedPrefix: Prefix
+  hash: Uint8Array,
+  expectedPrefix: Prefix,
+  codec: BlockCodecPlus<Code, any>,
+  hasher: SyncMultihashHasher<Alg>
 ): Promise<Bucket> {
-  let bytes: ByteView<unknown>;
+  let bytes: ByteView<EncodedBucket>;
   try {
-    bytes = await blockstore.get(cid);
+    bytes = await blockstore.get(digest2cid(expectedPrefix)(hash));
   } catch {
     throw new Error("data for bucket cid is missing");
   }
 
   let bucket: Bucket;
   try {
-    bucket = decode(bytes, cid);
+    bucket = decode(bytes, hash, codec, hasher);
   } catch {
     throw new Error("failed to decode bucket");
   }
@@ -138,10 +191,10 @@ export async function loadBucket(
   if (
     expectedPrefix.average !== bucket.prefix.average ||
     expectedPrefix.level !== bucket.prefix.level ||
-    expectedPrefix.mh !== bucket.prefix.mh ||
-    expectedPrefix.mc !== bucket.prefix.mc
+    expectedPrefix.mc !== bucket.prefix.mc ||
+    expectedPrefix.mh !== bucket.prefix.mh
   ) {
-    throw new Error('bucket has unexpected prefix')
+    throw new Error("bucket has unexpected prefix");
   }
 
   return bucket;

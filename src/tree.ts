@@ -56,6 +56,13 @@ export function createEmptyTree<T, C extends number, H extends number>(
   );
 }
 
+export function cloneTree<T, Code extends number, Alg extends number>(
+  tree: ProllyTree<T, Code, Alg>
+): ProllyTree<T, Code, Alg> {
+  // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
+  return { ...tree };
+}
+
 export function init<T>(
   options: InitOptions = {}
 ): ProllyTree<T, typeof cborCode, typeof mh_sha256.code> {

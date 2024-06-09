@@ -48,13 +48,6 @@ export function createTree<T, Code extends number, Alg extends number>(
   return { root: new DefaultBucket(prefix, [], codec, hasher), codec, hasher };
 }
 
-export function cloneTree<T, Code extends number, Alg extends number>(
-  tree: ProllyTree<T, Code, Alg>
-): ProllyTree<T, Code, Alg> {
-  // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
-  return { ...tree };
-}
-
 export const compareUpdates = (a: Update, b: Update): number => {
   const tuplesComparison = compareTuples(a[0], b[0]);
 

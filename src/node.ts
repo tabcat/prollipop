@@ -97,7 +97,10 @@ export const compareTimestamp = (a: number, b: number): number => a - b;
  * @param tuple
  * @returns
  */
-export const findIndexClosestToGTE = (nodes: Node[], tuple: Tuple): number => {
+export const findIndexGTE = <T extends Tuple>(
+  nodes: T[],
+  tuple: Tuple
+): number => {
   let index: number = 0;
 
   for (const node of nodes) {

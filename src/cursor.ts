@@ -1,12 +1,7 @@
 import { CID, SyncMultihashHasher } from "multiformats";
 import type { Blockstore } from "interface-blockstore";
 import { Prefix, digest2cid, loadBucket, type Bucket } from "./bucket";
-import {
-  findIndexClosestToGTE,
-  type Tuple,
-  type Node,
-  compareTuples,
-} from "./node";
+import { findIndexGTE, type Tuple, type Node, compareTuples } from "./node";
 import { firstElement, lastElement, prefixWithLevel } from "./util";
 import { BlockCodecPlus } from "./codec";
 
@@ -176,10 +171,7 @@ export const moveToLevel = async (
       );
     }
 
-    stateCopy.currentIndex = findIndexClosestToGTE(
-      bucketOf(state).nodes,
-      target
-    );
+    stateCopy.currentIndex = findIndexGTE(bucketOf(state).nodes, target);
   }
 
   Object.assign(state, stateCopy);

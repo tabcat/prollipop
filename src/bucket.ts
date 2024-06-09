@@ -11,7 +11,6 @@ import type { Blockstore } from "interface-blockstore";
 import type { ByteView, SyncMultihashHasher } from "multiformats/interface";
 import {
   BlockCodecPlus,
-  blockCodecPlus,
   matchesBucketPrefix,
 } from "./codec.js";
 
@@ -22,7 +21,6 @@ export interface Prefix {
   mc: number; // same for all buckets of the same tree
 }
 
-const codec = blockCodecPlus<Prefix>();
 
 export interface Bucket {
   readonly prefix: Prefix;

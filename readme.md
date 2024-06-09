@@ -1,3 +1,7 @@
+## Project Status
+
+Not working yet! But working on it daily.
+
 ## Data-structure
 
 This package implements a modded prolly-tree in Typescript.

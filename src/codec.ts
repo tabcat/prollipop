@@ -41,8 +41,9 @@ export interface BlockCodecPlus<Code extends number, T>
 
 export const matchesBucketPrefix =
   <T, Code extends number, Alg extends number>(
-    codec: BlockCodecPlus<Code, T>,
-    hasher: MultihashHasher<Alg>
+    codec?: BlockCodecPlus<Code, T>,
+    hasher?: MultihashHasher<Alg>
   ) =>
   (prefix: Prefix): boolean =>
-    prefix.mc === codec.code && prefix.mh === hasher.code;
+    (codec == null || codec.code === prefix.mc) &&
+    (hasher == null || hasher.code === prefix.mh);

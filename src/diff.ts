@@ -6,9 +6,14 @@
  */
 
 import type { CID } from "multiformats/cid";
-import type { Cursor } from "./cursor";
+import { createCursor, type Cursor } from "./cursor";
 import { type Node, compareTuples } from "./node";
 import { toReversed } from "./util";
+import { Bucket } from "./bucket";
+import { Blockstore } from "interface-blockstore";
+import { ProllyTree } from "./tree";
+import { BlockCodecPlus } from "./codec";
+import { SyncMultihashHasher } from "multiformats";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.
@@ -40,8 +45,8 @@ async function fastForwardUntilUnequal(
  * Returns -1 if there is no chunk address that matches, 0 if only the last
  * chunk address in each path matches, etc.
  *
- * @param left - path from root to leaf bucket
- * @param right - path from root to leaf bucket
+ * @param left - buckets from root to leaf bucket
+ * @param right - buckets from root to leaf bucket
  * @returns
  */
 function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
@@ -65,14 +70,17 @@ function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
 type LeftDiff<T> = [T, null];
 type RightDiff<T> = [null, T];
 
-const leftDiffer = (cid: CID): LeftDiff<CID> => [cid, null];
-const rightDiffer = (cid: CID): RightDiff<CID> => [null, cid];
+const leftDiffer = (bucket: Bucket): LeftDiff<Bucket> => [bucket, null];
+const rightDiffer = (bucket: Bucket): RightDiff<Bucket> => [null, bucket];
 
-type Diff<T> = LeftDiff<T> | RightDiff<T>;
+export type Diff<T> = LeftDiff<T> | RightDiff<T>;
+
+export type NodeDiff = Diff<Node>[];
+export type BucketDiff = Diff<Bucket>[];
 
 export interface ProllyTreeDiff {
-  nodes: Diff<Node>[];
-  buckets: Diff<CID>[];
+  nodes: NodeDiff;
+  buckets: BucketDiff;
 }
 
 const createProllyTreeDiff = (): ProllyTreeDiff => ({
@@ -80,67 +88,87 @@ const createProllyTreeDiff = (): ProllyTreeDiff => ({
   buckets: [],
 });
 
-const getBucketDiff = <T extends LeftDiff<CID> | RightDiff<CID>>(
-  last: CID[],
-  current: CID[],
-  differ: (cid: CID) => T
-): T[] =>
-  last
-    .slice(
-      -greatestMatchingLevelForPaths(toReversed(last), toReversed(current)) - 1
-    )
-    .map(differ);
+const getBucketCID = (b: Bucket): CID => b.getCID();
 
-export async function diff(
-  left: Cursor,
-  right: Cursor
+const getUnmatched = (last: Bucket[], current: Bucket[]): Bucket[] =>
+  last.slice(
+    -greatestMatchingLevelForPaths(
+      toReversed(last).map(getBucketCID),
+      toReversed(current).map(getBucketCID)
+    ) - 1
+  );
+
+export async function diff<Code extends number, Alg extends number, T>(
+  blockstore: Blockstore,
+  codec: BlockCodecPlus<number, any>,
+  hasher: SyncMultihashHasher<number>,
+  left: ProllyTree<T, Code, Alg>,
+  right: ProllyTree<T, Code, Alg>,
+  rightBlockstore?: Blockstore
 ): Promise<ProllyTreeDiff> {
   let d = createProllyTreeDiff();
-  let lastLeftPath: CID[];
-  let lastRightPath: CID[];
+  const leftCursor: Cursor = createCursor(blockstore, codec, hasher, left.root);
+  const rightCursor: Cursor = createCursor(
+    rightBlockstore ?? blockstore,
+    codec,
+    hasher,
+    right.root
+  );
+  let lastLeftBuckets: Bucket[];
+  let lastRightBuckets: Bucket[];
 
-  // i've written this in ordered-sets, just have to generalize again
-  while (!left.done() && !right.done()) {
-    const [lv, rv] = [left.current(), right.current()];
+  // i've written this function in ordered-sets, just have to generalize again
+  while (!leftCursor.done() && !rightCursor.done()) {
+    const [lv, rv] = [leftCursor.current(), rightCursor.current()];
 
     if (compareTuples(lv, rv) > 0) {
       // add node to diff
       d.nodes.push([lv, null]);
 
       // add buckets to diff
-      lastLeftPath = left.path();
-      await left.next();
-      d.buckets.push(...getBucketDiff(lastLeftPath, left.path(), leftDiffer))
+      lastLeftBuckets = leftCursor.buckets();
+      await leftCursor.next();
+      d.buckets.push(
+        ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer)
+      );
     } else if (compareTuples(lv, rv) < 0) {
       // add node to diff
       d.nodes.push([null, rv]);
 
       // add buckets to diff
-      lastRightPath = right.path();
-      await right.next();
-      d.buckets.push(...getBucketDiff(lastRightPath, right.path(), rightDiffer))
+      lastRightBuckets = rightCursor.buckets();
+      await rightCursor.next();
+      d.buckets.push(
+        ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(
+          rightDiffer
+        )
+      );
     } else {
-      await fastForwardUntilUnequal(left, right);
+      await fastForwardUntilUnequal(leftCursor, rightCursor);
     }
   }
 
-  while (!left.done()) {
+  while (!leftCursor.done()) {
     // add node to diff
-    d.nodes.push([left.current(), null]);
+    d.nodes.push([leftCursor.current(), null]);
 
     // add buckets to diff
-    lastLeftPath = left.path();
-    await left.next();
-    d.buckets.push(...getBucketDiff(lastLeftPath, left.path(), leftDiffer))
+    lastLeftBuckets = leftCursor.buckets();
+    await leftCursor.next();
+    d.buckets.push(
+      ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer)
+    );
   }
 
-  while (!right.done()) {
-    d.nodes.push([null, right.current()]);
+  while (!rightCursor.done()) {
+    d.nodes.push([null, rightCursor.current()]);
 
     // add buckets to diff
-    lastRightPath = right.path();
-    await right.next();
-    d.buckets.push(...getBucketDiff(lastRightPath, right.path(), rightDiffer))
+    lastRightBuckets = rightCursor.buckets();
+    await rightCursor.next();
+    d.buckets.push(
+      ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(rightDiffer)
+    );
   }
 
   return d;

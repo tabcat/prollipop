@@ -1,5 +1,3 @@
-import { encodeOptions, decodeOptions } from "@ipld/dag-cbor";
-import * as cbor from "cborg";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import {

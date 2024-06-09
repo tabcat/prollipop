@@ -24,6 +24,11 @@ type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
+export interface BlockCodecPlus<Code extends number, T>
+  extends BlockCodec<Code, T> {
+  decodeFirst(bytes: Bytes<T[]>): [T, ByteView<T[]>];
+}
+
 export const blockCodecPlus: <T>() => BlockCodecPlus<typeof code, T> = () => ({
   name,
   code,
@@ -33,8 +38,3 @@ export const blockCodecPlus: <T>() => BlockCodecPlus<typeof code, T> = () => ({
   decodeFirst: <T>(bytes: Bytes<T[]>): [T, ByteView<T[]>] =>
     cbor.decodeFirst(handleBuffer(bytes), decodeOptions),
 });
-
-export interface BlockCodecPlus<Code extends number, T>
-  extends BlockCodec<Code, T> {
-  decodeFirst(bytes: Bytes<T[]>): [T, ByteView<T[]>];
-}

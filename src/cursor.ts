@@ -1,12 +1,19 @@
-import { CID } from "multiformats";
+import { CID, SyncMultihashHasher } from "multiformats";
 import type { Blockstore } from "interface-blockstore";
 import { Prefix, digest2cid, loadBucket, type Bucket } from "./bucket";
-import { findIndexClosestToGTE, type Tuple, type Node } from "./node";
-import { lastElement, prefixWithLevel } from "./util";
+import {
+  findIndexClosestToGTE,
+  type Tuple,
+  type Node,
+  compareTuples,
+} from "./node";
+import { firstElement, lastElement, prefixWithLevel } from "./util";
+import { BlockCodecPlus } from "./codec";
 
 export interface Cursor {
   current(): Node;
-  path(): CID[]; // has to include current bucket ?
+  path(): CID[];
+  buckets(): Bucket[];
   next(): Promise<void>;
   nextAtLevel(level: number): Promise<void>;
   done(): boolean;
@@ -14,42 +21,77 @@ export interface Cursor {
 
 export interface CursorState {
   blockstore: Blockstore;
-  currentBucket: Bucket;
-  currentPath: CID[];
+  codec: BlockCodecPlus<number, any>;
+  hasher: SyncMultihashHasher<number>;
+  currentBuckets: Bucket[];
   currentIndex: number;
   isDone: boolean;
 }
 
 export const createCursorState = (
   blockstore: Blockstore,
-  currentBucket: Bucket,
-  currentPath: CID[] = [currentBucket.getCID()],
+  codec: BlockCodecPlus<number, any>,
+  hasher: SyncMultihashHasher<number>,
+  currentBuckets: Bucket[],
   currentIndex: number = 0
 ): CursorState => ({
   blockstore,
-  currentPath,
-  currentBucket,
+  codec,
+  hasher,
+  currentBuckets,
   currentIndex,
   isDone: false,
 });
 
 export const levelOf = (state: CursorState): number =>
-  state.currentBucket.prefix.level;
+  bucketOf(state).prefix.level;
+
+export const bucketOf = (state: CursorState): Bucket =>
+  lastElement(state.currentBuckets);
+
+export const nodeOf = (state: CursorState): Node =>
+  bucketOf(state).nodes[state.currentIndex];
+
+export const pathOf = (state: CursorState): CID[] =>
+  state.currentBuckets.map((bucket) => bucket.getCID());
 
 export const rootLevelOf = (state: CursorState): number =>
-  levelOf(state) + Math.max(0, state.currentPath.length - 1);
+  state.currentBuckets[0].prefix.level;
 
 export const firstOf = (state: CursorState): Node =>
-  state.currentBucket.nodes[0];
-
-export const currentOf = (state: CursorState): Node =>
-  state.currentBucket.nodes[state.currentIndex];
+  firstElement(bucketOf(state).nodes);
 
 export const lastOf = (state: CursorState): Node =>
-  state.currentBucket.nodes[state.currentBucket.nodes.length - 1];
+  lastElement(bucketOf(state).nodes);
 
-export const prefixOf = (state: CursorState): Prefix =>
-  state.currentBucket.prefix;
+export const prefixOf = (state: CursorState): Prefix => bucketOf(state).prefix;
+
+const getIsExtremity = (
+  state: CursorState,
+  findExtemity: (nodes: Node[]) => Node
+): boolean => {
+  const currentBucketsItorator = state.currentBuckets[Symbol.iterator]();
+
+  let lastBucket: Bucket = currentBucketsItorator.next().value;
+  for (const bucket of currentBucketsItorator) {
+    if (
+      !digest2cid(lastBucket.prefix)(
+        findExtemity(lastBucket.nodes).message
+      ).equals(bucket.getCID())
+    ) {
+      return false;
+    }
+
+    lastBucket = bucket;
+  }
+
+  return true;
+};
+
+export const getIsTail = (state: CursorState): boolean =>
+  getIsExtremity(state, firstElement);
+export const getIsHead = (state: CursorState): boolean =>
+  getIsExtremity(state, lastElement);
 
 const cursorErrorCodesList = [
   "UNKNOWN_DIRECTION",
@@ -65,9 +107,9 @@ export const cursorErrorCodes: { [key in CursorErrorCode]: CursorErrorCode } =
     [key in CursorErrorCode]: CursorErrorCode;
   };
 
-type Direction = "prev" | "next";
 const NEXT = "next" as const;
 const PREV = "prev" as const;
+type Direction = typeof NEXT | typeof PREV;
 
 /**
  * Returns whether moving in a direction will overflow the bucket.
@@ -77,11 +119,11 @@ const PREV = "prev" as const;
  * @returns
  */
 const overflows = (state: CursorState, direction: Direction): boolean => {
-  if (direction === "next") {
-    return state.currentBucket.nodes.length === state.currentIndex + 1;
+  if (direction === NEXT) {
+    return state.currentIndex === bucketOf(state).nodes.length - 1;
   }
 
-  if (direction === "prev") {
+  if (direction === PREV) {
     return state.currentIndex === 0;
   }
 
@@ -94,7 +136,7 @@ export const moveToLevel = async (
   _target?: Tuple
 ): Promise<void> => {
   if (levelOf(state) < 0) {
-    throw new Error('no negative levels')
+    throw new Error("no negative levels");
   }
 
   if (level > rootLevelOf(state)) {
@@ -105,7 +147,8 @@ export const moveToLevel = async (
     throw new Error("should only be used when having to change levels");
   }
 
-  const target = _target ?? state.currentBucket[state.currentIndex];
+  // tuple to use as direction
+  const target = _target ?? bucketOf(state)[state.currentIndex];
 
   const stateCopy = { ...state };
 
@@ -114,28 +157,27 @@ export const moveToLevel = async (
       // jump to level
       const difference = levelOf(stateCopy) - level - 1;
 
-      stateCopy.currentPath = stateCopy.currentPath.slice(0, difference);
-      stateCopy.currentBucket = await loadBucket(
-        stateCopy.blockstore,
-        lastElement(stateCopy.currentPath),
-        prefixWithLevel(prefixOf(stateCopy), levelOf(stateCopy) + difference)
+      stateCopy.currentBuckets = stateCopy.currentBuckets.splice(
+        -difference,
+        difference
       );
     } else {
       // walk to level
-      const digest =
-        stateCopy.currentBucket.nodes[stateCopy.currentIndex].message;
-      const cid = digest2cid(prefixOf(stateCopy))(digest); // need to double check digest, probably need to store hash size in prefix
+      const digest = bucketOf(state).nodes[stateCopy.currentIndex].message;
 
-      stateCopy.currentPath = [...stateCopy.currentPath, cid];
-      stateCopy.currentBucket = await loadBucket(
-        stateCopy.blockstore,
-        cid,
-        prefixWithLevel(prefixOf(stateCopy), levelOf(stateCopy) - 1)
+      stateCopy.currentBuckets.push(
+        await loadBucket(
+          stateCopy.blockstore,
+          digest,
+          prefixWithLevel(prefixOf(stateCopy), levelOf(stateCopy) - 1),
+          state.codec,
+          state.hasher
+        )
       );
     }
 
     stateCopy.currentIndex = findIndexClosestToGTE(
-      stateCopy.currentBucket.nodes,
+      bucketOf(state).nodes,
       target
     );
   }
@@ -152,7 +194,7 @@ export const moveSideways = async (
   // find a level which allows for moving in that direction
   while (overflows(stateCopy, direction)) {
     // cannot move next anymore, so done
-    if (stateCopy.currentPath.length === 1) {
+    if (stateCopy.currentBuckets.length === 1) {
       state.isDone = true;
       return;
     }
@@ -173,8 +215,31 @@ export const moveSideways = async (
     await moveToLevel(
       stateCopy,
       levelOf(state),
-      state.currentBucket.nodes[state.currentIndex] // use original tuple as target
+      bucketOf(state).nodes[state.currentIndex] // use original tuple as target
     );
+  }
+
+  Object.assign(state, stateCopy);
+};
+
+export const moveToTupleOnLevel = async (
+  state: CursorState,
+  tuple: Tuple,
+  level: number
+): Promise<void> => {
+  const stateCopy = { ...state };
+
+  // move up until finding a node greater than tuple
+  while (
+    compareTuples(lastOf(state), tuple) < 0 &&
+    levelOf(state) < rootLevelOf(state)
+  ) {
+    await moveToLevel(state, levelOf(state) + 1, tuple);
+  }
+
+  // move to level targeting tuple
+  if (levelOf(state) !== level) {
+    await moveToLevel(state, level, tuple);
   }
 
   Object.assign(state, stateCopy);
@@ -185,10 +250,10 @@ const createNextOnLevel =
   (direction: Direction, minTuple: Tuple) =>
   async (level: number): Promise<void> => {
     if (level > rootLevelOf(state)) {
-      state.isDone = true
+      state.isDone = true;
     }
 
-    if (state.isDone) return
+    if (state.isDone) return;
 
     const stateCopy = { ...state };
 
@@ -199,7 +264,7 @@ const createNextOnLevel =
     await moveSideways(stateCopy, direction);
 
     if (levelOf(stateCopy) !== levelOf(state)) {
-      await moveToLevel(stateCopy, levelOf(state), minTuple)
+      await moveToLevel(stateCopy, levelOf(state), minTuple);
     }
 
     Object.assign(state, stateCopy);
@@ -207,34 +272,36 @@ const createNextOnLevel =
 
 export const minTuples = {
   [NEXT]: { timestamp: 0, hash: new Uint8Array(32) },
-  [PREV]: { timestamp: Infinity, hash: Uint8Array.from(Array(32).fill([255])) }
-}
+  [PREV]: { timestamp: Infinity, hash: Uint8Array.from(Array(32).fill([255])) },
+};
 
-export function create(
-  blockstore: Blockstore,
-  rootBucket: Bucket,
-  direction: Direction = NEXT,
-): Cursor {
-  const state = createCursorState(blockstore, rootBucket);
-  
-  if (direction === PREV) {
-    state.currentIndex = state.currentBucket.nodes.length - 1
+export function createCursorFromState(state: CursorState): Cursor {
+  const nextAtLevel = createNextOnLevel(state)(NEXT, minTuples[NEXT]);
+
+  state.currentIndex = bucketOf(state).nodes.length - 1;
+
+  if (state.currentBuckets[0].nodes.length === 0) {
+    state.isDone = true;
+    state.currentIndex = -1; // keeps index equal to length - 1
   }
 
-  const nextAtLevel = createNextOnLevel(state)(direction, minTuples[direction]);
-
-  // empty tree, no nodes to read
-  if (state.currentBucket.nodes.length === 0) {
-    state.isDone = true
-    state.currentIndex = -1
-  }
-  
   return {
-    path: () => state.currentPath,
-    current: () => currentOf(state),
-    done: (): boolean => state.isDone,
+    path: () => pathOf(state),
+    buckets: () => state.currentBuckets,
+    current: () => nodeOf(state),
+    done: () => state.isDone,
     // don't use these methods concurrently
     next: () => nextAtLevel(levelOf(state)),
     nextAtLevel,
-  }
+  };
+}
+
+export function createCursor(
+  blockstore: Blockstore,
+  codec: BlockCodecPlus<number, any>,
+  hasher: SyncMultihashHasher<number>,
+  rootBucket: Bucket
+): Cursor {
+  const state = createCursorState(blockstore, codec, hasher, [rootBucket]);
+  return createCursorFromState(state);
 }

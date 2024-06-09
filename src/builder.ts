@@ -33,21 +33,6 @@ type Update = AddOp | RmOp;
 const isAddOp = (u: Update): u is AddOp => u[1] === "add";
 const isRmOp = (u: Update): u is RmOp => u[1] === "rm";
 
-export function createTree<T, Code extends number, Alg extends number>(
-  codec: BlockCodecPlus<Code, any>,
-  hasher: SyncMultihashHasher<Alg>,
-  options: { average: number }
-): ProllyTree<T, Code, Alg> {
-  const prefix: Prefix = {
-    level: 0,
-    average: options.average ?? 30,
-    mc: codec.code,
-    mh: hasher.code,
-  };
-
-  return { root: new DefaultBucket(prefix, [], codec, hasher), codec, hasher };
-}
-
 export const compareUpdates = (a: Update, b: Update): number => {
   const tuplesComparison = compareTuples(a[0], b[0]);
 

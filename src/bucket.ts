@@ -9,10 +9,7 @@ import {
 } from "./node.js";
 import type { Blockstore } from "interface-blockstore";
 import type { ByteView, SyncMultihashHasher } from "multiformats/interface";
-import {
-  BlockCodecPlus,
-  matchesBucketPrefix,
-} from "./codec.js";
+import { BlockCodecPlus } from "./codec.js";
 
 export interface Prefix {
   level: number;
@@ -21,7 +18,6 @@ export interface Prefix {
   mc: number; // same for all buckets of the same tree
 }
 
-
 export interface Bucket {
   readonly prefix: Prefix;
   readonly nodes: Node[];
@@ -29,6 +25,15 @@ export interface Bucket {
   getCID(): CID;
   getHash(): Uint8Array;
 }
+
+export const matchesBucketPrefix =
+  <T, Code extends number, Alg extends number>(
+    codec?: BlockCodecPlus<Code, T>,
+    hasher?: SyncMultihashHasher<Alg>
+  ) =>
+  (prefix: Prefix): boolean =>
+    (codec == null || codec.code === prefix.mc) &&
+    (hasher == null || hasher.code === prefix.mh);
 
 export class DefaultBucket<Code extends number, Alg extends number>
   implements Bucket

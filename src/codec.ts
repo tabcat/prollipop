@@ -38,12 +38,3 @@ export interface BlockCodecPlus<Code extends number, T>
   extends BlockCodec<Code, T> {
   decodeFirst(bytes: Bytes<T[]>): [T, ByteView<T[]>];
 }
-
-export const matchesBucketPrefix =
-  <T, Code extends number, Alg extends number>(
-    codec?: BlockCodecPlus<Code, T>,
-    hasher?: MultihashHasher<Alg>
-  ) =>
-  (prefix: Prefix): boolean =>
-    (codec == null || codec.code === prefix.mc) &&
-    (hasher == null || hasher.code === prefix.mh);

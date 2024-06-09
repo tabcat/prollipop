@@ -9,25 +9,30 @@ export interface Tuple {
 
 export interface Node extends Tuple {
   message: Uint8Array;
-  asBytes<Code extends number>(
-    codec: BlockCodecPlus<Code, EncodedNode>
-  ): Uint8Array;
+  asBytes(): Uint8Array;
 }
 
-export class DefaultNode implements Node {
+export class DefaultNode<Code extends number> implements Node {
   #bytes: Uint8Array;
+  #codec: BlockCodecPlus<Code, EncodedNode>;
 
   constructor(
     readonly timestamp: number,
     readonly hash: Uint8Array,
-    readonly message: Uint8Array
-  ) {}
-
-  asBytes<Code extends number>(
+    readonly message: Uint8Array,
     codec: BlockCodecPlus<Code, EncodedNode>
-  ): Uint8Array {
+  ) {
+    this.#codec = codec;
+  }
+
+  asBytes(): Uint8Array {
     if (this.#bytes == null) {
-      this.#bytes = encode(this.timestamp, this.hash, this.message, codec);
+      this.#bytes = encode(
+        this.timestamp,
+        this.hash,
+        this.message,
+        this.#codec
+      );
     }
 
     return this.#bytes;
@@ -49,12 +54,12 @@ export function encode<Code extends number>(
 export function decodeFirst<Code extends number>(
   bytes: ByteView<EncodedNode[]>,
   codec: BlockCodecPlus<Code, EncodedNode>
-): [DefaultNode, Uint8Array] {
+): [DefaultNode<Code>, Uint8Array] {
   const [decoded, remainder] = codec.decodeFirst(bytes);
 
   // do verification on decoded here
 
-  return [new DefaultNode(...decoded), remainder];
+  return [new DefaultNode(...decoded, codec), remainder];
 }
 
 export const extractTuple = ({ timestamp, hash }: Tuple): Tuple => ({

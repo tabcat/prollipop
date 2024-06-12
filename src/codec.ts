@@ -3,38 +3,26 @@
  */
 
 import cbor from "cborg";
-import type {
-  BlockCodec,
-  ByteView,
-  ArrayBufferView,
-  MultihashHasher,
-} from "multiformats";
-import {
-  name,
-  code,
-  encode as _encode,
-  decode as _decode,
-  decodeOptions,
-  encodeOptions,
-} from "@ipld/dag-cbor";
-import { Prefix } from "./bucket";
+import type { ByteView, ArrayBufferView } from "multiformats";
+import { name, code, decodeOptions, encodeOptions } from "@ipld/dag-cbor";
 
 type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
 const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
-export interface BlockCodecPlus<Code extends number, T>
-  extends BlockCodec<Code, T> {
-  decodeFirst(bytes: Bytes<T[]>): [T, ByteView<T[]>];
+export interface BlockCodecPlus<Code extends number> {
+  name: string;
+  code: Code;
+  encode<T>(data: T): ByteView<T>;
+  decode<T>(bytes: ByteView<T> | ArrayBufferView<T>): T;
+  decodeFirst<T>(bytes: Bytes<T[]>): [T, ByteView<T[]>];
 }
 
-export const blockCodecPlus: <T>() => BlockCodecPlus<typeof code, T> = () => ({
+export const blockCodecPlus = (): BlockCodecPlus<typeof code> => ({
   name,
   code,
-  encode: <T>(value: T) => cbor.encode(value, encodeOptions) as ByteView<T>,
-  decode: <T>(bytes: Bytes<T>) =>
-    cbor.decode(handleBuffer(bytes), decodeOptions),
-  decodeFirst: <T>(bytes: Bytes<T[]>): [T, ByteView<T[]>] =>
-    cbor.decodeFirst(handleBuffer(bytes), decodeOptions),
+  encode: (value) => cbor.encode(value, encodeOptions),
+  decode: (bytes) => cbor.decode(handleBuffer(bytes), decodeOptions),
+  decodeFirst: (bytes) => cbor.decodeFirst(handleBuffer(bytes), decodeOptions),
 });

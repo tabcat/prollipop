@@ -16,7 +16,7 @@ export interface BlockCodecPlus<Code extends number, Universe = any> extends Blo
   code: Code;
   encode<T extends Universe>(data: T): ByteView<T>;
   decode<T extends Universe>(bytes: ByteView<T> | ArrayBufferView<T>): T;
-  decodeFirst<T extends Universe, U extends Array<unknown> = T[]>(
+  decodeFirst<T extends Universe, U extends Array<Universe>>(
     bytes: Bytes<[T, ...U]>
   ): [T, ByteView<U>];
 }

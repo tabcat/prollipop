@@ -3,7 +3,7 @@
  */
 
 import cbor from "cborg";
-import type { ByteView, ArrayBufferView } from "multiformats";
+import type { ByteView, ArrayBufferView, BlockCodec } from "multiformats";
 import { name, code, decodeOptions, encodeOptions } from "@ipld/dag-cbor";
 
 type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
@@ -11,12 +11,14 @@ type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
-export interface BlockCodecPlus<Code extends number> {
+export interface BlockCodecPlus<Code extends number, Universe = any> extends BlockCodec<Code, Universe> {
   name: string;
   code: Code;
-  encode<T>(data: T): ByteView<T>;
-  decode<T>(bytes: ByteView<T> | ArrayBufferView<T>): T;
-  decodeFirst<T>(bytes: Bytes<T[]>): [T, ByteView<T[]>];
+  encode<T extends Universe>(data: T): ByteView<T>;
+  decode<T extends Universe>(bytes: ByteView<T> | ArrayBufferView<T>): T;
+  decodeFirst<T extends Universe, U extends Array<unknown> = T[]>(
+    bytes: Bytes<[T, ...U]>
+  ): [T, ByteView<U>];
 }
 
 export const blockCodecPlus = (): BlockCodecPlus<typeof code> => ({

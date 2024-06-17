@@ -16,12 +16,12 @@ export interface BlockCodecPlus<Code extends number, Universe = any> extends Blo
   code: Code;
   encode<T extends Universe>(data: T): ByteView<T>;
   decode<T extends Universe>(bytes: ByteView<T> | ArrayBufferView<T>): T;
-  decodeFirst<T extends Universe, U extends Array<Universe>>(
-    bytes: Bytes<[T, ...U]>
-  ): [T, ByteView<U>];
+  decodeFirst<U extends Universe[]>(
+    bytes: Bytes<U>
+  ): [U[0], ByteView<U extends [Universe, ...infer B] ? B : U>] // checks if U is a tuple or an array
 }
 
-export const blockCodecPlus = (): BlockCodecPlus<typeof code> => ({
+export const blockCodecPlus = (): BlockCodecPlus<typeof code, any> => ({
   name,
   code,
   encode: (value) => cbor.encode(value, encodeOptions),

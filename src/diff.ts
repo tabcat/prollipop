@@ -12,7 +12,7 @@ import { toReversed } from "./util";
 import { Bucket } from "./bucket";
 import { Blockstore } from "interface-blockstore";
 import { ProllyTree } from "./tree";
-import { BlockCodecPlus } from "./codec";
+import { TreeCodec } from "./codec";
 import { SyncMultihashHasher } from "multiformats";
 
 /**
@@ -100,7 +100,7 @@ const getUnmatched = (last: Bucket[], current: Bucket[]): Bucket[] =>
 
 export async function diff<Code extends number, Alg extends number, T>(
   blockstore: Blockstore,
-  codec: BlockCodecPlus<number, any>,
+  codec: TreeCodec<number>,
   hasher: SyncMultihashHasher<number>,
   left: ProllyTree<T, Code, Alg>,
   right: ProllyTree<T, Code, Alg>,

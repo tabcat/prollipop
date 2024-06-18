@@ -2,12 +2,13 @@ import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import {
   decodeFirst as decodeNodeFirst,
+  encode as encodeNode,
   type EncodedNode,
   type Node,
 } from "./node.js";
 import type { Blockstore } from "interface-blockstore";
 import type { ByteView, SyncMultihashHasher } from "multiformats/interface";
-import { BlockCodecPlus } from "./codec.js";
+import { TreeCodec } from "./codec.js";
 
 export interface Prefix {
   level: number;
@@ -26,7 +27,7 @@ export interface Bucket {
 
 export const matchesBucketPrefix =
   <T, Code extends number, Alg extends number>(
-    codec?: BlockCodecPlus<Code, T>,
+    codec?: TreeCodec<Code>,
     hasher?: SyncMultihashHasher<Alg>
   ) =>
   (prefix: Prefix): boolean =>
@@ -36,7 +37,7 @@ export const matchesBucketPrefix =
 export class DefaultBucket<Code extends number, Alg extends number>
   implements Bucket
 {
-  #codec: BlockCodecPlus<Code, Prefix>;
+  #codec: TreeCodec<Code>;
   #hasher: SyncMultihashHasher<Alg>;
   #bytes?: Uint8Array;
   #hash?: Uint8Array;
@@ -44,7 +45,7 @@ export class DefaultBucket<Code extends number, Alg extends number>
   constructor(
     readonly prefix: Prefix,
     readonly nodes: Node[],
-    codec: BlockCodecPlus<Code, Prefix>,
+    codec: TreeCodec<Code>,
     hasher: SyncMultihashHasher<Alg>,
     bytes?: ByteView<EncodedBucket>,
     hash?: Uint8Array
@@ -84,35 +85,31 @@ export type EncodedBucket = [Prefix, ...EncodedNode[]];
 
 export function encode<Code extends number>(
   bucket: Bucket,
-  codec: BlockCodecPlus<Code, any>
+  codec: TreeCodec<Code>
 ): ByteView<EncodedBucket> {
   const encodedPrefix: ByteView<Prefix> = codec.encode(bucket.prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
   for (const node of bucket.nodes) {
-    const bytes: ByteView<EncodedNode> = codec.encode([
+    const bytes: ByteView<EncodedNode> = encodeNode(
       node.timestamp,
       node.hash,
       node.message,
-    ]);
+      codec
+    );
     bytedNodes.push(bytes);
     len += bytes.length;
   }
 
-  const encodedNodes: ByteView<EncodedNode[]> = new Uint8Array(len);
+  const encodedBucket: ByteView<EncodedBucket> = new Uint8Array(encodedPrefix.length + len);
 
-  len = 0;
+  encodedBucket.set(encodedPrefix);
+  len = encodedPrefix.length;
   for (const bytes of bytedNodes) {
-    encodedNodes.set(bytes, len);
+    encodedBucket.set(bytes, len);
     len += bytes.length;
   }
-
-  const encodedBucket = new Uint8Array(
-    encodedPrefix.length + encodedNodes.length
-  );
-  encodedBucket.set(encodedPrefix);
-  encodedBucket.set(encodedNodes, encodedPrefix.length);
 
   return encodedBucket;
 }
@@ -120,7 +117,7 @@ export function encode<Code extends number>(
 export function decode<Code extends number, Alg extends number>(
   bytes: ByteView<EncodedBucket>,
   hash: Uint8Array,
-  codec: BlockCodecPlus<Code, any>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>
 ): Bucket {
   let decoded: [Prefix, ByteView<EncodedNode[]>];
@@ -160,17 +157,17 @@ export const digest2cid =
 
 export const cid2digest = (cid: CID): Uint8Array => cid.multihash.digest;
 
-export const createEmptyBucket = <Code extends number, Alg extends number>(
+export const createEmptyBucket = <T, Code extends number, Alg extends number>(
   prefix: Prefix,
-  codec: BlockCodecPlus<Code, any>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>
 ): Bucket => new DefaultBucket(prefix, [], codec, hasher);
 
-export async function loadBucket<Code extends number, Alg extends number>(
+export async function loadBucket<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   hash: Uint8Array,
   expectedPrefix: Prefix,
-  codec: BlockCodecPlus<Code, any>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>
 ): Promise<Bucket> {
   let bytes: ByteView<EncodedBucket>;

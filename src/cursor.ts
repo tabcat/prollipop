@@ -3,7 +3,7 @@ import type { Blockstore } from "interface-blockstore";
 import { Prefix, digest2cid, loadBucket, type Bucket } from "./bucket";
 import { findIndexGTE, type Tuple, type Node, compareTuples } from "./node";
 import { firstElement, lastElement, prefixWithLevel } from "./util";
-import { BlockCodecPlus } from "./codec";
+import { TreeCodec } from "./codec";
 
 export interface Cursor {
   current(): Node;
@@ -16,17 +16,17 @@ export interface Cursor {
 
 export interface CursorState {
   blockstore: Blockstore;
-  codec: BlockCodecPlus<number, any>;
+  codec: TreeCodec<number>;
   hasher: SyncMultihashHasher<number>;
   currentBuckets: Bucket[];
   currentIndex: number;
   isDone: boolean;
 }
 
-export const createCursorState = (
+export const createCursorState = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  codec: BlockCodecPlus<number, any>,
-  hasher: SyncMultihashHasher<number>,
+  codec: TreeCodec<Code>,
+  hasher: SyncMultihashHasher<Alg>,
   currentBuckets: Bucket[],
   currentIndex: number = 0
 ): CursorState => ({
@@ -290,7 +290,7 @@ export function createCursorFromState(state: CursorState): Cursor {
 
 export function createCursor(
   blockstore: Blockstore,
-  codec: BlockCodecPlus<number, any>,
+  codec: TreeCodec<number>,
   hasher: SyncMultihashHasher<number>,
   rootBucket: Bucket
 ): Cursor {

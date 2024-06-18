@@ -5,6 +5,8 @@
 import cbor from "cborg";
 import type { ByteView, ArrayBufferView, BlockCodec } from "multiformats";
 import { name, code, decodeOptions, encodeOptions } from "@ipld/dag-cbor";
+import { EncodedNode } from "./node";
+import { Prefix } from "./bucket";
 
 type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
@@ -21,7 +23,9 @@ export interface BlockCodecPlus<Code extends number, Universe = any> extends Blo
   ): [U[0], ByteView<U extends [Universe, ...infer B] ? B : U>] // checks if U is a tuple or an array
 }
 
-export const blockCodecPlus = (): BlockCodecPlus<typeof code, any> => ({
+export interface TreeCodec<Code extends number> extends BlockCodecPlus<Code, Prefix | EncodedNode> {}
+
+export const cborTreeCodec = (): TreeCodec<typeof code> => ({
   name,
   code,
   encode: (value) => cbor.encode(value, encodeOptions),

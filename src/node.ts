@@ -1,6 +1,6 @@
 import { compare as compareHash } from "uint8arrays";
 import type { ByteView } from "multiformats/interface";
-import { BlockCodecPlus } from "./codec";
+import { TreeCodec } from "./codec";
 
 export interface Tuple {
   timestamp: number;
@@ -14,13 +14,13 @@ export interface Node extends Tuple {
 
 export class DefaultNode<Code extends number> implements Node {
   #bytes: Uint8Array;
-  #codec: BlockCodecPlus<Code>;
+  #codec: TreeCodec<Code>;
 
   constructor(
     readonly timestamp: number,
     readonly hash: Uint8Array,
     readonly message: Uint8Array,
-    codec: BlockCodecPlus<Code>
+    codec: TreeCodec<Code>
   ) {
     this.#codec = codec;
   }
@@ -46,14 +46,14 @@ export function encode<Code extends number>(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
-  codec: BlockCodecPlus<Code>
+  codec: TreeCodec<Code>
 ): ByteView<EncodedNode> {
   return codec.encode([timestamp, hash, message]);
 }
 
 export function decodeFirst<Code extends number>(
   bytes: ByteView<EncodedNode[]>,
-  codec: BlockCodecPlus<Code>
+  codec: TreeCodec<Code>
 ): [DefaultNode<Code>, Uint8Array] {
   const [decoded, remainder] = codec.decodeFirst(bytes);
 

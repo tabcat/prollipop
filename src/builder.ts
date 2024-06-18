@@ -24,7 +24,6 @@ import { intersection } from "@tabcat/ordered-sets/intersection";
 import { union } from "@tabcat/ordered-sets/union";
 import { isBoundaryNode } from "./boundaries";
 import { ProllyTree } from "./tree";
-import { BlockCodecPlus } from "./codec";
 
 type AddOp = [Node, "add"];
 type RmOp = [Tuple, "rm"];

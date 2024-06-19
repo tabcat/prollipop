@@ -1,5 +1,5 @@
 import { Blockstore } from "interface-blockstore";
-import { Bucket, DefaultBucket, Prefix, createEmptyBucket } from "./bucket";
+import { Bucket, createEmptyBucket } from "./bucket";
 import {
   Tuple,
   DefaultNode,
@@ -8,7 +8,6 @@ import {
   findIndexGTE,
   compareNodes,
 } from "./node";
-import { SyncMultihashHasher } from "multiformats";
 import {
   bucketOf,
   getIsHead,

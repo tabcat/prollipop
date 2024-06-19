@@ -22,10 +22,11 @@ import { SyncMultihashHasher } from "multiformats";
  *   compareTuples(left.current(), right.current()) !== 0
  *
  */
-async function fastForwardUntilUnequal(
-  left: Cursor,
-  right: Cursor
-): Promise<void> {
+async function fastForwardUntilUnequal<
+  T,
+  Code extends number,
+  Alg extends number,
+>(left: Cursor<T, Code, Alg>, right: Cursor<T, Code, Alg>): Promise<void> {
   while (!left.done() && !right.done()) {
     if (compareTuples(left.current(), right.current()) !== 0) {
       return;
@@ -70,27 +71,42 @@ function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
 type LeftDiff<T> = [T, null];
 type RightDiff<T> = [null, T];
 
-const leftDiffer = (bucket: Bucket): LeftDiff<Bucket> => [bucket, null];
-const rightDiffer = (bucket: Bucket): RightDiff<Bucket> => [null, bucket];
+const leftDiffer = <T, Code extends number, Alg extends number>(
+  bucket: Bucket<T, Code, Alg>
+): LeftDiff<Bucket<T, Code, Alg>> => [bucket, null];
+const rightDiffer = <T, Code extends number, Alg extends number>(
+  bucket: Bucket<T, Code, Alg>
+): RightDiff<Bucket<T, Code, Alg>> => [null, bucket];
 
 export type Diff<T> = LeftDiff<T> | RightDiff<T>;
 
 export type NodeDiff = Diff<Node>[];
-export type BucketDiff = Diff<Bucket>[];
+export type BucketDiff<T, Code extends number, Alg extends number> = Diff<
+  Bucket<T, Code, Alg>
+>[];
 
-export interface ProllyTreeDiff {
+export interface ProllyTreeDiff<T, Code extends number, Alg extends number> {
   nodes: NodeDiff;
-  buckets: BucketDiff;
+  buckets: BucketDiff<T, Code, Alg>;
 }
 
-const createProllyTreeDiff = (): ProllyTreeDiff => ({
+const createProllyTreeDiff = <
+  T,
+  Code extends number,
+  Alg extends number,
+>(): ProllyTreeDiff<T, Code, Alg> => ({
   nodes: [],
   buckets: [],
 });
 
-const getBucketCID = (b: Bucket): CID => b.getCID();
+const getBucketCID = <T, Code extends number, Alg extends number>(
+  b: Bucket<T, Code, Alg>
+): CID => b.getCID();
 
-const getUnmatched = (last: Bucket[], current: Bucket[]): Bucket[] =>
+const getUnmatched = <T, Code extends number, Alg extends number>(
+  last: Bucket<T, Code, Alg>[],
+  current: Bucket<T, Code, Alg>[]
+): Bucket<T, Code, Alg>[] =>
   last.slice(
     -greatestMatchingLevelForPaths(
       toReversed(last).map(getBucketCID),
@@ -98,24 +114,29 @@ const getUnmatched = (last: Bucket[], current: Bucket[]): Bucket[] =>
     ) - 1
   );
 
-export async function diff<Code extends number, Alg extends number, T>(
+export async function diff<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  codec: TreeCodec<number>,
-  hasher: SyncMultihashHasher<number>,
+  codec: TreeCodec<Code, Alg>,
+  hasher: SyncMultihashHasher<Alg>,
   left: ProllyTree<T, Code, Alg>,
   right: ProllyTree<T, Code, Alg>,
   rightBlockstore?: Blockstore
-): Promise<ProllyTreeDiff> {
-  let d = createProllyTreeDiff();
-  const leftCursor: Cursor = createCursor(blockstore, codec, hasher, left.root);
-  const rightCursor: Cursor = createCursor(
+): Promise<ProllyTreeDiff<T, Code, Alg>> {
+  let d = createProllyTreeDiff<T, Code, Alg>();
+  const leftCursor: Cursor<T, Code, Alg> = createCursor(
+    blockstore,
+    codec,
+    hasher,
+    left.root
+  );
+  const rightCursor: Cursor<T, Code, Alg> = createCursor(
     rightBlockstore ?? blockstore,
     codec,
     hasher,
     right.root
   );
-  let lastLeftBuckets: Bucket[];
-  let lastRightBuckets: Bucket[];
+  let lastLeftBuckets: Bucket<T, Code, Alg>[];
+  let lastRightBuckets: Bucket<T, Code, Alg>[];
 
   // i've written this function in ordered-sets, just have to generalize again
   while (!leftCursor.done() && !rightCursor.done()) {

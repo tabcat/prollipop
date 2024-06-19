@@ -91,7 +91,7 @@ const getUpdatesThisLevel = (updates: Update[]): Update[] => {
   return onLevel;
 };
 
-const getUpdatesInBoundary = (bucket: Bucket, updates: Update[]): Update[] =>
+const getUpdatesInBoundary = <T, Code extends number, Alg extends number>(bucket: Bucket<T, Code, Alg>, updates: Update[]): Update[] =>
   updates.splice(
     0,
     findIndexGTE(
@@ -100,14 +100,14 @@ const getUpdatesInBoundary = (bucket: Bucket, updates: Update[]): Update[] =>
     )
   );
 
-const updateBucket = (
-  bucket: Bucket,
+const updateBucket = <T, Code extends number, Alg extends number>(
+  bucket: Bucket<T, Code, Alg>,
   updates: Update[],
   isTail: boolean
-): [Bucket[], Update[], NodeDiff] => {
+): [Bucket<T, Code, Alg>[], Update[], NodeDiff] => {
   const { prefix } = bucket;
 
-  const buckets: Bucket[] = [];
+  const buckets: Bucket<T, Code, Alg>[] = [];
   const afterbound: Update[] = [];
 
   const removedNodes: Node[] = Array.from(
@@ -150,10 +150,10 @@ const updateBucket = (
 
 export async function mutateTree<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<any, number, number>,
+  tree: ProllyTree<T, Code, Alg>,
   updates: Update[]
-): Promise<ProllyTreeDiff> {
-  const diff: ProllyTreeDiff = {
+): Promise<ProllyTreeDiff<T, Code, Alg>> {
+  const diff: ProllyTreeDiff<T, Code, Alg> = {
     nodes: [],
     buckets: [],
   };
@@ -168,9 +168,9 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
 
   let level = 0;
   let firstBucketOfLevel = true;
-  let levelTail: Bucket | null = null;
-  let levelHead: Bucket | null = null;
-  let newRoot: Bucket | null = null;
+  let levelTail: Bucket<T, Code, Alg> | null = null;
+  let levelHead: Bucket<T, Code, Alg> | null = null;
+  let newRoot: Bucket<T, Code, Alg> | null = null;
 
   while (updates.length > 0) {
     await moveToTupleOnLevel(cursorState, updates[0][0], level);
@@ -186,7 +186,7 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
 
     const pastRoot = level > rootLevelOf(cursorState);
 
-    const updatee: Bucket = pastRoot
+    const updatee: Bucket<T, Code, Alg> = pastRoot
       ? createEmptyBucket(
           prefixWithLevel(bucketOf(cursorState).prefix, level),
           tree.codec,
@@ -204,7 +204,7 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
      * If afterbound has elements then the old boundary was removed.
      * If updatee is a levelHead then afterbound will be empty.
      */
-    const [buckets, afterbound, nodeDiff]: [Bucket[], Update[], NodeDiff] =
+    const [buckets, afterbound, nodeDiff]: [Bucket<T, Code, Alg>[], Update[], NodeDiff] =
       updateBucket(updatee, updatesInBoundary, Boolean(levelHead));
 
     // check if any updates resulted in changes to bucket
@@ -223,7 +223,7 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
       }
 
       // add new buckets to diff
-      diff.buckets.push(...buckets.map<[null, Bucket]>((b) => [null, b]));
+      diff.buckets.push(...buckets.map<[null, Bucket<T, Code, Alg>]>((b) => [null, b]));
       // add new buckets to parent
       updates.push(
         ...buckets.map<Update>((b) => {

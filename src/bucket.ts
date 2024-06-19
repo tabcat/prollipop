@@ -10,15 +10,15 @@ import type { Blockstore } from "interface-blockstore";
 import type { ByteView, SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
 
-export interface Prefix {
+export interface Prefix<Code extends number, Alg extends number> {
   level: number;
   average: number; // same for all buckets of the same tree
-  mh: number; // same for all buckets of the same tree
-  mc: number; // same for all buckets of the same tree
+  mc: Code; // same for all buckets of the same tree
+  mh: Alg; // same for all buckets of the same tree
 }
 
-export interface Bucket {
-  readonly prefix: Prefix;
+export interface Bucket<T, Code extends number, Alg extends number> {
+  readonly prefix: Prefix<Code, Alg>;
   readonly nodes: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;
@@ -27,27 +27,27 @@ export interface Bucket {
 
 export const matchesBucketPrefix =
   <T, Code extends number, Alg extends number>(
-    codec?: TreeCodec<Code>,
+    codec?: TreeCodec<Code, Alg>,
     hasher?: SyncMultihashHasher<Alg>
   ) =>
-  (prefix: Prefix): boolean =>
+  (prefix: Prefix<Code, Alg>): boolean =>
     (codec == null || codec.code === prefix.mc) &&
     (hasher == null || hasher.code === prefix.mh);
 
-export class DefaultBucket<Code extends number, Alg extends number>
-  implements Bucket
+export class DefaultBucket<T, Code extends number, Alg extends number>
+  implements Bucket<T, Code, Alg>
 {
-  #codec: TreeCodec<Code>;
+  #codec: TreeCodec<Code, Alg>;
   #hasher: SyncMultihashHasher<Alg>;
   #bytes?: Uint8Array;
   #hash?: Uint8Array;
 
   constructor(
-    readonly prefix: Prefix,
+    readonly prefix: Prefix<Code, Alg>,
     readonly nodes: Node[],
-    codec: TreeCodec<Code>,
+    codec: TreeCodec<Code, Alg>,
     hasher: SyncMultihashHasher<Alg>,
-    bytes?: ByteView<EncodedBucket>,
+    bytes?: ByteView<EncodedBucket<T, Code, Alg>>,
     hash?: Uint8Array
   ) {
     if (!matchesBucketPrefix(codec, hasher)(prefix)) {
@@ -81,13 +81,13 @@ export class DefaultBucket<Code extends number, Alg extends number>
   }
 }
 
-export type EncodedBucket = [Prefix, ...EncodedNode[]];
+export type EncodedBucket<T, Code extends number, Alg extends number> = [Prefix<Code, Alg>, ...EncodedNode[]];
 
-export function encode<Code extends number>(
-  bucket: Bucket,
-  codec: TreeCodec<Code>
-): ByteView<EncodedBucket> {
-  const encodedPrefix: ByteView<Prefix> = codec.encode(bucket.prefix);
+export function encode<T, Code extends number, Alg extends number>(
+  bucket: Bucket<T, Code, Alg>,
+  codec: TreeCodec<Code, Alg>
+): ByteView<EncodedBucket<T, Code, Alg>> {
+  const encodedPrefix: ByteView<Prefix<Code, Alg>> = codec.encode(bucket.prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
@@ -102,7 +102,7 @@ export function encode<Code extends number>(
     len += bytes.length;
   }
 
-  const encodedBucket: ByteView<EncodedBucket> = new Uint8Array(encodedPrefix.length + len);
+  const encodedBucket: ByteView<EncodedBucket<T, Code, Alg>> = new Uint8Array(encodedPrefix.length + len);
 
   encodedBucket.set(encodedPrefix);
   len = encodedPrefix.length;
@@ -114,13 +114,13 @@ export function encode<Code extends number>(
   return encodedBucket;
 }
 
-export function decode<Code extends number, Alg extends number>(
-  bytes: ByteView<EncodedBucket>,
+export function decode<T, Code extends number, Alg extends number>(
+  bytes: ByteView<EncodedBucket<T, Code, Alg>>,
   hash: Uint8Array,
-  codec: TreeCodec<Code>,
+  codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>
-): Bucket {
-  let decoded: [Prefix, ByteView<EncodedNode[]>];
+): Bucket<T, Code, Alg> {
+  let decoded: [Prefix<Code, Alg>, ByteView<EncodedNode[]>];
   try {
     decoded = codec.decodeFirst(bytes);
   } catch (e) {
@@ -128,7 +128,7 @@ export function decode<Code extends number, Alg extends number>(
   }
 
   // do some verification here
-  const prefix: Prefix = decoded[0];
+  const prefix: Prefix<Code, Alg> = decoded[0];
 
   const nodes: Node[] = [];
 
@@ -140,44 +140,44 @@ export function decode<Code extends number, Alg extends number>(
     }
   }
 
-  return new DefaultBucket<Code, Alg>(
+  return new DefaultBucket<T, Code, Alg>(
     prefix,
     nodes,
     codec,
     hasher,
-    bytes as ByteView<EncodedBucket>,
+    bytes as ByteView<EncodedBucket<T, Code, Alg>>,
     hash
   );
 }
 
 export const digest2cid =
-  <Alg extends number>(prefix: Prefix) =>
+  <Code extends number, Alg extends number>(prefix: Prefix<Code, Alg>) =>
   (digest: Uint8Array): CID =>
     CID.createV1(prefix.mc, createMultihashDigest(prefix.mh, digest));
 
 export const cid2digest = (cid: CID): Uint8Array => cid.multihash.digest;
 
 export const createEmptyBucket = <T, Code extends number, Alg extends number>(
-  prefix: Prefix,
-  codec: TreeCodec<Code>,
+  prefix: Prefix<Code, Alg>,
+  codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>
-): Bucket => new DefaultBucket(prefix, [], codec, hasher);
+): Bucket<T, Code, Alg> => new DefaultBucket(prefix, [], codec, hasher);
 
 export async function loadBucket<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   hash: Uint8Array,
-  expectedPrefix: Prefix,
-  codec: TreeCodec<Code>,
+  expectedPrefix: Prefix<Code, Alg>,
+  codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>
-): Promise<Bucket> {
-  let bytes: ByteView<EncodedBucket>;
+): Promise<Bucket<T, Code, Alg>> {
+  let bytes: ByteView<EncodedBucket<T, Code, Alg>>;
   try {
     bytes = await blockstore.get(digest2cid(expectedPrefix)(hash));
   } catch {
     throw new Error("data for bucket cid is missing");
   }
 
-  let bucket: Bucket;
+  let bucket: Bucket<T, Code, Alg>;
   try {
     bucket = decode(bytes, hash, codec, hasher);
   } catch {

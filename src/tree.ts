@@ -14,17 +14,17 @@ const sha256Hasher = (): SyncMultihashHasher<typeof mh_sha256.code> => ({
 });
 
 export interface ProllyTree<T, Code extends number, Alg extends number> {
-  readonly codec: TreeCodec<Code>;
+  readonly codec: TreeCodec<Code, Alg>;
   readonly hasher: SyncMultihashHasher<Alg>;
-  root: Bucket;
+  root: Bucket<T, Code, Alg>;
 }
 
 export class DefaultProllyTree<T, Code extends number, Alg extends number>
   implements ProllyTree<T, Code, Alg>
 {
   constructor(
-    public root: Bucket,
-    readonly codec: TreeCodec<Code>,
+    public root: Bucket<T, Code, Alg>,
+    readonly codec: TreeCodec<Code, Alg>,
     readonly hasher: SyncMultihashHasher<Alg>
   ) {}
 }
@@ -34,14 +34,14 @@ export interface InitOptions {
 }
 
 export function createEmptyTree<T, Code extends number, Alg extends number>(
-  codec: TreeCodec<Code>,
+  codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
   options: InitOptions
 ): ProllyTree<T, Code, Alg> {
   /**
    * data which is prefixed to each bucket, only the level ever changes
    */
-  const prefix: Prefix = {
+  const prefix: Prefix<Code, Alg> = {
     level: 0,
     average: options.averageBucketSize ?? 30,
     mc: codec.code,

@@ -12,15 +12,15 @@ export interface Node extends Tuple {
   asBytes(): Uint8Array;
 }
 
-export class DefaultNode<Code extends number> implements Node {
+export class DefaultNode<Code extends number, Alg extends number> implements Node {
   #bytes: Uint8Array;
-  #codec: TreeCodec<Code>;
+  #codec: TreeCodec<Code, Alg>;
 
   constructor(
     readonly timestamp: number,
     readonly hash: Uint8Array,
     readonly message: Uint8Array,
-    codec: TreeCodec<Code>
+    codec: TreeCodec<Code, Alg>
   ) {
     this.#codec = codec;
   }
@@ -42,19 +42,19 @@ export class DefaultNode<Code extends number> implements Node {
 type EncodedTuple = [Tuple["timestamp"], Tuple["hash"]];
 export type EncodedNode = [...EncodedTuple, Node["message"]];
 
-export function encode<Code extends number>(
+export function encode<Code extends number, Alg extends number>(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
-  codec: TreeCodec<Code>
+  codec: TreeCodec<Code, Alg>
 ): ByteView<EncodedNode> {
   return codec.encode([timestamp, hash, message]);
 }
 
-export function decodeFirst<Code extends number>(
+export function decodeFirst<Code extends number, Alg extends number>(
   bytes: ByteView<EncodedNode[]>,
-  codec: TreeCodec<Code>
-): [DefaultNode<Code>, Uint8Array] {
+  codec: TreeCodec<Code, Alg>
+): [DefaultNode<Code, Alg>, Uint8Array] {
   const [decoded, remainder] = codec.decodeFirst(bytes);
 
   // do verification on decoded here

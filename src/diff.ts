@@ -90,7 +90,7 @@ export interface ProllyTreeDiff<Code extends number, Alg extends number> {
   buckets: BucketDiff<Code, Alg>;
 }
 
-const createProllyTreeDiff = <
+export const createProllyTreeDiff = <
   T,
   Code extends number,
   Alg extends number,
@@ -167,6 +167,12 @@ export async function * diff<T, Code extends number, Alg extends number>(
     } else {
       await fastForwardUntilUnequal(leftCursor, rightCursor);
     }
+
+    // yield diff as bucket changes
+    if (d.buckets.length > 0) {
+      yield d
+      d = createProllyTreeDiff()
+    }
   }
 
   while (!leftCursor.done()) {
@@ -179,6 +185,12 @@ export async function * diff<T, Code extends number, Alg extends number>(
     d.buckets.push(
       ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer),
     );
+
+    // yield diff as bucket changes
+    if (d.buckets.length > 0) {
+      yield d
+      d = createProllyTreeDiff()
+    }
   }
 
   while (!rightCursor.done()) {
@@ -190,7 +202,11 @@ export async function * diff<T, Code extends number, Alg extends number>(
     d.buckets.push(
       ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(rightDiffer),
     );
-  }
 
-  return d;
+    // yield diff as bucket changes
+    if (d.buckets.length > 0) {
+      yield d
+      d = createProllyTreeDiff()
+    }
+  }
 }

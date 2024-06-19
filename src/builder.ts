@@ -16,7 +16,7 @@ import {
   moveToTupleOnLevel,
   rootLevelOf,
 } from "./cursor";
-import { NodeDiff, ProllyTreeDiff, diff } from "./diff";
+import { NodeDiff, ProllyTreeDiff, createProllyTreeDiff, diff } from "./diff";
 import { lastElement, prefixWithLevel } from "./util";
 import { Diff, difference } from "@tabcat/ordered-sets/difference";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
@@ -151,15 +151,12 @@ const updateBucket = <T, Code extends number, Alg extends number>(
   return [buckets, updates, diff];
 };
 
-export async function mutateTree<T, Code extends number, Alg extends number>(
+export async function * mutateTree<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<T, Code, Alg>,
   updates: Update[],
-): Promise<ProllyTreeDiff<Code, Alg>> {
-  const diff: ProllyTreeDiff<Code, Alg> = {
-    nodes: [],
-    buckets: [],
-  };
+): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
+  let diff: ProllyTreeDiff<Code, Alg> = createProllyTreeDiff()
   const cursorState = createCursorState(blockstore, tree.codec, tree.hasher, [
     tree.root,
   ]);
@@ -246,6 +243,9 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
 
       // add afterbound updates back to front of updates
       updates.unshift(...afterbound);
+
+      yield diff
+      diff = createProllyTreeDiff()
     }
 
     // move to next level
@@ -274,6 +274,4 @@ export async function mutateTree<T, Code extends number, Alg extends number>(
   } else {
     tree.root = newRoot;
   }
-
-  return diff;
 }

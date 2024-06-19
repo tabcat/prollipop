@@ -12,7 +12,7 @@ export const ithElement = <T>(array: T[], i: number): T => {
 
   if (element == null) {
     throw new Error(
-      `did not find any elements at index ${i}. element is undefined`
+      `did not find any elements at index ${i}. element is undefined`,
     );
   }
 
@@ -48,7 +48,17 @@ export const toReversed = <T>(array: Array<T>): Array<T> => {
   return newArray;
 };
 
-export const prefixWithLevel = (prefix: Prefix, level: number): Prefix => ({
+/**
+ * Returns a copied prefix at a specific level.
+ *
+ * @param prefix
+ * @param level
+ * @returns
+ */
+export const prefixWithLevel = <Code extends number, Alg extends number>(
+  prefix: Prefix<Code, Alg>,
+  level: number,
+): Prefix<Code, Alg> => ({
   ...prefix,
   level,
 });

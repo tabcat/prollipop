@@ -72,71 +72,71 @@ type LeftDiff<T> = [T, null];
 type RightDiff<T> = [null, T];
 
 const leftDiffer = <T, Code extends number, Alg extends number>(
-  bucket: Bucket<T, Code, Alg>
-): LeftDiff<Bucket<T, Code, Alg>> => [bucket, null];
+  bucket: Bucket<Code, Alg>,
+): LeftDiff<Bucket<Code, Alg>> => [bucket, null];
 const rightDiffer = <T, Code extends number, Alg extends number>(
-  bucket: Bucket<T, Code, Alg>
-): RightDiff<Bucket<T, Code, Alg>> => [null, bucket];
+  bucket: Bucket<Code, Alg>,
+): RightDiff<Bucket<Code, Alg>> => [null, bucket];
 
 export type Diff<T> = LeftDiff<T> | RightDiff<T>;
 
 export type NodeDiff = Diff<Node>[];
-export type BucketDiff<T, Code extends number, Alg extends number> = Diff<
-  Bucket<T, Code, Alg>
+export type BucketDiff<Code extends number, Alg extends number> = Diff<
+  Bucket<Code, Alg>
 >[];
 
-export interface ProllyTreeDiff<T, Code extends number, Alg extends number> {
+export interface ProllyTreeDiff<Code extends number, Alg extends number> {
   nodes: NodeDiff;
-  buckets: BucketDiff<T, Code, Alg>;
+  buckets: BucketDiff<Code, Alg>;
 }
 
 const createProllyTreeDiff = <
   T,
   Code extends number,
   Alg extends number,
->(): ProllyTreeDiff<T, Code, Alg> => ({
+>(): ProllyTreeDiff<Code, Alg> => ({
   nodes: [],
   buckets: [],
 });
 
 const getBucketCID = <T, Code extends number, Alg extends number>(
-  b: Bucket<T, Code, Alg>
+  b: Bucket<Code, Alg>,
 ): CID => b.getCID();
 
 const getUnmatched = <T, Code extends number, Alg extends number>(
-  last: Bucket<T, Code, Alg>[],
-  current: Bucket<T, Code, Alg>[]
-): Bucket<T, Code, Alg>[] =>
+  last: Bucket<Code, Alg>[],
+  current: Bucket<Code, Alg>[],
+): Bucket<Code, Alg>[] =>
   last.slice(
     -greatestMatchingLevelForPaths(
       toReversed(last).map(getBucketCID),
-      toReversed(current).map(getBucketCID)
-    ) - 1
+      toReversed(current).map(getBucketCID),
+    ) - 1,
   );
 
-export async function diff<T, Code extends number, Alg extends number>(
+export async function * diff<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
   left: ProllyTree<T, Code, Alg>,
   right: ProllyTree<T, Code, Alg>,
-  rightBlockstore?: Blockstore
-): Promise<ProllyTreeDiff<T, Code, Alg>> {
+  rightBlockstore?: Blockstore,
+): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let d = createProllyTreeDiff<T, Code, Alg>();
   const leftCursor: Cursor<T, Code, Alg> = createCursor(
     blockstore,
     codec,
     hasher,
-    left.root
+    left.root,
   );
   const rightCursor: Cursor<T, Code, Alg> = createCursor(
     rightBlockstore ?? blockstore,
     codec,
     hasher,
-    right.root
+    right.root,
   );
-  let lastLeftBuckets: Bucket<T, Code, Alg>[];
-  let lastRightBuckets: Bucket<T, Code, Alg>[];
+  let lastLeftBuckets: Bucket<Code, Alg>[];
+  let lastRightBuckets: Bucket<Code, Alg>[];
 
   // i've written this function in ordered-sets, just have to generalize again
   while (!leftCursor.done() && !rightCursor.done()) {
@@ -150,7 +150,7 @@ export async function diff<T, Code extends number, Alg extends number>(
       lastLeftBuckets = leftCursor.buckets();
       await leftCursor.next();
       d.buckets.push(
-        ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer)
+        ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer),
       );
     } else if (compareTuples(lv, rv) < 0) {
       // add node to diff
@@ -161,8 +161,8 @@ export async function diff<T, Code extends number, Alg extends number>(
       await rightCursor.next();
       d.buckets.push(
         ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(
-          rightDiffer
-        )
+          rightDiffer,
+        ),
       );
     } else {
       await fastForwardUntilUnequal(leftCursor, rightCursor);
@@ -177,7 +177,7 @@ export async function diff<T, Code extends number, Alg extends number>(
     lastLeftBuckets = leftCursor.buckets();
     await leftCursor.next();
     d.buckets.push(
-      ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer)
+      ...getUnmatched(lastLeftBuckets, leftCursor.buckets()).map(leftDiffer),
     );
   }
 
@@ -188,7 +188,7 @@ export async function diff<T, Code extends number, Alg extends number>(
     lastRightBuckets = rightCursor.buckets();
     await rightCursor.next();
     d.buckets.push(
-      ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(rightDiffer)
+      ...getUnmatched(lastRightBuckets, rightCursor.buckets()).map(rightDiffer),
     );
   }
 

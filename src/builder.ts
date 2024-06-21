@@ -26,7 +26,7 @@ import { ProllyTree } from "./tree";
 
 type AddOp = [Node, "add"];
 type RmOp = [Tuple, "rm"];
-type Update = AddOp | RmOp;
+export type Update = AddOp | RmOp;
 
 const isAddOp = (u: Update): u is AddOp => u[1] === "add";
 const isRmOp = (u: Update): u is RmOp => u[1] === "rm";

@@ -152,7 +152,7 @@ const updateBucket = <T, Code extends number, Alg extends number>(
 
 export async function * mutateTree<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<T, Code, Alg>,
+  tree: ProllyTree<Code, Alg>,
   updates: Update[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let diff: ProllyTreeDiff<Code, Alg> = createProllyTreeDiff()

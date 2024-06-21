@@ -118,8 +118,8 @@ export async function * diff<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
-  left: ProllyTree<T, Code, Alg>,
-  right: ProllyTree<T, Code, Alg>,
+  left: ProllyTree<Code, Alg>,
+  right: ProllyTree<Code, Alg>,
   rightBlockstore?: Blockstore,
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let d = createProllyTreeDiff<T, Code, Alg>();

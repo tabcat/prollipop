@@ -19,7 +19,7 @@ import { Update, mutateTree } from "./builder";
  */
 export async function * search<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<T, Code, Alg>,
+  tree: ProllyTree<Code, Alg>,
   tuples: Tuple[]
 ): AsyncIterable<Node | Tuple> {
   tuples.sort(compareTuples)
@@ -44,7 +44,7 @@ export async function * search<T, Code extends number, Alg extends number>(
 
 export async function * insert <T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<T, Code, Alg>,
+  tree: ProllyTree<Code, Alg>,
   nodes: Node[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   return mutateTree(blockstore, tree, nodes.map((n): Update => [n, 'add']))
@@ -52,7 +52,7 @@ export async function * insert <T, Code extends number, Alg extends number>(
 
 export async function * remove <T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<T, Code, Alg>,
+  tree: ProllyTree<Code, Alg>,
   tuples: Tuple[]
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   return mutateTree(blockstore, tree, tuples.map((t): Update => [t, 'rm']))

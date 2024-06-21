@@ -12,14 +12,14 @@ const sha256Hasher = (): SyncMultihashHasher<typeof mh_sha256.code> => ({
     createMultihashDigest(mh_sha256.code, sha256(input)),
 });
 
-export interface ProllyTree<T, Code extends number, Alg extends number> {
+export interface ProllyTree<Code extends number, Alg extends number> {
   readonly codec: TreeCodec<Code, Alg>;
   readonly hasher: SyncMultihashHasher<Alg>;
   root: Bucket<Code, Alg>;
 }
 
-export class DefaultProllyTree<T, Code extends number, Alg extends number>
-  implements ProllyTree<T, Code, Alg>
+export class DefaultProllyTree<Code extends number, Alg extends number>
+  implements ProllyTree<Code, Alg>
 {
   constructor(
     public root: Bucket<Code, Alg>,
@@ -36,7 +36,7 @@ export function createEmptyTree<T, Code extends number, Alg extends number>(
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
   options: InitOptions,
-): ProllyTree<T, Code, Alg> {
+): ProllyTree<Code, Alg> {
   /**
    * data which is prefixed to each bucket, only the level ever changes
    */
@@ -55,14 +55,14 @@ export function createEmptyTree<T, Code extends number, Alg extends number>(
 }
 
 export function cloneTree<T, Code extends number, Alg extends number>(
-  tree: ProllyTree<T, Code, Alg>,
-): ProllyTree<T, Code, Alg> {
+  tree: ProllyTree<Code, Alg>,
+): ProllyTree<Code, Alg> {
   // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
   return { ...tree };
 }
 
 export function init<T>(
   options: InitOptions = {},
-): ProllyTree<T, typeof cborCode, typeof mh_sha256.code> {
+): ProllyTree<typeof cborCode, typeof mh_sha256.code> {
   return createEmptyTree(cborTreeCodec(), sha256Hasher(), options);
 }

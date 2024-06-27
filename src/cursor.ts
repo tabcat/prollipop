@@ -154,7 +154,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
   }
 
   // tuple to use as direction
-  const target = _target ?? bucketOf(state)[state.currentIndex];
+  const target = _target ?? nodeOf(state)
 
   const stateCopy: CursorState<Code, Alg> = { ...state };
 

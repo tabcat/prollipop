@@ -1,6 +1,6 @@
 import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
-import { TreeCodec } from "./codec";
+import { TreeCodec } from "./codec.js";
 
 export interface Tuple {
   readonly timestamp: number;

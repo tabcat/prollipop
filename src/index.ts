@@ -10,12 +10,12 @@ import {
   SyncMultihashHasher,
 } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
-import { Bytes, TreeCodec } from "./codec";
-import { compareTuples } from "./compare";
-import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor";
-import { ProllyTreeDiff } from "./diff";
-import { Node, ProllyTree, Tuple } from "./interface";
-import { InitOptions, createEmptyTree } from "./util";
+import { Bytes, TreeCodec } from "./codec.js";
+import { compareTuples } from "./compare.js";
+import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor.js";
+import { ProllyTreeDiff } from "./diff.js";
+import { Node, ProllyTree, Tuple } from "./interface.js";
+import { InitOptions, createEmptyTree } from "./util.js";
 
 const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;

@@ -8,8 +8,8 @@ import type {
   ByteView,
   SyncMultihashHasher,
 } from "multiformats";
-import { DefaultBucket, DefaultNode } from "./impls";
-import { Bucket, Node, Prefix, Tuple } from "./interface";
+import { DefaultBucket, DefaultNode } from "./impls.js";
+import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 
 export type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 

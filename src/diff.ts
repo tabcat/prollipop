@@ -7,10 +7,10 @@
 
 import { Blockstore } from "interface-blockstore";
 import type { CID } from "multiformats/cid";
-import { compareTuples } from "./compare";
-import { createCursor, type Cursor } from "./cursor";
-import { Bucket, Node, ProllyTree } from "./interface";
-import { toReversed } from "./util";
+import { compareTuples } from "./compare.js";
+import { createCursor, type Cursor } from "./cursor.js";
+import { Bucket, Node, ProllyTree } from "./interface.js";
+import { toReversed } from "./util.js";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.

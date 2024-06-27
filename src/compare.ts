@@ -1,5 +1,5 @@
 import { compare as compareHash } from "uint8arrays";
-import { Node, Tuple } from "./interface";
+import { Node, Tuple } from "./interface.js";
 
 export const compareNodes = (a: Node, b: Node): number => {
   const tuples = compareTuples(a, b);

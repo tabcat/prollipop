@@ -1,9 +1,9 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
-import { isBoundaryNode } from "./boundaries";
-import { TreeCodec } from "./codec";
-import { compareNodes, compareTuples } from "./compare";
+import { isBoundaryNode } from "./boundaries.js";
+import { TreeCodec } from "./codec.js";
+import { compareNodes, compareTuples } from "./compare.js";
 import {
   bucketOf,
   createCursorState,
@@ -12,20 +12,21 @@ import {
   moveToNextBucket,
   moveToTupleOnLevel,
   rootLevelOf,
-} from "./cursor";
+} from "./cursor.js";
 import {
   BucketDiff,
   NodeDiff,
   ProllyTreeDiff,
   createProllyTreeDiff,
-} from "./diff";
-import { Bucket, Node, ProllyTree, Tuple } from "./interface";
+} from "./diff.js";
+import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import {
   createBucket,
   findFailure,
+  firstElement,
   lastElement,
   prefixWithLevel,
-} from "./util";
+} from "./util.js";
 
 type Ops = "rm" | "add";
 export interface Update<Op extends Ops = Ops, Level extends number = number> {
@@ -135,8 +136,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
   let visitedLevelHead: boolean = false;
 
   while (updates.length > 0 && !newRootFound()) {
-    const firstBucketOfLevel: boolean = level !== updates[0].level;
-    level = updates[0].level;
+    const firstBucketOfLevel: boolean = level !== firstElement(updates).level;
+    level = firstElement(updates).level;
 
     if (firstBucketOfLevel) {
       newBuckets = [];
@@ -149,8 +150,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       if (leftovers.length === 0) {
         await moveToTupleOnLevel(
           cursorState,
-          updates[0].value,
-          updates[0].level,
+          firstElement(updates).value,
+          firstElement(updates).level
         );
       } else {
         await moveToNextBucket(cursorState);
@@ -232,7 +233,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     }
   }
 
-  tree.root = newBuckets[0];
+  tree.root = firstElement(newBuckets)
 
   if (level < rootLevelOf(cursorState)) {
     // add all higher level buckets in path to removed

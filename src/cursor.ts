@@ -6,6 +6,7 @@ import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import {
   bucketDigestToCid,
   firstElement,
+  ithElement,
   lastElement,
   loadBucket,
   prefixWithLevel,
@@ -53,7 +54,7 @@ export const bucketOf = <Code extends number, Alg extends number>(
 
 export const nodeOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): Node => bucketOf(state).nodes[state.currentIndex];
+): Node => ithElement(bucketOf(state).nodes, state.currentIndex);
 
 export const pathOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -61,7 +62,7 @@ export const pathOf = <Code extends number, Alg extends number>(
 
 export const rootLevelOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): number => state.currentBuckets[0].prefix.level;
+): number => firstElement(state.currentBuckets).prefix.level;
 
 export const lastOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -169,7 +170,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
       );
     } else {
       // walk to level
-      const digest = bucketOf(state).nodes[stateCopy.currentIndex].message;
+      const digest = ithElement(bucketOf(state).nodes, stateCopy.currentIndex).message;
 
       stateCopy.currentBuckets.push(
         await loadBucket(
@@ -301,7 +302,7 @@ export function createCursorFromState<
 
   state.currentIndex = bucketOf(state).nodes.length - 1;
 
-  if (state.currentBuckets[0].nodes.length === 0) {
+  if (firstElement(state.currentBuckets).nodes.length === 0) {
     state.isDone = true;
     state.currentIndex = -1; // keeps index equal to length - 1
   }

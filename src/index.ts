@@ -5,20 +5,16 @@ import { Blockstore } from "interface-blockstore";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
 import {
-  ByteView,
   MultihashDigest,
   SyncMultihashHasher,
 } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
-import { Bytes, TreeCodec } from "./codec.js";
+import { TreeCodec, handleBuffer} from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { InitOptions, createEmptyTree } from "./util.js";
-
-const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
-  bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
 const cborTreeCodec: TreeCodec<typeof dagCbor.code, typeof mh_sha256.code> = {
   ...dagCbor,
@@ -73,7 +69,7 @@ export async function* search<Code extends number, Alg extends number>(
 
   while (tuples.length > 0) {
     // remove first tuple from tuples
-    const [tuple]: Tuple[] = tuples.splice(0, 1);
+    const [tuple] = tuples.splice(0, 1) as [Tuple];
 
     await moveToTupleOnLevel(cursorState, tuple, 0);
 

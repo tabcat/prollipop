@@ -10,7 +10,7 @@ import type { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
-import { toReversed } from "./util.js";
+import { ithElement, toReversed } from "./util.js";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.
@@ -52,7 +52,7 @@ function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
   let ri = right.length - 1;
 
   while (li >= 0 && ri >= 0) {
-    if (!left[li].equals(right[ri])) {
+    if (!ithElement(left, li).equals(right[ri])) {
       break;
     }
 

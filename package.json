@@ -9,6 +9,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "prettier": {
+    "plugins": ["prettier-plugin-organize-imports"]
+  },
   "keywords": [
     "distributed",
     "deterministic",
@@ -29,6 +32,7 @@
   },
   "devDependencies": {
     "prettier": "^3.3.1",
+    "prettier-plugin-organize-imports": "^3.2.4",
     "typescript": "^5.4.5"
   }
 }

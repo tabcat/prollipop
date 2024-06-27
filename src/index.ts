@@ -1,13 +1,59 @@
 import { Blockstore } from "interface-blockstore";
-import { ProllyTree } from "./tree";
-import { Tuple, Node, compareTuples } from "./node";
-import {
-  createCursorState,
-  moveToTupleOnLevel,
-  nodeOf,
-} from "./cursor";
+import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor";
 import { ProllyTreeDiff } from "./diff";
-import { Update, mutateTree } from "./builder";
+import { Bytes, TreeCodec } from "./codec";
+import {
+  ByteView,
+  MultihashDigest,
+  SyncMultihashHasher,
+} from "multiformats/interface";
+import * as dagCbor from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
+import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
+import { encode, decode, decodeFirst } from "cborg";
+import { Prefix, ProllyTree, Tuple, Node } from "./interface";
+import { DefaultProllyTree } from "./impls";
+import { Update, mutateTree } from "./builder.js";
+import { InitOptions, createBucket, createEmptyTree } from "./util";
+import { compareTuples } from "./compare";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+
+const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
+  bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
+
+const cborTreeCodec: TreeCodec<typeof dagCbor.code, typeof mh_sha256.code> = {
+  ...dagCbor,
+  encode: (value) => encode(value, dagCbor.encodeOptions),
+  decode: (bytes) => decode(handleBuffer(bytes), dagCbor.decodeOptions),
+  decodeFirst: (bytes) =>
+    decodeFirst(handleBuffer(bytes), dagCbor.decodeOptions),
+};
+
+const sha256Hasher: SyncMultihashHasher<typeof mh_sha256.code> = {
+  ...mh_sha256,
+  digest: (input: Uint8Array): MultihashDigest<typeof mh_sha256.code> =>
+    createMultihashDigest(mh_sha256.code, sha256(input)),
+};
+
+export type PartialInitOptions = Partial<InitOptions>
+
+export function init<T>(
+  options: PartialInitOptions = {}
+): ProllyTree<typeof dagCbor.code, typeof mh_sha256.code> {
+  const opts: InitOptions = {
+    averageBucketSize: 30,
+    ...options
+  }
+
+  return createEmptyTree(cborTreeCodec, sha256Hasher, opts);
+}
+
+export function cloneTree<T, Code extends number, Alg extends number>(
+  tree: ProllyTree<Code, Alg>
+): ProllyTree<Code, Alg> {
+  // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
+  return { ...tree };
+}
 
 /**
  *
@@ -17,43 +63,51 @@ import { Update, mutateTree } from "./builder";
  *
  * @returns Associated Node if found, otherwise returns Tuple
  */
-export async function * search<T, Code extends number, Alg extends number>(
+export async function* search<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   tuples: Tuple[]
 ): AsyncIterable<Node | Tuple> {
-  tuples.sort(compareTuples)
+  tuples.sort(compareTuples);
 
-  const cursorState = createCursorState(blockstore, tree.codec, tree.hasher, [tree.root])
+  const cursorState = createCursorState(blockstore, tree);
 
   while (tuples.length > 0) {
     // remove first tuple from tuples
-    const [tuple]: Tuple[] = tuples.splice(0, 1)
+    const [tuple]: Tuple[] = tuples.splice(0, 1);
 
-    await moveToTupleOnLevel(cursorState, tuple, 0)
+    await moveToTupleOnLevel(cursorState, tuple, 0);
 
-    const node: Node = nodeOf(cursorState)
+    const node: Node = nodeOf(cursorState);
 
     if (compareTuples(tuple, node) === 0) {
-      yield node
+      yield node;
     } else {
-      yield tuple
+      yield tuple;
     }
   }
 }
 
-export async function * insert <T, Code extends number, Alg extends number>(
+export async function* insert<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  nodes: Node[],
+  nodes: Node[]
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
-  return mutateTree(blockstore, tree, nodes.map((n): Update => [n, 'add']))
+  return mutateTree(
+    blockstore,
+    tree,
+    nodes.map((n): Update<'add', 0> => ({ op: 'add', level: 0, value: n }))
+  );
 }
 
-export async function * remove <T, Code extends number, Alg extends number>(
+export async function* remove<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   tuples: Tuple[]
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
-  return mutateTree(blockstore, tree, tuples.map((t): Update => [t, 'rm']))
+  return mutateTree(
+    blockstore,
+    tree,
+    tuples.map((t): Update<"rm", 0> => ({ op: "rm", level: 0, value: t }))
+  );
 }

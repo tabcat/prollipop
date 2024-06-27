@@ -1,276 +1,241 @@
 import { Blockstore } from "interface-blockstore";
-import { Bucket, createEmptyBucket } from "./bucket";
-import {
-  Tuple,
-  DefaultNode,
-  compareTuples,
-  Node,
-  findIndexGTE,
-  compareNodes,
-} from "./node";
 import {
   bucketOf,
   getIsHead,
   createCursorState,
   moveToTupleOnLevel,
   rootLevelOf,
+  lastOf,
+  getIsTail,
+  levelOf,
+  moveToNextBucket,
 } from "./cursor";
-import { NodeDiff, ProllyTreeDiff, createProllyTreeDiff, diff } from "./diff";
-import { lastElement, prefixWithLevel } from "./util";
-import { Diff, difference } from "@tabcat/ordered-sets/difference";
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import {
+  BucketDiff,
+  NodeDiff,
+  ProllyTreeDiff,
+  createProllyTreeDiff,
+} from "./diff";
+import {
+  createBucket,
+  findFailure,
+  lastElement,
+  prefixWithLevel,
+} from "./util";
+import { difference, diff } from "@tabcat/ordered-sets/difference";
 import { intersection } from "@tabcat/ordered-sets/intersection";
 import { union } from "@tabcat/ordered-sets/union";
 import { isBoundaryNode } from "./boundaries";
-import { ProllyTree } from "./tree";
+import { ProllyTree, Tuple, Node, Bucket } from "./interface";
+import { compareNodes, compareTuples, findIndexGTE } from "./compare";
+import { DefaultBucket, DefaultNode } from "./impls";
+import { TreeCodec } from "./codec";
+import { SyncMultihashHasher } from "multiformats";
+import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 
-type AddOp = [Node, "add"];
-type RmOp = [Tuple, "rm"];
-export type Update = AddOp | RmOp;
+type Ops = "rm" | "add";
+export interface Update<Op extends Ops = Ops, Level extends number = number> {
+  op: Op;
+  level: Level;
+  value: Op extends "add" ? Node : Tuple;
+}
 
-const isAddOp = (u: Update): u is AddOp => u[1] === "add";
-const isRmOp = (u: Update): u is RmOp => u[1] === "rm";
+const compareNodeToUpdate = (a: Node, b: Update): number =>
+  compareTuples(a, b.value);
 
-export const compareUpdates = (a: Update, b: Update): number => {
-  const tuplesComparison = compareTuples(a[0], b[0]);
+const updateBucket = <Code extends number, Alg extends number>(
+  bucket: Bucket<Code, Alg>,
+  leftovers: Node[],
+  updates: Update[],
+  codec: TreeCodec<Code, Alg>,
+  hasher: SyncMultihashHasher<Alg>,
+  isHead: boolean
+): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
+  const buckets: Bucket<Code, Alg>[] = []
+  const afterbound: Node[] = []
+  const nodeDiffs: NodeDiff[] = []
+  
+  const isBoundary = isBoundaryNode(bucket.prefix.average, bucket.prefix.level)
 
-  if (tuplesComparison !== 0) {
-    return tuplesComparison;
+  const handleUpdate = (node: Node | null, update: Update): [Node | null, NodeDiff | null] => {
+    if (update.op === 'add') {
+      const addedNode = update.value as Update<'add'>['value']
+      if (node != null) {
+        if (compareNodes(node, addedNode) !== 0) {
+          return [addedNode, [node, addedNode]]
+        } else {
+          return [node, null]
+        }
+      } else {
+        return [addedNode, [null, addedNode]]
+      }
+    }
+
+    if (update.op === 'rm') {
+      if (node != null) {
+        return [null, [node, null]]
+      } else {
+        return [null, null]
+      }
+    }
+
+    throw new Error('unrecognized op')
   }
 
-  if (a[1] === b[1]) {
-    return 0;
-  }
+  for (const [node, update] of pairwiseTraversal([...leftovers, ...bucket.nodes], updates, compareNodeToUpdate)) {
+    let addedNode: Node | null = null
+    let nodeDiff: NodeDiff | null = null
+    if (update == null) {
+      addedNode = node
+    } else {
+      [addedNode, nodeDiff] = handleUpdate(node, update)
+    }
 
-  // move adds to the front
-  if (a[1] === "add") {
-    return -1;
-  } else if (b[1] === "add") {
-    return 1;
-  } else {
-    throw new Error("unrecognized builder op");
-  }
-};
-
-const reduceUpdates = (updates: Update[]): Update[] => {
-  const updatesIterator = updates[Symbol.iterator]();
-
-  const firstUpdate = updatesIterator.next();
-
-  if (firstUpdate.value == null) {
-    return [];
-  }
-
-  const reducedUpdates: Update[] = [firstUpdate.value];
-
-  for (const update of updatesIterator) {
-    if (compareTuples(lastElement(reducedUpdates)[0], update[0]) !== 0) {
-      reducedUpdates.push(update);
+    if (nodeDiff) nodeDiffs.push(nodeDiff)
+    
+    if (addedNode) {
+      afterbound.push(addedNode)
+      if (isBoundary(addedNode)) {
+        buckets.push(createBucket(bucket.prefix, afterbound.splice(0), codec, hasher))
+      }
     }
   }
 
-  return reducedUpdates;
-};
-
-const getUpdatesThisLevel = (updates: Update[]): Update[] => {
-  const updatesIterator = updates[Symbol.iterator]();
-  const firstUpdate = updatesIterator.next();
-
-  let lastUpdate: Update = firstUpdate.value;
-  const onLevel: Update[] = [lastUpdate];
-  for (const update of updatesIterator) {
-    // logic depends on there being a single update for a tuple
-    if (compareTuples(lastUpdate[0], update[0]) >= 0) {
-      break;
-    }
-
-    onLevel.push(lastUpdate);
+  if (isHead && leftovers.length > 0) {
+    buckets.push(createBucket(bucket.prefix, leftovers.splice(0), codec, hasher))
   }
 
-  return onLevel;
+  return [buckets, afterbound, nodeDiffs]
 };
 
-const getUpdatesInBoundary = <T, Code extends number, Alg extends number>(
-  bucket: Bucket<Code, Alg>,
-  updates: Update[],
-): Update[] =>
-  updates.splice(
-    0,
-    findIndexGTE(
-      updates.map((u) => u[0]),
-      lastElement(bucket.nodes),
-    ),
-  );
-
-const updateBucket = <T, Code extends number, Alg extends number>(
-  bucket: Bucket<Code, Alg>,
-  updates: Update[],
-  isTail: boolean,
-): [Bucket<Code, Alg>[], Update[], NodeDiff] => {
-  const { prefix } = bucket;
-
-  const buckets: Bucket<Code, Alg>[] = [];
-  const afterbound: Update[] = [];
-
-  const removedNodes: Node[] = Array.from(
-    intersection(
-      bucket.nodes,
-      updates.filter(isRmOp).map((u) => u[0]),
-      compareTuples,
-    ),
-  );
-  const addedNodes: Node[] = Array.from(
-    difference(
-      updates.filter(isAddOp).map((u) => u[0]),
-      bucket.nodes,
-      compareNodes,
-    ),
-  );
-  const diff: Diff<Node>[] = Array.from(
-    pairwiseTraversal(removedNodes, addedNodes, compareNodes),
-  ).map(([a, b]): Diff<Node> => (a !== null ? [a, null] : [null, b]));
-
-  const newNodes: Node[] = Array.from(
-    union(
-      intersection(bucket.nodes, removedNodes, compareNodes),
-      addedNodes,
-      compareNodes,
-    ),
-  );
-
-  const boundaries: Node[][] = [];
-
-  while (newNodes.findIndex((n) => isBoundaryNode) !== -1) {
-    const foundIndex = newNodes.findIndex(
-      isBoundaryNode(prefix.average, prefix.level),
-    );
-    boundaries.push(newNodes.splice(0, foundIndex + 1));
-  }
-
-  return [buckets, updates, diff];
-};
-
-export async function * mutateTree<T, Code extends number, Alg extends number>(
+export async function* mutateTree<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  updates: Update[],
+  updates: Update<Ops, number>[]
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
-  let diff: ProllyTreeDiff<Code, Alg> = createProllyTreeDiff()
-  const cursorState = createCursorState(blockstore, tree.codec, tree.hasher, [
-    tree.root,
-  ]);
+  let diffs = createProllyTreeDiff<Code, Alg>();
 
-  // sort by tuple
-  updates.sort(compareUpdates);
-  // one update per tuple
-  updates = reduceUpdates(updates);
+  const cursorState = createCursorState(blockstore, tree);
 
-  let level = 0;
-  let firstBucketOfLevel = true;
-  let levelTail: Bucket<Code, Alg> | null = null;
-  let levelHead: Bucket<Code, Alg> | null = null;
-  let newRoot: Bucket<Code, Alg> | null = null;
+  const newRootFound = () =>
+    newBuckets.length === 1 &&
+    leftovers.length === 0 &&
+    visitedLevelTail &&
+    visitedLevelHead;
 
-  while (updates.length > 0) {
-    await moveToTupleOnLevel(cursorState, updates[0][0], level);
+  let level: number = -1;
+  let newBuckets: Bucket<Code, Alg>[] = [];
+  let leftovers: Node[] = [];
+  let visitedLevelTail: boolean = false;
+  let visitedLevelHead: boolean = false;
 
-    if (firstBucketOfLevel && getIsHead(cursorState)) {
-      levelTail = lastElement(cursorState.currentBuckets);
-    }
-    firstBucketOfLevel = false;
+  while (updates.length > 0 && !newRootFound()) {
+    const firstBucketOfLevel: boolean = level !== updates[0].level;
+    level = updates[0].level;
 
-    if (getIsHead(cursorState)) {
-      levelHead = lastElement(cursorState.currentBuckets);
+    if (firstBucketOfLevel) {
+      newBuckets = [];
     }
 
-    const pastRoot = level > rootLevelOf(cursorState);
+    const pastRootLevel = level > rootLevelOf(cursorState);
 
-    const updatee: Bucket<Code, Alg> = pastRoot
-      ? createEmptyBucket(
-          prefixWithLevel(bucketOf(cursorState).prefix, level),
-          tree.codec,
-          tree.hasher,
+    let updatee: Bucket<Code, Alg>;
+    if (!pastRootLevel) {
+      if (leftovers.length === 0) {
+        await moveToTupleOnLevel(
+          cursorState,
+          updates[0].value,
+          updates[0].level
+        );
+      } else {
+        await moveToNextBucket(cursorState)
+      }
+
+      updatee = bucketOf(cursorState);
+      visitedLevelTail =
+        visitedLevelHead || (firstBucketOfLevel && getIsTail(cursorState));
+      visitedLevelHead = getIsHead(cursorState);
+    } else {
+      updatee = createBucket(
+        prefixWithLevel(tree.root.prefix, level),
+        [],
+        tree.getCodec(),
+        tree.getHasher()
+      );
+      visitedLevelTail = true;
+      visitedLevelHead = true;
+    }
+
+    const [buckets, afterbound, nodeDiffs] = updateBucket(
+      updatee,
+      leftovers,
+      updates.splice(
+        0,
+        findFailure(
+          updates,
+          (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0
         )
-      : bucketOf(cursorState);
-
-    const updatesInBoundary: Update[] = getUpdatesInBoundary(
-      bucketOf(cursorState),
-      getUpdatesThisLevel(updates),
+      ),
+      tree.getCodec(),
+      tree.getHasher(),
+      visitedLevelHead,
     );
+    newBuckets.push(...buckets);
+    leftovers.push(...afterbound);
 
-    /**
-     * If buckets has multiple elements then atleast one boundary was added.
-     * If afterbound has elements then the old boundary was removed.
-     * If updatee is a levelHead then afterbound will be empty.
-     */
-    const [buckets, afterbound, nodeDiff]: [
-      Bucket<Code, Alg>[],
-      Update[],
-      NodeDiff,
-    ] = updateBucket(updatee, updatesInBoundary, Boolean(levelHead));
-
-    // check if any updates resulted in changes to bucket
-    if (nodeDiff.length > 0) {
+    // there were changes
+    if (nodeDiffs.length > 0) {
+      // track leaf node changes
       if (level === 0) {
-        // track changed leaf nodes
-        diff.nodes.push(...nodeDiff);
+        diffs.nodes.push(...nodeDiffs);
       }
 
-      // only add to diff if bucket existed in tree before
-      if (!pastRoot) {
-        // rm old buckets in diff
-        diff.buckets.push([updatee, null]);
-        // remove bucket from parent
-        updates.push([lastElement(updatee.nodes), "rm"]);
+      // only add updatee to removed if it existed
+      if (!pastRootLevel) {
+        diffs.buckets.push([updatee, null]);
       }
-
-      // add new buckets to diff
-      diff.buckets.push(
-        ...buckets.map<[null, Bucket<Code, Alg>]>((b) => [null, b]),
+      diffs.buckets.push(
+        ...buckets.map((b): BucketDiff<Code, Alg> => [null, b])
       );
-      // add new buckets to parent
+
       updates.push(
-        ...buckets.map<Update>((b) => {
-          const { timestamp, hash } = lastElement(b.nodes);
-
-          return [
-            new DefaultNode(timestamp, hash, b.getHash(), tree.codec),
-            "add",
-          ];
-        }),
+        ...buckets.map(
+          (b: Bucket<Code, Alg>): Update<"add"> => ({
+            op: "add",
+            level: level + 1,
+            value: lastElement(b.nodes),
+          })
+        )
       );
-
-      // add afterbound updates back to front of updates
-      updates.unshift(...afterbound);
-
-      yield diff
-      diff = createProllyTreeDiff()
     }
 
-    // move to next level
-    if (Boolean(levelHead)) {
-      level++;
-      firstBucketOfLevel = true;
-      levelTail = null;
-      levelHead = null;
-    }
+    if (buckets.length > 0) {
+      const boundary = lastElement(lastElement(buckets).nodes);
 
-    // check if bucket[0] is new root
-    if (
-      newRoot === null &&
-      buckets.length === 1 &&
-      afterbound.length === 0 &&
-      levelTail != null &&
-      levelHead != null &&
-      compareTuples(updatesInBoundary[0][0], lastElement(levelTail.nodes)) >= 0 // update tuples span the entire level
-    ) {
-      newRoot = buckets[0];
+      yield {
+        // node diffs up to last bucket diff boundary
+        nodes: diffs.nodes.splice(
+          0,
+          findFailure(
+            diffs.nodes,
+            (d) => compareTuples(d[0] ?? d[1], boundary) <= 0
+          )
+        ),
+        // all bucket diffs
+        buckets: diffs.buckets.splice(0, diffs.buckets.length),
+      };
     }
   }
 
-  if (newRoot == null) {
-    throw new Error("something went wrong");
-  } else {
-    tree.root = newRoot;
+  tree.root = newBuckets[0];
+
+  if (level < rootLevelOf(cursorState)) {
+    // add all higher level buckets in path to removed
+    diffs.buckets.push(
+      ...cursorState.currentBuckets
+        .slice(0, cursorState.currentBuckets.length - level)
+        .map((b): BucketDiff<Code, Alg> => [b, null])
+    );
   }
+  yield diffs;
 }

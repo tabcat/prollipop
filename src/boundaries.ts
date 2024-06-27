@@ -1,4 +1,4 @@
-import type { Node } from "./node.js";
+import type { Node } from "./interface.js";
 
 const MAX_UINT32 = 2 ** 32 - 1;
 

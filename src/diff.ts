@@ -7,13 +7,12 @@
 
 import type { CID } from "multiformats/cid";
 import { createCursor, type Cursor } from "./cursor";
-import { type Node, compareTuples } from "./node";
 import { toReversed } from "./util";
-import { Bucket } from "./bucket";
 import { Blockstore } from "interface-blockstore";
-import { ProllyTree } from "./tree";
 import { TreeCodec } from "./codec";
 import { SyncMultihashHasher } from "multiformats";
+import { compareTuples } from "./compare";
+import { Bucket, ProllyTree, Node } from "./interface";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.
@@ -26,7 +25,7 @@ async function fastForwardUntilUnequal<
   T,
   Code extends number,
   Alg extends number,
->(left: Cursor<T, Code, Alg>, right: Cursor<T, Code, Alg>): Promise<void> {
+>(left: Cursor<Code, Alg>, right: Cursor<Code, Alg>): Promise<void> {
   while (!left.done() && !right.done()) {
     if (compareTuples(left.current(), right.current()) !== 0) {
       return;
@@ -70,6 +69,7 @@ function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
 
 type LeftDiff<T> = [T, null];
 type RightDiff<T> = [null, T];
+type LeftAndRightDiff<T> = [T, T];
 
 const leftDiffer = <T, Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
@@ -78,20 +78,19 @@ const rightDiffer = <T, Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
 ): RightDiff<Bucket<Code, Alg>> => [null, bucket];
 
-export type Diff<T> = LeftDiff<T> | RightDiff<T>;
+type Diff<T> = LeftDiff<T> | RightDiff<T> | LeftAndRightDiff<T>;
 
-export type NodeDiff = Diff<Node>[];
+export type NodeDiff = Diff<Node>;
 export type BucketDiff<Code extends number, Alg extends number> = Diff<
   Bucket<Code, Alg>
->[];
+>;
 
 export interface ProllyTreeDiff<Code extends number, Alg extends number> {
-  nodes: NodeDiff;
-  buckets: BucketDiff<Code, Alg>;
+  nodes: NodeDiff[];
+  buckets: BucketDiff<Code, Alg>[];
 }
 
 export const createProllyTreeDiff = <
-  T,
   Code extends number,
   Alg extends number,
 >(): ProllyTreeDiff<Code, Alg> => ({
@@ -114,26 +113,20 @@ const getUnmatched = <T, Code extends number, Alg extends number>(
     ) - 1,
   );
 
-export async function * diff<T, Code extends number, Alg extends number>(
+export async function * diff<Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  codec: TreeCodec<Code, Alg>,
-  hasher: SyncMultihashHasher<Alg>,
   left: ProllyTree<Code, Alg>,
   right: ProllyTree<Code, Alg>,
   rightBlockstore?: Blockstore,
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
-  let d = createProllyTreeDiff<T, Code, Alg>();
-  const leftCursor: Cursor<T, Code, Alg> = createCursor(
+  let d = createProllyTreeDiff<Code, Alg>();
+  const leftCursor: Cursor<Code, Alg> = createCursor(
     blockstore,
-    codec,
-    hasher,
-    left.root,
+    left,
   );
-  const rightCursor: Cursor<T, Code, Alg> = createCursor(
+  const rightCursor: Cursor<Code, Alg> = createCursor(
     rightBlockstore ?? blockstore,
-    codec,
-    hasher,
-    right.root,
+    right
   );
   let lastLeftBuckets: Bucket<Code, Alg>[];
   let lastRightBuckets: Bucket<Code, Alg>[];

@@ -36,8 +36,8 @@ export const createCursorState = <Code extends number, Alg extends number>(
   currentIndex: number = 0
 ): CursorState<Code, Alg> => ({
   blockstore,
-  codec: tree.codec,
-  hasher: tree.hasher,
+  codec: tree.getCodec(),
+  hasher: tree.getHasher(),
   currentBuckets,
   currentIndex,
   isDone: false,
@@ -237,7 +237,7 @@ export const moveToTupleOnLevel = async <
 
   // move up until finding a node greater than tuple
   while (
-    compareTuples(lastOf(state), tuple) < 0 &&
+    compareTuples(tuple, lastOf(state)) > 0 &&
     levelOf(state) < rootLevelOf(state)
   ) {
     await moveToLevel(state, levelOf(state) + 1, tuple);
@@ -250,6 +250,16 @@ export const moveToTupleOnLevel = async <
 
   Object.assign(state, stateCopy);
 };
+
+export const moveToNextBucket = async <Code extends number, Alg extends number>(state: CursorState<Code, Alg>): Promise<void> => {
+  const stateCopy = { ...state };
+
+  stateCopy.currentIndex = bucketOf(state).nodes.length - 1
+
+  await moveSideways(stateCopy, NEXT)
+
+  Object.assign(state, stateCopy)
+}
 
 const createNextOnLevel =
   <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>

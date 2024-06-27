@@ -7,7 +7,8 @@
   "types": "dist/src/index.d.ts",
   "files": [],
   "scripts": {
-    "format": "prettier src test --write"
+    "format": "prettier src test --write",
+    "test": "vitest --config vitest.config.ts"
   },
   "prettier": {
     "plugins": [

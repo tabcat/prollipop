@@ -51,7 +51,10 @@ export class DefaultProllyTree<Code extends number, Alg extends number>
     public root: Bucket<Code, Alg>,
     codec: TreeCodec<Code, Alg>,
     hasher: SyncMultihashHasher<Alg>,
-  ) {}
+  ) {
+    this.#codec = codec
+    this.#hasher = hasher
+  }
 
   getCodec(): TreeCodec<Code, Alg> {
     return this.#codec;

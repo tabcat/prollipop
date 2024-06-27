@@ -22,9 +22,9 @@ interface BlockCodecPlus<Code extends number, Universe = any>
   code: Code;
   encode<T extends Universe>(data: T): ByteView<T>;
   decode<T extends Universe>(bytes: Bytes<T>): T;
-  decodeFirst<U extends Universe[]>(
-    bytes: Bytes<U>,
-  ): [U[0], ByteView<U extends [Universe, ...infer B] ? B : U>]; // checks if U is a tuple or an array
+  decodeFirst(
+    bytes: Uint8Array,
+  ): [any, Uint8Array]; // checks if U is a tuple or an array
 }
 
 export interface TreeCodec<Code extends number, Alg extends number>
@@ -43,14 +43,14 @@ export function encodeNode<Code extends number, Alg extends number>(
 }
 
 export function decodeNodeFirst<Code extends number, Alg extends number>(
-  bytes: ByteView<EncodedNode[]>,
+  bytes: Uint8Array,
   codec: TreeCodec<Code, Alg>,
 ): [DefaultNode, Uint8Array] {
-  const [decoded, remainder] = codec.decodeFirst(bytes);
+  const [node, remainder]: [EncodedNode, Uint8Array] = codec.decodeFirst(bytes);
 
   // do verification on decoded here
 
-  return [new DefaultNode(...decoded), remainder];
+  return [new DefaultNode(...node), remainder];
 }
 
 export type EncodedBucket<Code extends number, Alg extends number> = [
@@ -93,11 +93,11 @@ export function encodeBucket<Code extends number, Alg extends number>(
 }
 
 export function decodeBucket<Code extends number, Alg extends number>(
-  bytes: ByteView<EncodedBucket<Code, Alg>>,
+  bytes: Uint8Array,
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
-  let decoded: [Prefix<Code, Alg>, ByteView<EncodedNode[]>];
+  let decoded: [Prefix<Code, Alg>, Uint8Array];
   try {
     decoded = codec.decodeFirst(bytes);
   } catch (e) {

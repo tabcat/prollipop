@@ -294,7 +294,6 @@ export const minTuples = {
 };
 
 export function createCursorFromState<
-  T,
   Code extends number,
   Alg extends number,
 >(state: CursorState<Code, Alg>): Cursor<Code, Alg> {

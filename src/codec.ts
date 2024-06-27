@@ -30,7 +30,7 @@ export interface TreeCodec<Code extends number, Alg extends number>
 export type EncodedTuple = [Tuple["timestamp"], Tuple["hash"]];
 export type EncodedNode = [...EncodedTuple, Node["message"]];
 
-export function encodeNode<T, Code extends number, Alg extends number>(
+export function encodeNode<Code extends number, Alg extends number>(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
@@ -39,7 +39,7 @@ export function encodeNode<T, Code extends number, Alg extends number>(
   return codec.encode([timestamp, hash, message]);
 }
 
-export function decodeNodeFirst<T, Code extends number, Alg extends number>(
+export function decodeNodeFirst<Code extends number, Alg extends number>(
   bytes: ByteView<EncodedNode[]>,
   codec: TreeCodec<Code, Alg>,
 ): [DefaultNode, Uint8Array] {
@@ -89,7 +89,7 @@ export function encodeBucket<Code extends number, Alg extends number>(
   return encodedBucket;
 }
 
-export function decodeBucket<T, Code extends number, Alg extends number>(
+export function decodeBucket<Code extends number, Alg extends number>(
   bytes: ByteView<EncodedBucket<Code, Alg>>,
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,

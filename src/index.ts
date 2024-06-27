@@ -36,7 +36,7 @@ const sha256Hasher: SyncMultihashHasher<typeof mh_sha256.code> = {
 
 export type PartialInitOptions = Partial<InitOptions>;
 
-export function init<T>(
+export function init(
   options: PartialInitOptions = {},
 ): ProllyTree<typeof dagCbor.code, typeof mh_sha256.code> {
   const opts: InitOptions = {
@@ -47,7 +47,7 @@ export function init<T>(
   return createEmptyTree(cborTreeCodec, sha256Hasher, opts);
 }
 
-export function cloneTree<T, Code extends number, Alg extends number>(
+export function cloneTree<Code extends number, Alg extends number>(
   tree: ProllyTree<Code, Alg>,
 ): ProllyTree<Code, Alg> {
   // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
@@ -62,7 +62,7 @@ export function cloneTree<T, Code extends number, Alg extends number>(
  *
  * @returns Associated Node if found, otherwise returns Tuple
  */
-export async function* search<T, Code extends number, Alg extends number>(
+export async function* search<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   tuples: Tuple[],
@@ -87,7 +87,7 @@ export async function* search<T, Code extends number, Alg extends number>(
   }
 }
 
-export async function* insert<T, Code extends number, Alg extends number>(
+export async function* insert<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   nodes: Node[],
@@ -99,7 +99,7 @@ export async function* insert<T, Code extends number, Alg extends number>(
   );
 }
 
-export async function* remove<T, Code extends number, Alg extends number>(
+export async function* remove<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   tuples: Tuple[],

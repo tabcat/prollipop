@@ -20,7 +20,6 @@ import { toReversed } from "./util.js";
  *
  */
 async function fastForwardUntilUnequal<
-  T,
   Code extends number,
   Alg extends number,
 >(left: Cursor<Code, Alg>, right: Cursor<Code, Alg>): Promise<void> {
@@ -69,10 +68,10 @@ type LeftDiff<T> = [T, null];
 type RightDiff<T> = [null, T];
 type LeftAndRightDiff<T> = [T, T];
 
-const leftDiffer = <T, Code extends number, Alg extends number>(
+const leftDiffer = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
 ): LeftDiff<Bucket<Code, Alg>> => [bucket, null];
-const rightDiffer = <T, Code extends number, Alg extends number>(
+const rightDiffer = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
 ): RightDiff<Bucket<Code, Alg>> => [null, bucket];
 
@@ -96,11 +95,11 @@ export const createProllyTreeDiff = <
   buckets: [],
 });
 
-const getBucketCID = <T, Code extends number, Alg extends number>(
+const getBucketCID = <Code extends number, Alg extends number>(
   b: Bucket<Code, Alg>,
 ): CID => b.getCID();
 
-const getUnmatched = <T, Code extends number, Alg extends number>(
+const getUnmatched = <Code extends number, Alg extends number>(
   last: Bucket<Code, Alg>[],
   current: Bucket<Code, Alg>[],
 ): Bucket<Code, Alg>[] =>

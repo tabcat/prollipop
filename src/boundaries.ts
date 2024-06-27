@@ -22,5 +22,5 @@ export const isBoundaryNode =
   (node: Node): boolean =>
     isBoundaryHash(
       level === 0 ? node.hash : node.message,
-      MAX_UINT32 / average
+      MAX_UINT32 / average,
     );

@@ -5,14 +5,12 @@
  * (code, comments) have been scraped from the article and turned into (typescript, jsdoc) format.
  */
 
-import type { CID } from "multiformats/cid";
-import { createCursor, type Cursor } from "./cursor";
-import { toReversed } from "./util";
 import { Blockstore } from "interface-blockstore";
-import { TreeCodec } from "./codec";
-import { SyncMultihashHasher } from "multiformats";
+import type { CID } from "multiformats/cid";
 import { compareTuples } from "./compare";
-import { Bucket, ProllyTree, Node } from "./interface";
+import { createCursor, type Cursor } from "./cursor";
+import { Bucket, Node, ProllyTree } from "./interface";
+import { toReversed } from "./util";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.
@@ -113,20 +111,17 @@ const getUnmatched = <T, Code extends number, Alg extends number>(
     ) - 1,
   );
 
-export async function * diff<Code extends number, Alg extends number>(
+export async function* diff<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   left: ProllyTree<Code, Alg>,
   right: ProllyTree<Code, Alg>,
   rightBlockstore?: Blockstore,
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let d = createProllyTreeDiff<Code, Alg>();
-  const leftCursor: Cursor<Code, Alg> = createCursor(
-    blockstore,
-    left,
-  );
+  const leftCursor: Cursor<Code, Alg> = createCursor(blockstore, left);
   const rightCursor: Cursor<Code, Alg> = createCursor(
     rightBlockstore ?? blockstore,
-    right
+    right,
   );
   let lastLeftBuckets: Bucket<Code, Alg>[];
   let lastRightBuckets: Bucket<Code, Alg>[];
@@ -163,8 +158,8 @@ export async function * diff<Code extends number, Alg extends number>(
 
     // yield diff as bucket changes
     if (d.buckets.length > 0) {
-      yield d
-      d = createProllyTreeDiff()
+      yield d;
+      d = createProllyTreeDiff();
     }
   }
 
@@ -181,8 +176,8 @@ export async function * diff<Code extends number, Alg extends number>(
 
     // yield diff as bucket changes
     if (d.buckets.length > 0) {
-      yield d
-      d = createProllyTreeDiff()
+      yield d;
+      d = createProllyTreeDiff();
     }
   }
 
@@ -198,8 +193,8 @@ export async function * diff<Code extends number, Alg extends number>(
 
     // yield diff as bucket changes
     if (d.buckets.length > 0) {
-      yield d
-      d = createProllyTreeDiff()
+      yield d;
+      d = createProllyTreeDiff();
     }
   }
 }

@@ -1,5 +1,8 @@
-import { CID, SyncMultihashHasher } from "multiformats";
 import type { Blockstore } from "interface-blockstore";
+import { CID, SyncMultihashHasher } from "multiformats";
+import { TreeCodec } from "./codec";
+import { compareTuples, findIndexGTE } from "./compare";
+import { Bucket, Node, ProllyTree, Tuple } from "./interface";
 import {
   bucketDigestToCid,
   firstElement,
@@ -7,9 +10,6 @@ import {
   loadBucket,
   prefixWithLevel,
 } from "./util";
-import { TreeCodec } from "./codec";
-import { Node, Bucket, Tuple, ProllyTree } from "./interface";
-import { compareTuples, findIndexGTE } from "./compare";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
@@ -33,7 +33,7 @@ export const createCursorState = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   currentBuckets: Bucket<Code, Alg>[] = [tree.root],
-  currentIndex: number = 0
+  currentIndex: number = 0,
 ): CursorState<Code, Alg> => ({
   blockstore,
   codec: tree.getCodec(),
@@ -44,32 +44,32 @@ export const createCursorState = <Code extends number, Alg extends number>(
 });
 
 export const levelOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): number => bucketOf(state).prefix.level;
 
 export const bucketOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): Bucket<Code, Alg> => lastElement(state.currentBuckets);
 
 export const nodeOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): Node => bucketOf(state).nodes[state.currentIndex];
 
 export const pathOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): CID[] => state.currentBuckets.map((bucket) => bucket.getCID());
 
 export const rootLevelOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): number => state.currentBuckets[0].prefix.level;
 
 export const lastOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): Node => lastElement(bucketOf(state).nodes);
 
 const getIsExtremity = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  findExtemity: (nodes: Node[]) => Node
+  findExtemity: (nodes: Node[]) => Node,
 ): boolean => {
   const currentBucketsItorator = state.currentBuckets[Symbol.iterator]();
 
@@ -77,7 +77,7 @@ const getIsExtremity = <Code extends number, Alg extends number>(
   for (const bucket of currentBucketsItorator) {
     if (
       !bucketDigestToCid(lastBucket.prefix)(
-        findExtemity(lastBucket.nodes).message
+        findExtemity(lastBucket.nodes).message,
       ).equals(bucket.getCID())
     ) {
       return false;
@@ -90,10 +90,10 @@ const getIsExtremity = <Code extends number, Alg extends number>(
 };
 
 export const getIsTail = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): boolean => getIsExtremity(state, firstElement);
 export const getIsHead = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>
+  state: CursorState<Code, Alg>,
 ): boolean => getIsExtremity(state, lastElement);
 
 const cursorErrorCodesList = [
@@ -123,7 +123,7 @@ type Direction = typeof NEXT | typeof PREV;
  */
 const overflows = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  direction: Direction
+  direction: Direction,
 ): boolean => {
   if (direction === NEXT) {
     return state.currentIndex === bucketOf(state).nodes.length - 1;
@@ -139,7 +139,7 @@ const overflows = <Code extends number, Alg extends number>(
 export const moveToLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
   level: number,
-  _target?: Tuple
+  _target?: Tuple,
 ): Promise<void> => {
   if (levelOf(state) < 0) {
     throw new Error("no negative levels");
@@ -165,7 +165,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 
       stateCopy.currentBuckets = stateCopy.currentBuckets.splice(
         -difference,
-        difference
+        difference,
       );
     } else {
       // walk to level
@@ -177,8 +177,8 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
           digest,
           prefixWithLevel(bucketOf(stateCopy).prefix, levelOf(stateCopy) - 1),
           state.codec,
-          state.hasher
-        )
+          state.hasher,
+        ),
       );
     }
 
@@ -190,7 +190,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  direction: Direction
+  direction: Direction,
 ): Promise<void> => {
   const stateCopy = { ...state };
 
@@ -218,7 +218,7 @@ export const moveSideways = async <Code extends number, Alg extends number>(
     await moveToLevel(
       stateCopy,
       levelOf(state),
-      bucketOf(state).nodes[state.currentIndex] // use original tuple as target
+      bucketOf(state).nodes[state.currentIndex], // use original tuple as target
     );
   }
 
@@ -231,7 +231,7 @@ export const moveToTupleOnLevel = async <
 >(
   state: CursorState<Code, Alg>,
   tuple: Tuple,
-  level: number
+  level: number,
 ): Promise<void> => {
   const stateCopy = { ...state };
 
@@ -251,15 +251,17 @@ export const moveToTupleOnLevel = async <
   Object.assign(state, stateCopy);
 };
 
-export const moveToNextBucket = async <Code extends number, Alg extends number>(state: CursorState<Code, Alg>): Promise<void> => {
+export const moveToNextBucket = async <Code extends number, Alg extends number>(
+  state: CursorState<Code, Alg>,
+): Promise<void> => {
   const stateCopy = { ...state };
 
-  stateCopy.currentIndex = bucketOf(state).nodes.length - 1
+  stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
-  await moveSideways(stateCopy, NEXT)
+  await moveSideways(stateCopy, NEXT);
 
-  Object.assign(state, stateCopy)
-}
+  Object.assign(state, stateCopy);
+};
 
 const createNextOnLevel =
   <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>
@@ -318,7 +320,7 @@ export function createCursorFromState<
 
 export function createCursor<Code extends number, Alg extends number>(
   blockstore: Blockstore,
-  tree: ProllyTree<Code, Alg>
+  tree: ProllyTree<Code, Alg>,
 ): Cursor<Code, Alg> {
   const state = createCursorState(blockstore, tree);
   return createCursorFromState(state);

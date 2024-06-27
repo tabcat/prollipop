@@ -3,13 +3,13 @@
  */
 
 import type {
-  ByteView,
   ArrayBufferView,
   BlockCodec,
+  ByteView,
   SyncMultihashHasher,
 } from "multiformats";
-import { Tuple, Node, Bucket, Prefix } from "./interface";
 import { DefaultBucket, DefaultNode } from "./impls";
+import { Bucket, Node, Prefix, Tuple } from "./interface";
 
 export type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
@@ -20,7 +20,7 @@ interface BlockCodecPlus<Code extends number, Universe = any>
   encode<T extends Universe>(data: T): ByteView<T>;
   decode<T extends Universe>(bytes: ByteView<T> | ArrayBufferView<T>): T;
   decodeFirst<U extends Universe[]>(
-    bytes: Bytes<U>
+    bytes: Bytes<U>,
   ): [U[0], ByteView<U extends [Universe, ...infer B] ? B : U>]; // checks if U is a tuple or an array
 }
 
@@ -34,14 +34,14 @@ export function encodeNode<T, Code extends number, Alg extends number>(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
-  codec: TreeCodec<Code, Alg>
+  codec: TreeCodec<Code, Alg>,
 ): ByteView<EncodedNode> {
   return codec.encode([timestamp, hash, message]);
 }
 
 export function decodeNodeFirst<T, Code extends number, Alg extends number>(
   bytes: ByteView<EncodedNode[]>,
-  codec: TreeCodec<Code, Alg>
+  codec: TreeCodec<Code, Alg>,
 ): [DefaultNode, Uint8Array] {
   const [decoded, remainder] = codec.decodeFirst(bytes);
 
@@ -58,7 +58,7 @@ export type EncodedBucket<Code extends number, Alg extends number> = [
 export function encodeBucket<Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code, Alg>
+  codec: TreeCodec<Code, Alg>,
 ): ByteView<EncodedBucket<Code, Alg>> {
   const encodedPrefix: ByteView<Prefix<Code, Alg>> = codec.encode(prefix);
   const bytedNodes: Uint8Array[] = [];
@@ -69,14 +69,14 @@ export function encodeBucket<Code extends number, Alg extends number>(
       node.timestamp,
       node.hash,
       node.message,
-      codec
+      codec,
     );
     bytedNodes.push(bytes);
     len += bytes.length;
   }
 
   const encodedBucket: ByteView<EncodedBucket<Code, Alg>> = new Uint8Array(
-    encodedPrefix.length + len
+    encodedPrefix.length + len,
   );
 
   encodedBucket.set(encodedPrefix);
@@ -92,7 +92,7 @@ export function encodeBucket<Code extends number, Alg extends number>(
 export function decodeBucket<T, Code extends number, Alg extends number>(
   bytes: ByteView<EncodedBucket<Code, Alg>>,
   codec: TreeCodec<Code, Alg>,
-  hasher: SyncMultihashHasher<Alg>
+  hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
   let decoded: [Prefix<Code, Alg>, ByteView<EncodedNode[]>];
   try {
@@ -114,5 +114,10 @@ export function decodeBucket<T, Code extends number, Alg extends number>(
     }
   }
 
-  return new DefaultBucket<Code, Alg>(prefix, nodes, bytes, hasher.digest(bytes).digest);
+  return new DefaultBucket<Code, Alg>(
+    prefix,
+    nodes,
+    bytes,
+    hasher.digest(bytes).digest,
+  );
 }

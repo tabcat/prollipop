@@ -1,22 +1,21 @@
+import * as dagCbor from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
+import { decode, decodeFirst, encode } from "cborg";
 import { Blockstore } from "interface-blockstore";
-import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor";
-import { ProllyTreeDiff } from "./diff";
-import { Bytes, TreeCodec } from "./codec";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
 import {
   ByteView,
   MultihashDigest,
   SyncMultihashHasher,
 } from "multiformats/interface";
-import * as dagCbor from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
-import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
-import { encode, decode, decodeFirst } from "cborg";
-import { Prefix, ProllyTree, Tuple, Node } from "./interface";
-import { DefaultProllyTree } from "./impls";
 import { Update, mutateTree } from "./builder.js";
-import { InitOptions, createBucket, createEmptyTree } from "./util";
+import { Bytes, TreeCodec } from "./codec";
 import { compareTuples } from "./compare";
-import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor";
+import { ProllyTreeDiff } from "./diff";
+import { Node, ProllyTree, Tuple } from "./interface";
+import { InitOptions, createEmptyTree } from "./util";
 
 const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
@@ -35,21 +34,21 @@ const sha256Hasher: SyncMultihashHasher<typeof mh_sha256.code> = {
     createMultihashDigest(mh_sha256.code, sha256(input)),
 };
 
-export type PartialInitOptions = Partial<InitOptions>
+export type PartialInitOptions = Partial<InitOptions>;
 
 export function init<T>(
-  options: PartialInitOptions = {}
+  options: PartialInitOptions = {},
 ): ProllyTree<typeof dagCbor.code, typeof mh_sha256.code> {
   const opts: InitOptions = {
     averageBucketSize: 30,
-    ...options
-  }
+    ...options,
+  };
 
   return createEmptyTree(cborTreeCodec, sha256Hasher, opts);
 }
 
 export function cloneTree<T, Code extends number, Alg extends number>(
-  tree: ProllyTree<Code, Alg>
+  tree: ProllyTree<Code, Alg>,
 ): ProllyTree<Code, Alg> {
   // only care about tree.root mutations, Buckets and Nodes of a tree should never be mutated
   return { ...tree };
@@ -66,7 +65,7 @@ export function cloneTree<T, Code extends number, Alg extends number>(
 export async function* search<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  tuples: Tuple[]
+  tuples: Tuple[],
 ): AsyncIterable<Node | Tuple> {
   tuples.sort(compareTuples);
 
@@ -91,23 +90,23 @@ export async function* search<T, Code extends number, Alg extends number>(
 export async function* insert<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  nodes: Node[]
+  nodes: Node[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   return mutateTree(
     blockstore,
     tree,
-    nodes.map((n): Update<'add', 0> => ({ op: 'add', level: 0, value: n }))
+    nodes.map((n): Update<"add", 0> => ({ op: "add", level: 0, value: n })),
   );
 }
 
 export async function* remove<T, Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  tuples: Tuple[]
+  tuples: Tuple[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   return mutateTree(
     blockstore,
     tree,
-    tuples.map((t): Update<"rm", 0> => ({ op: "rm", level: 0, value: t }))
+    tuples.map((t): Update<"rm", 0> => ({ op: "rm", level: 0, value: t })),
   );
 }

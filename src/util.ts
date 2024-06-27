@@ -1,11 +1,11 @@
-import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { ByteView, SyncMultihashHasher } from "multiformats/interface";
-import { Tuple, Node, Prefix, Bucket, ProllyTree } from "./interface";
-import { EncodedBucket, TreeCodec, decodeBucket, encodeBucket } from "./codec";
-import { DefaultBucket, DefaultProllyTree } from "./impls";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import { ByteView, SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
+import { EncodedBucket, TreeCodec, decodeBucket, encodeBucket } from "./codec";
+import { DefaultBucket, DefaultProllyTree } from "./impls";
+import { Bucket, Node, Prefix, ProllyTree, Tuple } from "./interface";
 
 /**
  * Returns the element indexed at i or throws if element is undefined.
@@ -19,7 +19,7 @@ export const ithElement = <T>(array: T[], i: number): T => {
 
   if (element == null) {
     throw new Error(
-      `did not find any elements at index ${i}. element is undefined`
+      `did not find any elements at index ${i}. element is undefined`,
     );
   }
 
@@ -58,24 +58,27 @@ export const toReversed = <T>(array: Array<T>): Array<T> => {
 /**
  * Returns the index of the first element to fail a test.
  * If no failure is found then return the length of the array.
- * 
- * @param array 
- * @param test 
- * @returns 
+ *
+ * @param array
+ * @param test
+ * @returns
  */
-export const findFailure = <T>(array: Array<T>, test: (element: T) => boolean): number => {
-  let i = 0
+export const findFailure = <T>(
+  array: Array<T>,
+  test: (element: T) => boolean,
+): number => {
+  let i = 0;
 
   for (const element of array) {
     if (test(element) === false) {
-      return i
+      return i;
     }
 
-    i++
+    i++;
   }
 
-  return i
-}
+  return i;
+};
 
 /**
  * Returns a copied prefix at a specific level.
@@ -86,7 +89,7 @@ export const findFailure = <T>(array: Array<T>, test: (element: T) => boolean): 
  */
 export const prefixWithLevel = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
-  level: number
+  level: number,
 ): Prefix<Code, Alg> => ({
   ...prefix,
   level,
@@ -95,7 +98,7 @@ export const prefixWithLevel = <Code extends number, Alg extends number>(
 export const matchingPrefixes =
   <Code extends number, Alg extends number>(
     codec?: TreeCodec<Code, Alg>,
-    hasher?: SyncMultihashHasher<Alg>
+    hasher?: SyncMultihashHasher<Alg>,
   ) =>
   (prefix: Prefix<Code, Alg>): boolean =>
     (codec == null || codec.code === prefix.mc) &&
@@ -113,16 +116,24 @@ export const bucketDigestToCid =
 
 export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
 
-export const bucketBytesToDigest = <Alg extends number>(bytes: Uint8Array, hasher: SyncMultihashHasher<Alg>): Uint8Array => hasher.digest(bytes).digest
+export const bucketBytesToDigest = <Alg extends number>(
+  bytes: Uint8Array,
+  hasher: SyncMultihashHasher<Alg>,
+): Uint8Array => hasher.digest(bytes).digest;
 
 export const createBucket = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
   codec: TreeCodec<Code, Alg>,
-  hasher: SyncMultihashHasher<Alg>
+  hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> => {
   const bytes = encodeBucket(prefix, nodes, codec);
-  return new DefaultBucket(prefix, nodes, bytes, bucketBytesToDigest(bytes, hasher));
+  return new DefaultBucket(
+    prefix,
+    nodes,
+    bytes,
+    bucketBytesToDigest(bytes, hasher),
+  );
 };
 
 export async function loadBucket<Code extends number, Alg extends number>(
@@ -130,7 +141,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
   hash: Uint8Array,
   expectedPrefix: Prefix<Code, Alg>,
   codec: TreeCodec<Code, Alg>,
-  hasher: SyncMultihashHasher<Alg>
+  hasher: SyncMultihashHasher<Alg>,
 ): Promise<Bucket<Code, Alg>> {
   let bytes: ByteView<EncodedBucket<Code, Alg>>;
   try {
@@ -147,7 +158,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
   }
 
   if (compareBytes(hash, bucket.getHash()) !== 0) {
-    throw new Error('mismatched hash')
+    throw new Error("mismatched hash");
   }
 
   if (
@@ -187,4 +198,3 @@ export function createEmptyTree<Code extends number, Alg extends number>(
     hasher,
   );
 }
-

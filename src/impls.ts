@@ -1,19 +1,14 @@
-import { SyncMultihashHasher } from "multiformats/interface";
-import {
-  Bucket,
-  Node,
-  Prefix,
-  ProllyTree,
-} from "./interface.js";
-import { bucketDigestToCid } from "./util.js";
 import { CID } from "multiformats/cid";
+import { SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
+import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
+import { bucketDigestToCid } from "./util.js";
 
 export class DefaultNode implements Node {
   constructor(
     readonly timestamp: Node["timestamp"],
     readonly hash: Node["hash"],
-    readonly message: Node["message"]
+    readonly message: Node["message"],
   ) {}
 }
 
@@ -27,7 +22,7 @@ export class DefaultBucket<Code extends number, Alg extends number>
     readonly prefix: Prefix<Code, Alg>,
     readonly nodes: Node[],
     bytes: Uint8Array,
-    hash: Uint8Array
+    hash: Uint8Array,
   ) {
     this.#bytes = bytes;
     this.#hash = hash;
@@ -49,22 +44,20 @@ export class DefaultBucket<Code extends number, Alg extends number>
 export class DefaultProllyTree<Code extends number, Alg extends number>
   implements ProllyTree<Code, Alg>
 {
-  #codec: TreeCodec<Code, Alg>
-  #hasher: SyncMultihashHasher<Alg>
+  #codec: TreeCodec<Code, Alg>;
+  #hasher: SyncMultihashHasher<Alg>;
 
   constructor(
     public root: Bucket<Code, Alg>,
     codec: TreeCodec<Code, Alg>,
-    hasher: SyncMultihashHasher<Alg>
-  ) {
+    hasher: SyncMultihashHasher<Alg>,
+  ) {}
 
+  getCodec(): TreeCodec<Code, Alg> {
+    return this.#codec;
   }
 
-  getCodec (): TreeCodec<Code, Alg> {
-    return this.#codec
-  }
-
-  getHasher (): SyncMultihashHasher<Alg> {
-    return this.#hasher
+  getHasher(): SyncMultihashHasher<Alg> {
+    return this.#hasher;
   }
 }

@@ -27,7 +27,7 @@ export interface Bucket<Code extends number, Alg extends number> {
 }
 
 export interface ProllyTree<Code extends number, Alg extends number> {
-  getCodec(): TreeCodec<Code, Alg>
-  getHasher(): SyncMultihashHasher<Alg>
+  getCodec(): TreeCodec<Code, Alg>;
+  getHasher(): SyncMultihashHasher<Alg>;
   root: Bucket<Code, Alg>;
 }

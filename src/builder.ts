@@ -1,14 +1,17 @@
+import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
+import { SyncMultihashHasher } from "multiformats";
+import { isBoundaryNode } from "./boundaries";
+import { TreeCodec } from "./codec";
+import { compareNodes, compareTuples } from "./compare";
 import {
   bucketOf,
-  getIsHead,
   createCursorState,
+  getIsHead,
+  getIsTail,
+  moveToNextBucket,
   moveToTupleOnLevel,
   rootLevelOf,
-  lastOf,
-  getIsTail,
-  levelOf,
-  moveToNextBucket,
 } from "./cursor";
 import {
   BucketDiff,
@@ -16,22 +19,13 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff";
+import { Bucket, Node, ProllyTree, Tuple } from "./interface";
 import {
   createBucket,
   findFailure,
   lastElement,
   prefixWithLevel,
 } from "./util";
-import { difference, diff } from "@tabcat/ordered-sets/difference";
-import { intersection } from "@tabcat/ordered-sets/intersection";
-import { union } from "@tabcat/ordered-sets/union";
-import { isBoundaryNode } from "./boundaries";
-import { ProllyTree, Tuple, Node, Bucket } from "./interface";
-import { compareNodes, compareTuples, findIndexGTE } from "./compare";
-import { DefaultBucket, DefaultNode } from "./impls";
-import { TreeCodec } from "./codec";
-import { SyncMultihashHasher } from "multiformats";
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 
 type Ops = "rm" | "add";
 export interface Update<Op extends Ops = Ops, Level extends number = number> {
@@ -49,69 +43,80 @@ const updateBucket = <Code extends number, Alg extends number>(
   updates: Update[],
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
-  isHead: boolean
+  isHead: boolean,
 ): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
-  const buckets: Bucket<Code, Alg>[] = []
-  const afterbound: Node[] = []
-  const nodeDiffs: NodeDiff[] = []
-  
-  const isBoundary = isBoundaryNode(bucket.prefix.average, bucket.prefix.level)
+  const buckets: Bucket<Code, Alg>[] = [];
+  const afterbound: Node[] = [];
+  const nodeDiffs: NodeDiff[] = [];
 
-  const handleUpdate = (node: Node | null, update: Update): [Node | null, NodeDiff | null] => {
-    if (update.op === 'add') {
-      const addedNode = update.value as Update<'add'>['value']
+  const isBoundary = isBoundaryNode(bucket.prefix.average, bucket.prefix.level);
+
+  const handleUpdate = (
+    node: Node | null,
+    update: Update,
+  ): [Node | null, NodeDiff | null] => {
+    if (update.op === "add") {
+      const addedNode = update.value as Update<"add">["value"];
       if (node != null) {
         if (compareNodes(node, addedNode) !== 0) {
-          return [addedNode, [node, addedNode]]
+          return [addedNode, [node, addedNode]];
         } else {
-          return [node, null]
+          return [node, null];
         }
       } else {
-        return [addedNode, [null, addedNode]]
+        return [addedNode, [null, addedNode]];
       }
     }
 
-    if (update.op === 'rm') {
+    if (update.op === "rm") {
       if (node != null) {
-        return [null, [node, null]]
+        return [null, [node, null]];
       } else {
-        return [null, null]
+        return [null, null];
       }
     }
 
-    throw new Error('unrecognized op')
-  }
+    throw new Error("unrecognized op");
+  };
 
-  for (const [node, update] of pairwiseTraversal([...leftovers, ...bucket.nodes], updates, compareNodeToUpdate)) {
-    let addedNode: Node | null = null
-    let nodeDiff: NodeDiff | null = null
+  for (const [node, update] of pairwiseTraversal(
+    [...leftovers, ...bucket.nodes],
+    updates,
+    compareNodeToUpdate,
+  )) {
+    let addedNode: Node | null = null;
+    let nodeDiff: NodeDiff | null = null;
     if (update == null) {
-      addedNode = node
+      addedNode = node;
     } else {
-      [addedNode, nodeDiff] = handleUpdate(node, update)
+      [addedNode, nodeDiff] = handleUpdate(node, update);
     }
 
-    if (nodeDiff) nodeDiffs.push(nodeDiff)
-    
+    if (nodeDiff) nodeDiffs.push(nodeDiff);
+
     if (addedNode) {
-      afterbound.push(addedNode)
+      afterbound.push(addedNode);
       if (isBoundary(addedNode)) {
-        buckets.push(createBucket(bucket.prefix, afterbound.splice(0), codec, hasher))
+        buckets.push(
+          createBucket(bucket.prefix, afterbound.splice(0), codec, hasher),
+        );
       }
     }
   }
 
   if (isHead && leftovers.length > 0) {
-    buckets.push(createBucket(bucket.prefix, leftovers.splice(0), codec, hasher))
+    buckets.push(
+      createBucket(bucket.prefix, leftovers.splice(0), codec, hasher),
+    );
   }
 
-  return [buckets, afterbound, nodeDiffs]
+  return [buckets, afterbound, nodeDiffs];
 };
 
 export async function* mutateTree<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  updates: Update<Ops, number>[]
+  updates: Update<Ops, number>[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let diffs = createProllyTreeDiff<Code, Alg>();
 
@@ -145,10 +150,10 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         await moveToTupleOnLevel(
           cursorState,
           updates[0].value,
-          updates[0].level
+          updates[0].level,
         );
       } else {
-        await moveToNextBucket(cursorState)
+        await moveToNextBucket(cursorState);
       }
 
       updatee = bucketOf(cursorState);
@@ -160,7 +165,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         prefixWithLevel(tree.root.prefix, level),
         [],
         tree.getCodec(),
-        tree.getHasher()
+        tree.getHasher(),
       );
       visitedLevelTail = true;
       visitedLevelHead = true;
@@ -173,8 +178,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         0,
         findFailure(
           updates,
-          (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0
-        )
+          (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0,
+        ),
       ),
       tree.getCodec(),
       tree.getHasher(),
@@ -195,7 +200,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         diffs.buckets.push([updatee, null]);
       }
       diffs.buckets.push(
-        ...buckets.map((b): BucketDiff<Code, Alg> => [null, b])
+        ...buckets.map((b): BucketDiff<Code, Alg> => [null, b]),
       );
 
       updates.push(
@@ -204,8 +209,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
             op: "add",
             level: level + 1,
             value: lastElement(b.nodes),
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -218,8 +223,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
           0,
           findFailure(
             diffs.nodes,
-            (d) => compareTuples(d[0] ?? d[1], boundary) <= 0
-          )
+            (d) => compareTuples(d[0] ?? d[1], boundary) <= 0,
+          ),
         ),
         // all bucket diffs
         buckets: diffs.buckets.splice(0, diffs.buckets.length),
@@ -234,7 +239,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     diffs.buckets.push(
       ...cursorState.currentBuckets
         .slice(0, cursorState.currentBuckets.length - level)
-        .map((b): BucketDiff<Code, Alg> => [b, null])
+        .map((b): BucketDiff<Code, Alg> => [b, null]),
     );
   }
   yield diffs;

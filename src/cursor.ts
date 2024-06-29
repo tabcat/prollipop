@@ -98,7 +98,6 @@ export const getIsHead = <Code extends number, Alg extends number>(
 ): boolean => getIsExtremity(state, lastElement);
 
 const cursorErrorCodesList = [
-  "UNKNOWN_DIRECTION",
   "LEVEL_IS_NEGATIVE",
   "LEVEL_EXCEEDS_ROOT",
   "LEVELS_MUST_BE_UNEQUAL",
@@ -111,31 +110,15 @@ export const cursorErrorCodes: { [key in CursorErrorCode]: CursorErrorCode } =
     [key in CursorErrorCode]: CursorErrorCode;
   };
 
-const NEXT = "next" as const;
-const PREV = "prev" as const;
-type Direction = typeof NEXT | typeof PREV;
-
 /**
- * Returns whether moving in a direction will overflow the bucket.
+ * Returns whether increasing the currentIndex will overflow the bucket.
  *
  * @param state - the state of the cursor
- * @param direction - the direction to move the cursor
  * @returns
  */
 const overflows = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  direction: Direction,
-): boolean => {
-  if (direction === NEXT) {
-    return state.currentIndex === bucketOf(state).nodes.length - 1;
-  }
-
-  if (direction === PREV) {
-    return state.currentIndex === 0;
-  }
-
-  throw new Error("unknown direction");
-};
+): boolean => state.currentIndex === bucketOf(state).nodes.length - 1;
 
 export const moveToLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -154,8 +137,8 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     throw new Error("should only be used when having to change levels");
   }
 
-  // tuple to use as direction
-  const target = _target ?? nodeOf(state)
+  // tuple to use as guide
+  const target = _target ?? nodeOf(state);
 
   const stateCopy: CursorState<Code, Alg> = { ...state };
 
@@ -170,7 +153,10 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
       );
     } else {
       // walk to level
-      const digest = ithElement(bucketOf(state).nodes, stateCopy.currentIndex).message;
+      const digest = ithElement(
+        bucketOf(state).nodes,
+        stateCopy.currentIndex,
+      ).message;
 
       stateCopy.currentBuckets.push(
         await loadBucket(
@@ -191,13 +177,12 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  direction: Direction,
 ): Promise<void> => {
   const stateCopy = { ...state };
 
-  // find a level which allows for moving in that direction
-  while (overflows(stateCopy, direction)) {
-    // cannot move next anymore, so done
+  // find a level which allows increasing currentIndex
+  while (overflows(stateCopy)) {
+    // cannot increase currentIndex anymore, so done
     if (stateCopy.currentBuckets.length === 1) {
       state.isDone = true;
       return;
@@ -206,13 +191,7 @@ export const moveSideways = async <Code extends number, Alg extends number>(
     await moveToLevel(stateCopy, levelOf(stateCopy) + 1);
   }
 
-  if (direction === NEXT) {
-    stateCopy.currentIndex += 1;
-  } else if (direction === PREV) {
-    stateCopy.currentIndex -= 1;
-  } else {
-    throw new Error("unknown direction given");
-  }
+  stateCopy.currentIndex += 1;
 
   // get back to same level
   while (levelOf(stateCopy) !== levelOf(state)) {
@@ -259,14 +238,13 @@ export const moveToNextBucket = async <Code extends number, Alg extends number>(
 
   stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
-  await moveSideways(stateCopy, NEXT);
+  await moveSideways(stateCopy);
 
   Object.assign(state, stateCopy);
 };
 
 const createNextOnLevel =
   <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>
-  (direction: Direction, minTuple: Tuple) =>
   async (level: number): Promise<void> => {
     if (level > rootLevelOf(state)) {
       state.isDone = true;
@@ -280,25 +258,22 @@ const createNextOnLevel =
       await moveToLevel(stateCopy, level);
     }
 
-    await moveSideways(stateCopy, direction);
+    await moveSideways(stateCopy);
 
     if (levelOf(stateCopy) !== levelOf(state)) {
-      await moveToLevel(stateCopy, levelOf(state), minTuple);
+      await moveToLevel(stateCopy, levelOf(state), {
+        timestamp: 0,
+        hash: new Uint8Array(nodeOf(state).hash.length),
+      });
     }
 
     Object.assign(state, stateCopy);
   };
 
-export const minTuples = {
-  [NEXT]: { timestamp: 0, hash: new Uint8Array(32) },
-  [PREV]: { timestamp: Infinity, hash: Uint8Array.from(Array(32).fill([255])) },
-};
-
-export function createCursorFromState<
-  Code extends number,
-  Alg extends number,
->(state: CursorState<Code, Alg>): Cursor<Code, Alg> {
-  const nextAtLevel = createNextOnLevel(state)(NEXT, minTuples[NEXT]);
+export function createCursorFromState<Code extends number, Alg extends number>(
+  state: CursorState<Code, Alg>,
+): Cursor<Code, Alg> {
+  const nextAtLevel = createNextOnLevel(state);
 
   state.currentIndex = bucketOf(state).nodes.length - 1;
 

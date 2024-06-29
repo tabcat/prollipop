@@ -19,10 +19,10 @@ import { ithElement, toReversed } from "./util.js";
  *   compareTuples(left.current(), right.current()) !== 0
  *
  */
-async function fastForwardUntilUnequal<
-  Code extends number,
-  Alg extends number,
->(left: Cursor<Code, Alg>, right: Cursor<Code, Alg>): Promise<void> {
+async function fastForwardUntilUnequal<Code extends number, Alg extends number>(
+  left: Cursor<Code, Alg>,
+  right: Cursor<Code, Alg>,
+): Promise<void> {
   while (!left.done() && !right.done()) {
     if (compareTuples(left.current(), right.current()) !== 0) {
       return;

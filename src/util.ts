@@ -3,7 +3,12 @@ import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { ByteView, SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
-import { EncodedBucket, TreeCodec, decodeBucket, encodeBucket } from "./codec.js";
+import {
+  EncodedBucket,
+  TreeCodec,
+  decodeBucket,
+  encodeBucket,
+} from "./codec.js";
 import { DefaultBucket, DefaultProllyTree } from "./impls.js";
 import { Bucket, Node, Prefix, ProllyTree, Tuple } from "./interface.js";
 

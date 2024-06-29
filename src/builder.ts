@@ -151,7 +151,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         await moveToTupleOnLevel(
           cursorState,
           firstElement(updates).value,
-          firstElement(updates).level
+          firstElement(updates).level,
         );
       } else {
         await moveToNextBucket(cursorState);
@@ -233,7 +233,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     }
   }
 
-  tree.root = firstElement(newBuckets)
+  tree.root = firstElement(newBuckets);
 
   if (level < rootLevelOf(cursorState)) {
     // add all higher level buckets in path to removed

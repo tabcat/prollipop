@@ -1,3 +1,4 @@
+import type { CodeError } from "code-err";
 import { describe, expect, it } from "vitest";
 import {
   INSUFFICIENT_HASH_LENGTH,
@@ -5,7 +6,6 @@ import {
   isBoundaryHash,
   isBoundaryNode,
 } from "../src/boundaries.js";
-import type { CodeError } from "code-err";
 
 const average = 2;
 const limit = MAX_UINT32 / average;

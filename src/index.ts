@@ -4,12 +4,9 @@ import { decode, decodeFirst, encode } from "cborg";
 import { Blockstore } from "interface-blockstore";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
-import {
-  MultihashDigest,
-  SyncMultihashHasher,
-} from "multiformats/interface";
+import { MultihashDigest, SyncMultihashHasher } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
-import { TreeCodec, handleBuffer} from "./codec.js";
+import { TreeCodec, handleBuffer } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";

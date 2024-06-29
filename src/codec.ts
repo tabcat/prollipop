@@ -10,6 +10,7 @@ import type {
 } from "multiformats";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
+import { CodeError } from "code-err";
 
 export type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
@@ -42,13 +43,29 @@ export function encodeNode<Code extends number, Alg extends number>(
   return codec.encode([timestamp, hash, message]);
 }
 
+export const UNEXPECTED_NODE_FORMAT = 'UNEXPECTED_NODE_FORMAT'
+
 export function decodeNodeFirst<Code extends number, Alg extends number>(
   bytes: Uint8Array,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code, Alg>
 ): [DefaultNode, Uint8Array] {
   const [node, remainder]: [EncodedNode, Uint8Array] = codec.decodeFirst(bytes);
 
-  // do verification on decoded here
+  if (!Array.isArray(node)) {
+    throw new CodeError('expected decoded node to be an array', { code: UNEXPECTED_NODE_FORMAT })
+  }
+
+  if (typeof node[0] !== "number") {
+    throw new CodeError('expected node timestamp field to be a number', { code: UNEXPECTED_NODE_FORMAT })
+  }
+
+  if (!(node[1] instanceof Uint8Array)) {
+    throw new CodeError('expected node hash field to be a byte array', { code: UNEXPECTED_NODE_FORMAT })
+  }
+
+  if (!(node[2] instanceof Uint8Array)) {
+    throw new CodeError('expected node message field to be a byte array', { code: UNEXPECTED_NODE_FORMAT })
+  }
 
   return [new DefaultNode(...node), remainder];
 }
@@ -92,6 +109,10 @@ export function encodeBucket<Code extends number, Alg extends number>(
   return encodedBucket;
 }
 
+export const UNEXPECTED_BUCKET_FORMAT = 'UNEXPECTED_BUCKET_FORMAT'
+export const UNEXPECTED_CODEC = 'UNEXPECTED_CODEC'
+export const UNEXPECTED_HASHER = 'UNEXPECTED_HASHER'
+
 export function decodeBucket<Code extends number, Alg extends number>(
   bytes: Uint8Array,
   codec: TreeCodec<Code, Alg>,
@@ -106,6 +127,32 @@ export function decodeBucket<Code extends number, Alg extends number>(
 
   // do some verification here
   const prefix: Prefix<Code, Alg> = decoded[0];
+
+  if (typeof prefix !== 'object') {
+    throw new CodeError('expected decoded prefix to be an object', { code: UNEXPECTED_BUCKET_FORMAT })
+  }
+
+  if (typeof prefix.average !== 'number') {
+    throw new CodeError('expected prefix average field to be a number', { code: UNEXPECTED_BUCKET_FORMAT })
+  }
+
+  if (typeof prefix.level !== 'number') {
+    throw new CodeError('expected prefix level field to be a number', { code: UNEXPECTED_BUCKET_FORMAT })
+  }
+
+  if (typeof prefix.mc !== 'number') {
+    throw new CodeError('expected prefix mc field to be a number', { code: UNEXPECTED_BUCKET_FORMAT })
+    if (prefix.mc !== codec.code) {
+      throw new CodeError(`expected codec code to be ${codec.code}. observed code: ${codec.code}`, { code: UNEXPECTED_CODEC })
+    }
+  }
+
+  if (typeof prefix.mh !== 'number') {
+    throw new CodeError('expected prefix mh field to be a number', { code: UNEXPECTED_BUCKET_FORMAT })
+    if (prefix.mh !== hasher.code) {
+      throw new CodeError(`expected hasher code to be ${hasher.code}. observed code: ${hasher.code}`, { code: UNEXPECTED_HASHER })
+    }
+  }
 
   const nodes: Node[] = [];
 

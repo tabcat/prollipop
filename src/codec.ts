@@ -23,7 +23,7 @@ interface BlockCodecPlus<Code extends number, Universe = any>
   code: Code;
   encode<T extends Universe>(data: T): ByteView<T>;
   decode<T extends Universe>(bytes: Bytes<T>): T;
-  decodeFirst(bytes: Uint8Array): [any, Uint8Array]; // checks if U is a tuple or an array
+  decodeFirst(bytes: Uint8Array): [any, Uint8Array];
 }
 
 export interface TreeCodec<Code extends number, Alg extends number>

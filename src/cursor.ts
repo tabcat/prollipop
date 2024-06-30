@@ -10,7 +10,7 @@ import {
   lastElement,
   loadBucket,
   prefixWithLevel,
-} from "./util.js";
+} from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;

@@ -26,7 +26,7 @@ import {
   firstElement,
   lastElement,
   prefixWithLevel,
-} from "./util.js";
+} from "./utils.js";
 
 type Ops = "rm" | "add";
 export interface Update<Op extends Ops = Ops, Level extends number = number> {

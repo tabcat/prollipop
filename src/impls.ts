@@ -2,7 +2,7 @@ import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
-import { bucketDigestToCid } from "./util.js";
+import { bucketDigestToCid } from "./utils.js";
 
 export class DefaultNode implements Node {
   constructor(

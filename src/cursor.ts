@@ -1,16 +1,10 @@
+import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { CID, SyncMultihashHasher } from "multiformats";
 import { TreeCodec } from "./codec.js";
 import { compareTuples, findIndexGTE } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import {
-  bucketDigestToCid,
-  firstElement,
-  ithElement,
-  lastElement,
-  loadBucket,
-  prefixWithLevel,
-} from "./utils.js";
+import { bucketDigestToCid, loadBucket, prefixWithLevel } from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;

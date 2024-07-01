@@ -1,3 +1,4 @@
+import { firstElement, lastElement } from "@tabcat/ith-element";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
@@ -20,13 +21,7 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import {
-  createBucket,
-  findFailure,
-  firstElement,
-  lastElement,
-  prefixWithLevel,
-} from "./utils.js";
+import { createBucket, findFailure, prefixWithLevel } from "./utils.js";
 
 type Ops = "rm" | "add";
 export interface Update<Op extends Ops = Ops, Level extends number = number> {

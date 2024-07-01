@@ -27,6 +27,7 @@
   "dependencies": {
     "@ipld/dag-cbor": "^9.2.0",
     "@noble/hashes": "^1.3.3",
+    "@tabcat/ith-element": "^1.0.1",
     "@tabcat/ordered-sets": "^4.0.2",
     "cborg": "^4.1.0",
     "code-err": "^3.1.0",

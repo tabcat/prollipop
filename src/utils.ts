@@ -10,7 +10,7 @@ import {
   encodeBucket,
 } from "./codec.js";
 import { DefaultBucket, DefaultProllyTree } from "./impls.js";
-import { Bucket, Node, Prefix, ProllyTree, Tuple } from "./interface.js";
+import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 
 /**
  * Returns the index of the first element to fail a test.
@@ -50,20 +50,6 @@ export const prefixWithLevel = <Code extends number, Alg extends number>(
 ): Prefix<Code, Alg> => ({
   ...prefix,
   level,
-});
-
-export const matchingPrefixes =
-  <Code extends number, Alg extends number>(
-    codec?: TreeCodec<Code, Alg>,
-    hasher?: SyncMultihashHasher<Alg>,
-  ) =>
-  (prefix: Prefix<Code, Alg>): boolean =>
-    (codec == null || codec.code === prefix.mc) &&
-    (hasher == null || hasher.code === prefix.mh);
-
-export const extractTuple = ({ timestamp, hash }: Tuple): Tuple => ({
-  timestamp,
-  hash,
 });
 
 export const bucketDigestToCid =

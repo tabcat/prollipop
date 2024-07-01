@@ -5,12 +5,13 @@
  * (code, comments) have been scraped from the article and turned into (typescript, jsdoc) format.
  */
 
+import { ithElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import type { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
-import { ithElement, toReversed } from "./utils.js";
+import { toReversed } from "./utils.js";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.

@@ -1,3 +1,7 @@
+# Prollipop 🍭
+
+A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) implementation in Typescript.
+
 ## Project Status
 
 Not working yet! But working on it daily.

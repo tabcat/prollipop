@@ -1,10 +1,11 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { CID, SyncMultihashHasher } from "multiformats";
+import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
 import { compareTuples, findIndexGTE } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { bucketDigestToCid, loadBucket, prefixWithLevel } from "./utils.js";
+import { loadBucket, prefixWithLevel } from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
@@ -62,18 +63,21 @@ export const lastOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Node => lastElement(bucketOf(state).nodes);
 
-const getIsExtremity = <Code extends number, Alg extends number>(
+export const getIsExtremity = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  findExtemity: (nodes: Node[]) => Node,
+  findExtemity: (nodes: Node[]) => Node, // firstElement or lastElement
 ): boolean => {
-  const currentBucketsItorator = state.currentBuckets[Symbol.iterator]();
+  let lastBucket: Bucket<Code, Alg> | null = null;
+  let i = state.currentBuckets.length - 1;
 
-  let lastBucket: Bucket<Code, Alg> = currentBucketsItorator.next().value;
-  for (const bucket of currentBucketsItorator) {
+  // traverse from level 0
+  while (i >= 0) {
+    const bucket = ithElement(state.currentBuckets, i);
+
+    // skips level 0
     if (
-      !bucketDigestToCid(lastBucket.prefix)(
-        findExtemity(lastBucket.nodes).message,
-      ).equals(bucket.getCID())
+      lastBucket != null &&
+      compare(findExtemity(bucket.nodes).message, lastBucket.getHash())
     ) {
       return false;
     }

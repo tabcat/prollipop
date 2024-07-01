@@ -16,6 +16,7 @@ mods:
 
 - [Prolly Trees](https://www.dolthub.com/blog/2024-03-03-prolly-trees/)
   - author: [Tim Sehn](https://github.com/timsehn)
+  - implementation: [dolt](https://github.com/dolthub/dolt)
   - relevance: great introduction to prolly-trees
 
 - [Prolly Tree PoC and technical writeup](https://github.com/waku-org/research/issues/78)
@@ -35,7 +36,7 @@ mods:
 
 - [Range-Based Set Reconciliation](https://logperiodic.com/rbsr.html)
   - author: [Doug Hoyte](https://hoytech.com/about)
-  - relevance: Negantrophy section uses [number, hash] tuples
+  - relevance: Negantrophy section uses [number, hash] tuples as keys
 
 ### Additional Resources:
 

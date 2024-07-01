@@ -11,7 +11,6 @@ import type { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
-import { toReversed } from "./utils.js";
 
 /**
  * Advances left and right cursors until one of them is done or they are no longer equal.
@@ -53,7 +52,7 @@ function greatestMatchingLevelForPaths(left: CID[], right: CID[]): number {
   let ri = right.length - 1;
 
   while (li >= 0 && ri >= 0) {
-    if (!ithElement(left, li).equals(right[ri])) {
+    if (!ithElement(left, li).equals(ithElement(right, ri))) {
       break;
     }
 
@@ -106,8 +105,8 @@ const getUnmatched = <Code extends number, Alg extends number>(
 ): Bucket<Code, Alg>[] =>
   last.slice(
     -greatestMatchingLevelForPaths(
-      toReversed(last).map(getBucketCID),
-      toReversed(current).map(getBucketCID),
+      last.map(getBucketCID),
+      current.map(getBucketCID),
     ) - 1,
   );
 

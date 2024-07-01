@@ -13,18 +13,6 @@ import { DefaultBucket, DefaultProllyTree } from "./impls.js";
 import { Bucket, Node, Prefix, ProllyTree, Tuple } from "./interface.js";
 
 /**
- * Returns the reverse as a new array.
- *
- * @param array
- * @returns
- */
-export const toReversed = <T>(array: Array<T>): Array<T> => {
-  const newArray = Array.from(array);
-  newArray.reverse();
-  return newArray;
-};
-
-/**
  * Returns the index of the first element to fail a test.
  * If no failure is found then return the length of the array.
  *

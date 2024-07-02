@@ -4,6 +4,7 @@ import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
+import { levelExceedsRoot, levelIsNegative } from "./errors.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { findFailure, loadBucket, prefixWithLevel } from "./utils.js";
 
@@ -95,19 +96,6 @@ export const getIsHead = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): boolean => getIsExtremity(state, lastElement);
 
-const cursorErrorCodesList = [
-  "LEVEL_IS_NEGATIVE",
-  "LEVEL_EXCEEDS_ROOT",
-  "LEVELS_MUST_BE_UNEQUAL",
-] as const;
-
-type CursorErrorCode = (typeof cursorErrorCodesList)[number];
-
-export const cursorErrorCodes: { [key in CursorErrorCode]: CursorErrorCode } =
-  Object.fromEntries(cursorErrorCodesList.map((code) => [code, code])) as {
-    [key in CursorErrorCode]: CursorErrorCode;
-  };
-
 /**
  * Returns whether increasing the currentIndex will overflow the bucket.
  *
@@ -124,15 +112,11 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
   _target?: Tuple,
 ): Promise<void> => {
   if (levelOf(state) < 0) {
-    throw new Error("no negative levels");
+    throw levelIsNegative();
   }
 
   if (level > rootLevelOf(state)) {
-    throw new Error("level is higher than level of tree root");
-  }
-
-  if (level === levelOf(state)) {
-    throw new Error("should only be used when having to change levels");
+    throw levelExceedsRoot(level, rootLevelOf(state));
   }
 
   // tuple to use as guide

@@ -2,6 +2,7 @@ import { CodeError } from "code-err";
 import {
   ERR_NOT_FOUND,
   INSUFFICIENT_HASH_LENGTH,
+  INVALID_LEVEL,
   UNEXPECTED_BUCKET_FORMAT,
   UNEXPECTED_BUCKET_HASH,
   UNEXPECTED_BUCKET_LEVEL,
@@ -49,3 +50,11 @@ export const insufficientHashLength = (length: number) =>
     `Hash must be at least 4 bytes in length. Recieved hash with length ${length}`,
     { code: INSUFFICIENT_HASH_LENGTH },
   );
+
+export const levelIsNegative = () =>
+  new CodeError("Levels cannot be negative.", { code: INVALID_LEVEL });
+
+export const levelExceedsRoot = (level: number, root: number) =>
+  new CodeError(`Level, ${level}, exceeds the root level, ${root}.`, {
+    code: INVALID_LEVEL,
+  });

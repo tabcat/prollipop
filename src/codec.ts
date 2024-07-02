@@ -2,12 +2,18 @@
  * Encoding/decoding of nodes and buckets
  */
 
-import { CodeError } from "code-err";
 import type {
   ArrayBufferView,
   ByteView,
   SyncMultihashHasher,
 } from "multiformats";
+import {
+  unexpectedBucketFormat,
+  unexpectedCodec,
+  unexpectedHasher,
+  unexpectedNodeFormat,
+  unexpectedPrefixFormat,
+} from "./errors.js";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 
@@ -42,43 +48,36 @@ export function encodeNode<Code extends number, Alg extends number>(
   return codec.encode([timestamp, hash, message]);
 }
 
-export const UNEXPECTED_NODE_FORMAT = "UNEXPECTED_NODE_FORMAT";
-
 export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
   if (!Array.isArray(encodedNode)) {
-    throw new CodeError("expected decoded node to be an array", {
-      code: UNEXPECTED_NODE_FORMAT,
-    });
+    throw unexpectedNodeFormat("Expected encoded node to an array.");
   }
 
   const [timestamp, hash, message] = encodedNode as Partial<EncodedNode>;
 
   if (typeof timestamp !== "number") {
-    throw new CodeError("expected node timestamp field to be a number", {
-      code: UNEXPECTED_NODE_FORMAT,
-    });
+    throw unexpectedNodeFormat("Expected node timestamp field to be a number.");
   }
 
   if (!(hash instanceof Uint8Array)) {
-    throw new CodeError("expected node hash field to be a byte array", {
-      code: UNEXPECTED_NODE_FORMAT,
-    });
+    throw unexpectedNodeFormat("Expected node hash field to be a byte array.");
   }
 
   if (!(message instanceof Uint8Array)) {
-    throw new CodeError("expected node message field to be a byte array", {
-      code: UNEXPECTED_NODE_FORMAT,
-    });
+    throw unexpectedNodeFormat(
+      "Expected node message field to be a byte array.",
+    );
   }
 
-  return [timestamp, hash, message]
-}
+  return [timestamp, hash, message];
+};
 
 export function decodeNodeFirst<Code extends number, Alg extends number>(
   bytes: Uint8Array,
   codec: TreeCodec<Code, Alg>,
 ): [DefaultNode, Uint8Array] {
-  const [encodedNode, remainder]: [unknown, Uint8Array] = codec.decodeFirst(bytes);
+  const [encodedNode, remainder]: [unknown, Uint8Array] =
+    codec.decodeFirst(bytes);
 
   return [new DefaultNode(...getValidatedEncodedNode(encodedNode)), remainder];
 }
@@ -122,57 +121,39 @@ export function encodeBucket<Code extends number, Alg extends number>(
   return encodedBucket;
 }
 
-export const UNEXPECTED_BUCKET_FORMAT = "UNEXPECTED_BUCKET_FORMAT";
-export const UNEXPECTED_CODEC = "UNEXPECTED_CODEC";
-export const UNEXPECTED_HASHER = "UNEXPECTED_HASHER";
-
 export const getValidatedPrefix = <Code extends number, Alg extends number>(
   prefix: unknown,
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
 ): Prefix<Code, Alg> => {
   if (typeof prefix !== "object") {
-    throw new CodeError("expected decoded prefix to be an object", {
-      code: UNEXPECTED_BUCKET_FORMAT,
-    });
+    throw unexpectedBucketFormat("Expected bucket prefix to be an object.");
   }
 
   const { average, level, mc, mh } = prefix as Partial<Prefix<Code, Alg>>;
 
   if (typeof average !== "number") {
-    throw new CodeError("expected prefix average field to be a number", {
-      code: UNEXPECTED_BUCKET_FORMAT,
-    });
+    throw unexpectedPrefixFormat(
+      "Expected prefix average field to be a number",
+    );
   }
 
   if (typeof level !== "number") {
-    throw new CodeError("expected prefix level field to be a number", {
-      code: UNEXPECTED_BUCKET_FORMAT,
-    });
+    throw unexpectedPrefixFormat("expected prefix level field to be a number");
   }
 
   if (typeof mc !== "number") {
-    throw new CodeError("expected prefix mc field to be a number", {
-      code: UNEXPECTED_BUCKET_FORMAT,
-    });
+    throw unexpectedPrefixFormat("expected prefix mc field to be a number");
   }
-  if (mc !== codec.code) {
-    throw new CodeError(
-      `expected codec code to be ${codec.code}. observed code: ${codec.code}`,
-      { code: UNEXPECTED_CODEC },
-    );
+  if (codec.code !== mc) {
+    unexpectedCodec(codec.code, mc);
   }
 
   if (typeof mh !== "number") {
-    throw new CodeError("expected prefix mh field to be a number", {
-      code: UNEXPECTED_BUCKET_FORMAT,
-    });
+    throw unexpectedPrefixFormat("expected prefix mh field to be a number");
   }
-  if (mh !== hasher.code) {
-    throw new CodeError(
-      `expected hasher code to be ${hasher.code}. observed code: ${hasher.code}`,
-      { code: UNEXPECTED_HASHER },
-    );
+  if (hasher.code !== mh) {
+    throw unexpectedHasher(hasher.code, mh);
   }
 
   return { average, level, mc, mh };
@@ -197,7 +178,7 @@ export function decodeBucket<Code extends number, Alg extends number>(
     try {
       [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1], codec);
     } catch (e) {
-      console.error('')
+      console.error("");
       throw new Error("error decoding nodes from bucket");
     }
   }

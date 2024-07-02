@@ -100,7 +100,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
   const bucket = decodeBucket(bytes, codec, hasher);
 
   if (bucket.prefix.level !== expectedPrefix.level) {
-    throw unexpectedBucketLevel();
+    throw unexpectedBucketLevel(bucket.prefix.level, expectedPrefix.level);
   }
 
   if (compareBytes(hash, bucket.getHash()) !== 0) {

@@ -107,7 +107,7 @@ describe("utils", () => {
             cborTreeCodec,
             sha256SyncHasher,
           ),
-      ).rejects.toMatchObject(unexpectedBucketLevel());
+      ).rejects.toMatchObject(unexpectedBucketLevel(0, 1));
     });
 
     it("throws if bucket hash does not match requested hash", () => {

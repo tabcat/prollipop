@@ -5,10 +5,14 @@ import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { EncodedNode } from "../../src/codec.js";
 import { DefaultBucket, DefaultNode } from "../../src/impls.js";
 import {
+  cborTreeCodec,
+  sha256SyncHasher,
   sha256SyncHasher as syncHasher,
   cborTreeCodec as treeCodec,
 } from "../../src/index.js";
 import { Bucket, Prefix } from "../../src/interface.js";
+import { MemoryBlockstore } from "blockstore-core";
+import { createProllyTree } from "./tree.js";
 
 // nodes
 export const timestamp = 0;
@@ -47,3 +51,13 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefixBytes,
   syncHasher.digest(prefixBytes).digest,
 );
+
+export const blockstore = new MemoryBlockstore();
+const treeNodes = Array(30)
+  .fill(0)
+  .map((_, i) => ({
+    timestamp: i,
+    hash: new Uint8Array(Array(4).fill(i)),
+    message: new Uint8Array(Array(4).fill(i)),
+  }));
+export const tree = createProllyTree(blockstore, prefix, treeNodes, cborTreeCodec, sha256SyncHasher);

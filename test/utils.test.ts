@@ -24,7 +24,7 @@ import {
   emptyBucket,
   node,
   prefix,
-} from "./constants.js";
+} from "./helpers/constants.js";
 
 describe("utils", () => {
   describe("findFailure", () => {

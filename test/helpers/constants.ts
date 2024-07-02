@@ -1,14 +1,14 @@
 import { encodeOptions } from "@ipld/dag-cbor";
 import * as cbor from "cborg";
-import { EncodedNode } from "../src/codec.js";
-import { DefaultBucket, DefaultNode } from "../src/impls.js";
+import { CID } from "multiformats/cid";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import { EncodedNode } from "../../src/codec.js";
+import { DefaultBucket, DefaultNode } from "../../src/impls.js";
 import {
   sha256SyncHasher as syncHasher,
   cborTreeCodec as treeCodec,
-} from "../src/index.js";
-import { Bucket, Prefix } from "../src/interface.js";
-import { CID } from "multiformats/cid";
-import { create as createMultihashDigest } from 'multiformats/hashes/digest'
+} from "../../src/index.js";
+import { Bucket, Prefix } from "../../src/interface.js";
 
 // nodes
 export const timestamp = 0;
@@ -23,7 +23,7 @@ export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 export type Mc = typeof treeCodec.code;
 export type Mh = typeof syncHasher.code;
 export const prefix: Prefix<Mc, Mh> = {
-  average: 1,
+  average: 4,
   level: 0,
   mc: treeCodec.code,
   mh: syncHasher.code,
@@ -31,7 +31,10 @@ export const prefix: Prefix<Mc, Mh> = {
 export const prefixBytes = cbor.encode(prefix, encodeOptions);
 export const bucketBytes = new Uint8Array([...prefixBytes, ...nodeBytes]);
 export const bucketHash = syncHasher.digest(bucketBytes).digest;
-export const bucketCid = CID.createV1(treeCodec.code, createMultihashDigest(syncHasher.code, bucketHash))
+export const bucketCid = CID.createV1(
+  treeCodec.code,
+  createMultihashDigest(syncHasher.code, bucketHash),
+);
 export const bucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
   [node],
@@ -42,5 +45,5 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
   [],
   prefixBytes,
-  syncHasher.digest(prefixBytes).digest
-)
+  syncHasher.digest(prefixBytes).digest,
+);

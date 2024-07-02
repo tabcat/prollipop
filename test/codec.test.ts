@@ -20,7 +20,7 @@ import {
   nodeBytes2,
   prefix,
   timestamp,
-} from "./constants.js";
+} from "./helpers/constants.js";
 
 describe("codec", () => {
   describe("handleBuffer", () => {

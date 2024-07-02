@@ -22,30 +22,3 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 };
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
-
-/**
- * Returns the index of the first node which is greater than or equal to the given tuple.
- * If no nodes exist which are greater than or equal to the given tuple then it returns the last index.
- *
- * @param nodes
- * @param tuple
- * @returns
- */
-export const findIndexGTE = <T extends Tuple>(
-  nodes: T[],
-  tuple: Tuple,
-): number => {
-  let index: number = 0;
-
-  for (const node of nodes) {
-    const comparison = compareTuples(tuple, node);
-
-    if (comparison <= 0) {
-      return index;
-    }
-
-    index++;
-  }
-
-  return index - 1;
-};

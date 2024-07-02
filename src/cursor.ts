@@ -3,9 +3,9 @@ import type { Blockstore } from "interface-blockstore";
 import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
-import { compareTuples, findIndexGTE } from "./compare.js";
+import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { loadBucket, prefixWithLevel } from "./utils.js";
+import { findFailure, loadBucket, prefixWithLevel } from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
@@ -167,7 +167,8 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
       );
     }
 
-    stateCopy.currentIndex = findIndexGTE(bucketOf(state).nodes, target);
+    // set to index of node which is greater than or equal to target
+    stateCopy.currentIndex = findFailure(bucketOf(state).nodes, n => compareTuples(target, n) > 0);
   }
 
   Object.assign(state, stateCopy);

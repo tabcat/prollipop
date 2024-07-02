@@ -21,7 +21,7 @@ export const cborTreeCodec: TreeCodec<typeof dagCbor.code, typeof mh_sha256.code
     decodeFirst(handleBuffer(bytes), dagCbor.decodeOptions),
 };
 
-export const sha256Hasher: SyncMultihashHasher<typeof mh_sha256.code> = {
+export const sha256SyncHasher: SyncMultihashHasher<typeof mh_sha256.code> = {
   ...mh_sha256,
   digest: (input: Uint8Array): MultihashDigest<typeof mh_sha256.code> =>
     createMultihashDigest(mh_sha256.code, sha256(input)),
@@ -37,7 +37,7 @@ export function init(
     ...options,
   };
 
-  return createEmptyTree(cborTreeCodec, sha256Hasher, opts);
+  return createEmptyTree(cborTreeCodec, sha256SyncHasher, opts);
 }
 
 export function cloneTree<Code extends number, Alg extends number>(

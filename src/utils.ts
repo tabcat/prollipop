@@ -1,20 +1,20 @@
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { ByteView, SyncMultihashHasher } from "multiformats/interface";
+import { SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
+import { TreeCodec, decodeBucket, encodeBucket } from "./codec.js";
 import {
-  EncodedBucket,
-  TreeCodec,
-  decodeBucket,
-  encodeBucket,
-} from "./codec.js";
+  errNotFound,
+  unexpectedBucketHash,
+  unexpectedBucketLevel,
+} from "./errors.js";
 import { DefaultBucket, DefaultProllyTree } from "./impls.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 
 /**
  * Returns the index of the first element to fail a test.
- * If no failure is found then return the length of the array.
+ * If no failure is found then it returns the length of the array.
  *
  * @param array
  * @param test
@@ -86,31 +86,25 @@ export async function loadBucket<Code extends number, Alg extends number>(
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
 ): Promise<Bucket<Code, Alg>> {
-  let bytes: ByteView<EncodedBucket<Code, Alg>>;
+  let bytes: Uint8Array;
   try {
     bytes = await blockstore.get(bucketDigestToCid(expectedPrefix)(hash));
-  } catch {
-    throw new Error("data for bucket cid is missing");
+  } catch (e) {
+    if (e instanceof Error && e.message === "Not Found") {
+      throw errNotFound();
+    } else {
+      throw e;
+    }
   }
 
-  let bucket: Bucket<Code, Alg>;
-  try {
-    bucket = decodeBucket(bytes, codec, hasher);
-  } catch {
-    throw new Error("failed to decode bucket");
+  const bucket = decodeBucket(bytes, codec, hasher);
+
+  if (bucket.prefix.level !== expectedPrefix.level) {
+    throw unexpectedBucketLevel();
   }
 
   if (compareBytes(hash, bucket.getHash()) !== 0) {
-    throw new Error("mismatched hash");
-  }
-
-  if (
-    expectedPrefix.average !== bucket.prefix.average ||
-    expectedPrefix.level !== bucket.prefix.level ||
-    expectedPrefix.mc !== bucket.prefix.mc ||
-    expectedPrefix.mh !== bucket.prefix.mh
-  ) {
-    throw new Error("bucket has unexpected prefix");
+    throw unexpectedBucketHash();
   }
 
   return bucket;

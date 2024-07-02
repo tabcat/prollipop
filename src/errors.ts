@@ -1,6 +1,7 @@
 import { CodeError } from "code-err";
 import {
   ERR_NOT_FOUND,
+  INSUFFICIENT_HASH_LENGTH,
   UNEXPECTED_BUCKET_FORMAT,
   UNEXPECTED_BUCKET_HASH,
   UNEXPECTED_BUCKET_LEVEL,
@@ -43,4 +44,8 @@ export const unexpectedHasher = (code: number, expected: number) =>
     `Prefix multihasher code, ${code}, did not match expected code, ${expected}.`,
   );
 
-
+export const insufficientHashLength = (length: number) =>
+  new CodeError(
+    `Hash must be at least 4 bytes in length. Recieved hash with length ${length}`,
+    { code: INSUFFICIENT_HASH_LENGTH },
+  );

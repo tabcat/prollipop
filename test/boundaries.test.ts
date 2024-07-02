@@ -1,11 +1,10 @@
-import type { CodeError } from "code-err";
 import { describe, expect, it } from "vitest";
 import {
-  INSUFFICIENT_HASH_LENGTH,
   MAX_UINT32,
   isBoundaryHash,
   isBoundaryNode,
 } from "../src/boundaries.js";
+import { insufficientHashLength } from "../src/errors.js";
 
 const average = 2;
 const limit = MAX_UINT32 / average;
@@ -24,7 +23,7 @@ describe("isBoundaryHash", () => {
   it("throws if hash length is less than 4", () => {
     expect(() => isBoundaryHash(new Uint8Array(), limit))
       .to.throw()
-      .and.satisfy((err: CodeError) => err.code === INSUFFICIENT_HASH_LENGTH);
+      .and.deep.equals(insufficientHashLength(0));
   });
 });
 

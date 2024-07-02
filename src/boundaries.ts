@@ -1,9 +1,7 @@
-import { CodeError } from "code-err";
 import type { Node } from "./interface.js";
+import { insufficientHashLength } from "./errors.js";
 
 export const MAX_UINT32 = 2 ** 32 - 1;
-
-export const INSUFFICIENT_HASH_LENGTH = "INSUFFICIENT_HASH_LENGTH";
 
 /**
  * Returns true if hash meets 1/average threshold, false otherwise
@@ -18,9 +16,7 @@ export const INSUFFICIENT_HASH_LENGTH = "INSUFFICIENT_HASH_LENGTH";
  */
 export function isBoundaryHash(hash: Uint8Array, limit: number): boolean {
   if (hash.length < 4) {
-    throw new CodeError("Hash must be at least 4 bytes in length", {
-      code: INSUFFICIENT_HASH_LENGTH,
-    });
+    throw insufficientHashLength(hash.length)
   }
 
   return new DataView(hash.buffer, hash.byteOffset, 4).getUint32(0) < limit;

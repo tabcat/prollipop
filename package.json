@@ -8,6 +8,7 @@
   "files": [],
   "scripts": {
     "format": "prettier src test --write",
+    "build": "tsc",
     "test": "vitest --config vitest.config.ts"
   },
   "prettier": {

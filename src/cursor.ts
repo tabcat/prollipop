@@ -152,7 +152,10 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     }
 
     // set to index of node which is greater than or equal to target
-    stateCopy.currentIndex = findFailure(bucketOf(state).nodes, n => compareTuples(target, n) > 0);
+    stateCopy.currentIndex = findFailure(
+      bucketOf(state).nodes,
+      (n) => compareTuples(target, n) > 0,
+    );
   }
 
   Object.assign(state, stateCopy);

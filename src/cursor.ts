@@ -135,10 +135,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
       );
     } else {
       // walk to level
-      const digest = ithElement(
-        bucketOf(state).nodes,
-        stateCopy.currentIndex,
-      ).message;
+      const digest = nodeOf(stateCopy).message
 
       stateCopy.currentBuckets.push(
         await loadBucket(
@@ -184,7 +181,7 @@ export const moveSideways = async <Code extends number, Alg extends number>(
     await moveToLevel(
       stateCopy,
       levelOf(state),
-      bucketOf(state).nodes[state.currentIndex], // use original tuple as target
+      nodeOf(state), // use original tuple as target
     );
   }
 
@@ -263,9 +260,8 @@ export function createCursorFromState<Code extends number, Alg extends number>(
 
   state.currentIndex = bucketOf(state).nodes.length - 1;
 
-  if (firstElement(state.currentBuckets).nodes.length === 0) {
-    state.isDone = true;
-    state.currentIndex = -1; // keeps index equal to length - 1
+  if (state.currentIndex === -1) {
+    state.isDone = true
   }
 
   return {

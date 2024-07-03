@@ -4,7 +4,7 @@ import { SyncMultihashHasher } from "multiformats";
 import { isBoundaryNode } from "../../src/boundaries.js";
 import { TreeCodec, encodeBucket } from "../../src/codec.js";
 import { DefaultBucket, DefaultProllyTree } from "../../src/impls.js";
-import type { Bucket, Node, Prefix } from "../../src/interface.js";
+import type { Bucket, Node, Prefix, ProllyTree } from "../../src/interface.js";
 import { prefixWithLevel } from "../../src/utils.js";
 
 const levelOfNodes = <Code extends number, Alg extends number>(
@@ -19,6 +19,11 @@ const levelOfNodes = <Code extends number, Alg extends number>(
       level.push([]);
     }
   }
+
+  if (lastElement(level).length === 0) {
+    level.pop();
+  }
+
   return level;
 };
 
@@ -38,7 +43,7 @@ const nextLevelNodes = <Code extends number, Alg extends number>(
 ): Node[] => {
   const nodes: Node[] = [];
   for (const bucket of buckets) {
-    nodes.push(lastElement(bucket.nodes));
+    nodes.push({ ...lastElement(bucket.nodes), message: bucket.getHash() });
   }
   return nodes;
 };
@@ -49,7 +54,7 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   nodes: Node[],
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
-) => {
+): [ProllyTree<Code, Alg>, Bucket<Code, Alg>[][]] => {
   let level: number = 0;
   let nodeLevel = levelOfNodes(prefix, nodes);
   let bucketLevel = levelOfBuckets(
@@ -60,10 +65,15 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   );
   bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
 
+  const treeState: Bucket<Code, Alg>[][] = [bucketLevel];
+
   // tree has higher levels
   while (bucketLevel.length > 1) {
+    if (level >= 4) {
+      throw new Error('e')
+    }
     level++;
-    nodeLevel = levelOfNodes(prefix, nextLevelNodes(bucketLevel));
+    nodeLevel = levelOfNodes(prefixWithLevel(prefix, level), nextLevelNodes(bucketLevel));
     bucketLevel = levelOfBuckets(
       prefixWithLevel(prefix, level),
       nodeLevel,
@@ -71,7 +81,11 @@ export const createProllyTree = <Code extends number, Alg extends number>(
       hasher,
     );
     bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
+    treeState.push(bucketLevel);
   }
 
-  return new DefaultProllyTree(firstElement(bucketLevel), codec, hasher);
+  return [
+    new DefaultProllyTree(firstElement(bucketLevel), codec, hasher),
+    treeState,
+  ];
 };

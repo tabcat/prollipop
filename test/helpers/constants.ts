@@ -1,4 +1,5 @@
 import { encodeOptions } from "@ipld/dag-cbor";
+import { MemoryBlockstore } from "blockstore-core";
 import * as cbor from "cborg";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
@@ -11,8 +12,7 @@ import {
   cborTreeCodec as treeCodec,
 } from "../../src/index.js";
 import { Bucket, Prefix } from "../../src/interface.js";
-import { MemoryBlockstore } from "blockstore-core";
-import { createProllyTree } from "./tree.js";
+import { createProllyTree } from "./create-tree.js";
 
 // nodes
 export const timestamp = 0;
@@ -27,7 +27,7 @@ export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 export type Mc = typeof treeCodec.code;
 export type Mh = typeof syncHasher.code;
 export const prefix: Prefix<Mc, Mh> = {
-  average: 4,
+  average: 30,
   level: 0,
   mc: treeCodec.code,
   mh: syncHasher.code,
@@ -55,9 +55,20 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
 export const blockstore = new MemoryBlockstore();
 const treeNodes = Array(30)
   .fill(0)
-  .map((_, i) => ({
-    timestamp: i,
-    hash: new Uint8Array(Array(4).fill(i)),
-    message: new Uint8Array(Array(4).fill(i)),
-  }));
-export const tree = createProllyTree(blockstore, prefix, treeNodes, cborTreeCodec, sha256SyncHasher);
+  .map((_, i) => {
+    const hash = sha256SyncHasher.digest(
+      new Uint8Array(Array(32).fill(i)),
+    ).digest;
+    return {
+      timestamp: i,
+      hash,
+      message: hash,
+    };
+  });
+export const [tree, treeState] = createProllyTree(
+  blockstore,
+  prefix,
+  treeNodes,
+  cborTreeCodec,
+  sha256SyncHasher,
+);

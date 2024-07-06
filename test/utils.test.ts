@@ -86,8 +86,8 @@ describe("utils", () => {
     it("throws if bucket is not found in blockstore", () => {
       const blockstore = new MemoryBlockstore();
       expect(
-        async () =>
-          await loadBucket(
+        () =>
+          loadBucket(
             blockstore,
             bucketHash,
             prefix,
@@ -99,8 +99,8 @@ describe("utils", () => {
 
     it("throws if bucket level mismatches level of expected prefix", () => {
       expect(
-        async () =>
-          await loadBucket(
+        () =>
+          loadBucket(
             blockstore,
             bucketHash,
             { ...prefix, level: 1 },
@@ -114,8 +114,8 @@ describe("utils", () => {
       const blockstore = new MemoryBlockstore();
       blockstore.put(emptyBucket.getCID(), bucketBytes);
       expect(
-        async () =>
-          await loadBucket(
+        () =>
+          loadBucket(
             blockstore,
             emptyBucket.getHash(),
             prefix,

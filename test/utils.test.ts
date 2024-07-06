@@ -130,7 +130,7 @@ describe("utils", () => {
     it("returns an empty tree", () => {
       expect(
         createEmptyTree(cborTreeCodec, sha256SyncHasher, {
-          averageBucketSize: 1,
+          averageBucketSize: 30,
         }),
       ).to.deep.equal(
         new DefaultProllyTree(

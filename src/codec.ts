@@ -164,23 +164,13 @@ export function decodeBucket<Code extends number, Alg extends number>(
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
-  let decoded: [unknown, Uint8Array];
-  try {
-    decoded = codec.decodeFirst(bytes);
-  } catch (e) {
-    throw new Error("failed to decode bucket");
-  }
+  const decoded: [unknown, Uint8Array] = codec.decodeFirst(bytes);
 
   const prefix = getValidatedPrefix(decoded[0], codec, hasher);
 
   const nodes: Node[] = [];
   while (decoded[1].length > 0) {
-    try {
-      [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1], codec);
-    } catch (e) {
-      console.error("");
-      throw new Error("error decoding nodes from bucket");
-    }
+    [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1], codec);
   }
 
   return new DefaultBucket<Code, Alg>(

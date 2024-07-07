@@ -2,6 +2,7 @@ import { CodeError } from "code-err";
 import {
   ERR_NOT_FOUND,
   INSUFFICIENT_HASH_LENGTH,
+  INVALID_AVERAGE,
   INVALID_LEVEL,
   UNEXPECTED_BUCKET_FORMAT,
   UNEXPECTED_BUCKET_HASH,
@@ -12,6 +13,17 @@ import {
 
 export const errNotFound = () =>
   new CodeError("Not Found.", { code: ERR_NOT_FOUND });
+
+export const averageLessThanOne = (average: number) =>
+  new CodeError(`Average must not be less than one. Received: ${average}`, {
+    code: INVALID_AVERAGE,
+  });
+
+export const averageNotWhole = (average: number) =>
+  new CodeError(`Average must be a whole number. Received ${average}`, { code: INVALID_AVERAGE });
+
+export const averageExceedsMax = (average: number) =>
+  new CodeError(`Average exceeds max uint32. Received ${average}`, { code: INVALID_AVERAGE });
 
 export const unexpectedBucketHash = () =>
   new CodeError("Bucket hash did not match requested bucket hash.", {
@@ -56,5 +68,10 @@ export const levelIsNegative = () =>
 
 export const levelExceedsRoot = (level: number, root: number) =>
   new CodeError(`Level, ${level}, exceeds the root level, ${root}.`, {
+    code: INVALID_LEVEL,
+  });
+
+export const levelMustChange = (level: number) =>
+  new CodeError(`Cursor is already at level ${level}.`, {
     code: INVALID_LEVEL,
   });

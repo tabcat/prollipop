@@ -1,5 +1,10 @@
+import {
+  averageExceedsMax,
+  averageLessThanOne,
+  averageNotWhole,
+  insufficientHashLength,
+} from "./errors.js";
 import type { Node } from "./interface.js";
-import { insufficientHashLength } from "./errors.js";
 
 export const MAX_UINT32 = 2 ** 32 - 1;
 
@@ -16,16 +21,28 @@ export const MAX_UINT32 = 2 ** 32 - 1;
  */
 export function isBoundaryHash(hash: Uint8Array, limit: number): boolean {
   if (hash.length < 4) {
-    throw insufficientHashLength(hash.length)
+    throw insufficientHashLength(hash.length);
   }
 
   return new DataView(hash.buffer, hash.byteOffset, 4).getUint32(0) < limit;
 }
 
-export const isBoundaryNode =
-  (average: number, level: number) =>
-  (node: Node): boolean =>
+export const isBoundaryNode = (average: number, level: number) => {
+  if (average < 1) {
+    throw averageLessThanOne(average);
+  }
+
+  if (average > MAX_UINT32) {
+    throw averageExceedsMax(average);
+  }
+
+  if (average % 1 !== 0) {
+    throw averageNotWhole(average);
+  }
+
+  return (node: Node): boolean =>
     isBoundaryHash(
       level === 0 ? node.hash : node.message,
-      MAX_UINT32 / average,
+      MAX_UINT32 / Math.max(average, 1),
     );
+};

@@ -4,7 +4,7 @@ import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import { levelExceedsRoot, levelIsNegative } from "./errors.js";
+import { levelExceedsRoot, levelIsNegative, levelMustChange } from "./errors.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { findFailure, loadBucket, prefixWithLevel } from "./utils.js";
 
@@ -78,12 +78,13 @@ export const getIsExtremity = <Code extends number, Alg extends number>(
     // skips level 0
     if (
       lastBucket != null &&
-      compare(findExtemity(bucket.nodes).message, lastBucket.getHash())
+      compare(findExtemity(bucket.nodes).message, lastBucket.getHash()) !== 0
     ) {
       return false;
     }
 
     lastBucket = bucket;
+    i--
   }
 
   return true;
@@ -111,7 +112,11 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
   level: number,
   _target?: Tuple,
 ): Promise<void> => {
-  if (levelOf(state) < 0) {
+  if (levelOf(state) === level) {
+    throw levelMustChange(level)
+  }
+
+  if (level < 0) {
     throw levelIsNegative();
   }
 
@@ -127,11 +132,11 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
   while (level !== levelOf(stateCopy)) {
     if (level > levelOf(stateCopy)) {
       // jump to level
-      const difference = levelOf(stateCopy) - level - 1;
+      const difference = levelOf(stateCopy) - level;
 
-      stateCopy.currentBuckets = stateCopy.currentBuckets.splice(
-        -difference,
+      stateCopy.currentBuckets.splice(
         difference,
+        -difference,
       );
     } else {
       // walk to level
@@ -149,10 +154,10 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     }
 
     // set to index of node which is greater than or equal to target
-    stateCopy.currentIndex = findFailure(
-      bucketOf(state).nodes,
+    stateCopy.currentIndex = Math.min(findFailure(
+      bucketOf(stateCopy).nodes,
       (n) => compareTuples(target, n) > 0,
-    );
+    ), bucketOf(stateCopy).nodes.length - 1);
   }
 
   Object.assign(state, stateCopy);

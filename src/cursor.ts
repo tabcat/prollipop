@@ -4,9 +4,13 @@ import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import { levelExceedsRoot, levelIsNegative, levelMustChange } from "./errors.js";
+import {
+  levelExceedsRoot,
+  levelIsNegative,
+  levelMustChange,
+} from "./errors.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { findFailure, loadBucket, prefixWithLevel } from "./utils.js";
+import { findFailureOrLastIndex, loadBucket, prefixWithLevel } from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
@@ -39,6 +43,10 @@ export const createCursorState = <Code extends number, Alg extends number>(
   currentIndex,
   isDone: false,
 });
+
+export const cloneCursorState = <Code extends number, Alg extends number>(
+  state: CursorState<Code, Alg>,
+): CursorState<Code, Alg> => ({ ...state, currentBuckets: Array.from(state.currentBuckets) })
 
 export const levelOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -84,7 +92,7 @@ export const getIsExtremity = <Code extends number, Alg extends number>(
     }
 
     lastBucket = bucket;
-    i--
+    i--;
   }
 
   return true;
@@ -113,7 +121,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
   _target?: Tuple,
 ): Promise<void> => {
   if (levelOf(state) === level) {
-    throw levelMustChange(level)
+    throw levelMustChange(level);
   }
 
   if (level < 0) {
@@ -134,13 +142,10 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
       // jump to level
       const difference = levelOf(stateCopy) - level;
 
-      stateCopy.currentBuckets.splice(
-        difference,
-        -difference,
-      );
+      stateCopy.currentBuckets.splice(difference, -difference);
     } else {
       // walk to level
-      const digest = nodeOf(stateCopy).message
+      const digest = nodeOf(stateCopy).message;
 
       stateCopy.currentBuckets.push(
         await loadBucket(
@@ -154,10 +159,11 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     }
 
     // set to index of node which is greater than or equal to target
-    stateCopy.currentIndex = Math.min(findFailure(
-      bucketOf(stateCopy).nodes,
-      (n) => compareTuples(target, n) > 0,
-    ), bucketOf(stateCopy).nodes.length - 1);
+    stateCopy.currentIndex = 
+      findFailureOrLastIndex(
+        bucketOf(stateCopy).nodes,
+        (n) => compareTuples(target, n) > 0,
+      )
   }
 
   Object.assign(state, stateCopy);
@@ -166,7 +172,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy = { ...state };
+  const stateCopy  = cloneCursorState(state);
 
   // find a level which allows increasing currentIndex
   while (overflows(stateCopy)) {
@@ -201,7 +207,7 @@ export const moveToTupleOnLevel = async <
   tuple: Tuple,
   level: number,
 ): Promise<void> => {
-  const stateCopy = { ...state };
+  const stateCopy  = cloneCursorState(state);
 
   // move up until finding a node greater than tuple
   while (
@@ -222,38 +228,39 @@ export const moveToTupleOnLevel = async <
 export const moveToNextBucket = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy = { ...state };
+  const stateCopy  = cloneCursorState(state);
 
   stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
   await moveSideways(stateCopy);
 
+  // if it was set to done don't update currentIndex
+  if (stateCopy.isDone) {
+    state.isDone = true
+    return
+  }
+
   Object.assign(state, stateCopy);
 };
 
-const createNextOnLevel =
+export const createNextOnLevel =
   <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>
   async (level: number): Promise<void> => {
     if (level > rootLevelOf(state)) {
       state.isDone = true;
     }
 
-    if (state.isDone) return;
+    if (state.isDone) {
+      return;
+    }
 
-    const stateCopy = { ...state };
+    const stateCopy  = cloneCursorState(state);
 
     if (levelOf(stateCopy) !== level) {
       await moveToLevel(stateCopy, level);
     }
 
     await moveSideways(stateCopy);
-
-    if (levelOf(stateCopy) !== levelOf(state)) {
-      await moveToLevel(stateCopy, levelOf(state), {
-        timestamp: 0,
-        hash: new Uint8Array(nodeOf(state).hash.length),
-      });
-    }
 
     Object.assign(state, stateCopy);
   };
@@ -266,7 +273,7 @@ export function createCursorFromState<Code extends number, Alg extends number>(
   state.currentIndex = bucketOf(state).nodes.length - 1;
 
   if (state.currentIndex === -1) {
-    state.isDone = true
+    state.isDone = true;
   }
 
   return {

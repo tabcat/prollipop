@@ -3,7 +3,11 @@ import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
 import { isBoundaryNode } from "../../src/boundaries.js";
 import { TreeCodec, encodeBucket } from "../../src/codec.js";
-import { DefaultBucket, DefaultProllyTree } from "../../src/impls.js";
+import {
+  DefaultBucket,
+  DefaultNode,
+  DefaultProllyTree,
+} from "../../src/impls.js";
 import type { Bucket, Node, Prefix, ProllyTree } from "../../src/interface.js";
 import { prefixWithLevel } from "../../src/utils.js";
 
@@ -70,10 +74,13 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   // tree has higher levels
   while (bucketLevel.length > 1) {
     if (level >= 4) {
-      throw new Error('e')
+      throw new Error("e");
     }
     level++;
-    nodeLevel = levelOfNodes(prefixWithLevel(prefix, level), nextLevelNodes(bucketLevel));
+    nodeLevel = levelOfNodes(
+      prefixWithLevel(prefix, level),
+      nextLevelNodes(bucketLevel),
+    );
     bucketLevel = levelOfBuckets(
       prefixWithLevel(prefix, level),
       nodeLevel,
@@ -86,6 +93,14 @@ export const createProllyTree = <Code extends number, Alg extends number>(
 
   return [
     new DefaultProllyTree(firstElement(bucketLevel), codec, hasher),
-    treeState,
+    treeState.reverse(),
   ];
 };
+
+export const createProllyTreeNodes = <Alg extends number>(
+  ids: number[],
+  hasher: SyncMultihashHasher<Alg>,
+): Node[] => ids.map((id) => {
+  const hash = hasher.digest(new Uint8Array(Array(id).fill(id))).digest
+  return new DefaultNode(id, hash, hash);
+})

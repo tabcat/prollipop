@@ -37,6 +37,11 @@ export const findFailure = <T>(
   return i;
 };
 
+export const findFailureOrLastIndex = <T>(
+  array: Array<T>,
+  test: (element: T) => boolean,
+): number => Math.min(array.length - 1, findFailure(array, test));
+
 /**
  * Returns a copied prefix at a specific level.
  *

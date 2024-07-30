@@ -1,5 +1,5 @@
 import { compare as compareHash } from "uint8arrays";
-import { Node, Tuple } from "./interface.js";
+import { Bucket, Node, Tuple } from "./interface.js";
 
 export const compareNodes = (a: Node, b: Node): number => {
   const tuples = compareTuples(a, b);
@@ -22,3 +22,5 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 };
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
+
+export const compareBuckets = <Code extends number, Alg extends number>(a: Bucket<Code, Alg>, b: Bucket<Code, Alg>): number => compareHash(a.getHash(), b.getHash())

@@ -13,6 +13,7 @@ import {
   createBucket,
   createEmptyTree,
   findFailure,
+  findFailureOrLastIndex,
   loadBucket,
   prefixWithLevel,
 } from "../src/utils.js";
@@ -37,6 +38,22 @@ describe("utils", () => {
     it("returns the length of the array if no elements fail the test", () => {
       expect(findFailure([], () => true)).to.equal(0);
       expect(findFailure([0, 1, 2], (x) => x < 3)).to.equal(3);
+    });
+  });
+
+  describe("findFailure", () => {
+    it("returns the index of the first element to fail a test", () => {
+      expect(findFailureOrLastIndex([0, 1, 2], (x) => x < 1)).to.equal(1);
+      expect(findFailureOrLastIndex([2, 1, 0], (x) => x < 1)).to.equal(0);
+      expect(findFailureOrLastIndex([2, 1, 0], (x) => x >= 1)).to.equal(2);
+    });
+
+    it("returns the length of the array -1 if no elements fail the test", () => {
+      expect(findFailureOrLastIndex([0, 1, 2], (x) => x < 3)).to.equal(2);
+    });
+
+    it("throws if the array has no elements", () => {
+      expect(() => findFailureOrLastIndex([], () => true)).to.throw()
     });
   });
 

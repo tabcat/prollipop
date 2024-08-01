@@ -21,6 +21,10 @@ export class DefaultNode implements Node {
       message: base32.encode(this.message)
     }
   }
+
+  get [Symbol.toStringTag]() {
+    return JSON.stringify(this[nodeInspectSymbol]())
+  }
 }
 
 export class DefaultBucket<Code extends number, Alg extends number>
@@ -57,6 +61,10 @@ export class DefaultBucket<Code extends number, Alg extends number>
       nodes: this.nodes,
       hash: base32.encode(this.#hash)
     }
+  }
+
+  get [Symbol.toStringTag]() {
+    return JSON.stringify(this[nodeInspectSymbol]())
   }
 }
 

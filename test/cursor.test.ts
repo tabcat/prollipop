@@ -297,6 +297,7 @@ describe("cursor", () => {
 
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
+        currentIndex: firstElement(treeState.map(lastElement)).nodes.length - 1,
         isDone: true,
       });
 
@@ -308,6 +309,7 @@ describe("cursor", () => {
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
         currentBuckets: treeState.map(lastElement),
+        currentIndex: lastElement(treeState.map(lastElement)).nodes.length - 1,
         isDone: true,
       });
     });

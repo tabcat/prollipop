@@ -234,12 +234,6 @@ export const moveToNextBucket = async <Code extends number, Alg extends number>(
 
   await moveSideways(stateCopy);
 
-  // if it was set to done don't update currentIndex
-  if (stateCopy.isDone) {
-    state.isDone = true
-    return
-  }
-
   Object.assign(state, stateCopy);
 };
 

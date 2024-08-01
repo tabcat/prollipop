@@ -3,6 +3,9 @@ import { SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
+import { base32 } from "multiformats/bases/base32";
+
+const nodeInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
 
 export class DefaultNode implements Node {
   constructor(
@@ -10,6 +13,14 @@ export class DefaultNode implements Node {
     readonly hash: Node["hash"],
     readonly message: Node["message"],
   ) {}
+
+  [nodeInspectSymbol] () {
+    return {
+      timestamp: this.timestamp,
+      hash: base32.encode(this.hash),
+      message: base32.encode(this.message)
+    }
+  }
 }
 
 export class DefaultBucket<Code extends number, Alg extends number>
@@ -38,6 +49,14 @@ export class DefaultBucket<Code extends number, Alg extends number>
 
   getCID(): CID {
     return bucketDigestToCid(this.prefix)(this.getHash());
+  }
+
+  [nodeInspectSymbol] () {
+    return {
+      prefix: this.prefix,
+      nodes: this.nodes,
+      hash: base32.encode(this.#hash)
+    }
   }
 }
 

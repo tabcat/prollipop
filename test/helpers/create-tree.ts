@@ -17,7 +17,7 @@ const levelOfNodes = <Code extends number, Alg extends number>(
 ): Node[][] => {
   const level: Node[][] = [[]];
   for (const node of nodes) {
-    lastElement(level).push(node);
+    lastElement(level).push(new DefaultNode(node.timestamp, node.hash, node.message));
 
     if (isBoundaryNode(prefix.average, prefix.level)(node)) {
       level.push([]);

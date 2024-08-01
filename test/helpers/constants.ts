@@ -12,7 +12,7 @@ import {
   cborTreeCodec as treeCodec,
 } from "../../src/index.js";
 import { Bucket, Prefix } from "../../src/interface.js";
-import { createProllyTree } from "./create-tree.js";
+import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
 
 // nodes
 export const timestamp = 0;
@@ -53,18 +53,10 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
 );
 
 export const blockstore = new MemoryBlockstore();
-const treeNodes = Array(30)
-  .fill(0)
-  .map((_, i) => {
-    const hash = sha256SyncHasher.digest(
-      new Uint8Array(Array(32).fill(i)),
-    ).digest;
-    return {
-      timestamp: i,
-      hash,
-      message: hash,
-    };
-  });
+
+export const treeNodesMax = 255
+
+export const treeNodes = createProllyTreeNodes(Array(treeNodesMax).fill(0).map((_, i) => i), sha256SyncHasher)
 export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,

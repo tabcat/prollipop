@@ -53,7 +53,7 @@ describe("utils", () => {
     });
 
     it("throws if the array has no elements", () => {
-      expect(() => findFailureOrLastIndex([], () => true)).to.throw()
+      expect(() => findFailureOrLastIndex([], () => true)).to.throw();
     });
   });
 
@@ -102,43 +102,40 @@ describe("utils", () => {
 
     it("throws if bucket is not found in blockstore", () => {
       const blockstore = new MemoryBlockstore();
-      expect(
-        () =>
-          loadBucket(
-            blockstore,
-            bucketHash,
-            prefix,
-            cborTreeCodec,
-            sha256SyncHasher,
-          ),
+      expect(() =>
+        loadBucket(
+          blockstore,
+          bucketHash,
+          prefix,
+          cborTreeCodec,
+          sha256SyncHasher,
+        ),
       ).rejects.toMatchObject(errNotFound());
     });
 
     it("throws if bucket level mismatches level of expected prefix", () => {
-      expect(
-        () =>
-          loadBucket(
-            blockstore,
-            bucketHash,
-            { ...prefix, level: 1 },
-            cborTreeCodec,
-            sha256SyncHasher,
-          ),
+      expect(() =>
+        loadBucket(
+          blockstore,
+          bucketHash,
+          { ...prefix, level: 1 },
+          cborTreeCodec,
+          sha256SyncHasher,
+        ),
       ).rejects.toMatchObject(unexpectedBucketLevel(0, 1));
     });
 
     it("throws if bucket hash does not match requested hash", () => {
       const blockstore = new MemoryBlockstore();
       blockstore.put(emptyBucket.getCID(), bucketBytes);
-      expect(
-        () =>
-          loadBucket(
-            blockstore,
-            emptyBucket.getHash(),
-            prefix,
-            cborTreeCodec,
-            sha256SyncHasher,
-          ),
+      expect(() =>
+        loadBucket(
+          blockstore,
+          emptyBucket.getHash(),
+          prefix,
+          cborTreeCodec,
+          sha256SyncHasher,
+        ),
       ).rejects.toMatchObject(unexpectedBucketHash());
     });
   });
@@ -151,7 +148,17 @@ describe("utils", () => {
         }),
       ).to.deep.equal(
         new DefaultProllyTree(
-          createBucket(prefix, [], cborTreeCodec, sha256SyncHasher),
+          createBucket(
+            {
+              average: 30,
+              level: 0,
+              mc: cborTreeCodec.code,
+              mh: sha256SyncHasher.code,
+            },
+            [],
+            cborTreeCodec,
+            sha256SyncHasher,
+          ),
           cborTreeCodec,
           sha256SyncHasher,
         ),

@@ -10,7 +10,11 @@ import {
   levelMustChange,
 } from "./errors.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { findFailureOrLastIndex, loadBucket, prefixWithLevel } from "./utils.js";
+import {
+  findFailureOrLastIndex,
+  loadBucket,
+  prefixWithLevel,
+} from "./utils.js";
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
@@ -46,7 +50,10 @@ export const createCursorState = <Code extends number, Alg extends number>(
 
 export const cloneCursorState = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): CursorState<Code, Alg> => ({ ...state, currentBuckets: Array.from(state.currentBuckets) })
+): CursorState<Code, Alg> => ({
+  ...state,
+  currentBuckets: Array.from(state.currentBuckets),
+});
 
 export const levelOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -115,10 +122,15 @@ const overflows = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): boolean => state.currentIndex === bucketOf(state).nodes.length - 1;
 
+export const defaultGuide =
+  (target: Tuple) =>
+  (nodes: Node[]): number =>
+    findFailureOrLastIndex(nodes, (n) => compareTuples(target, n) > 0);
+
 export const moveToLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
   level: number,
-  _target?: Tuple,
+  _guide?: (nodes: Node[]) => number,
 ): Promise<void> => {
   if (levelOf(state) === level) {
     throw levelMustChange(level);
@@ -132,8 +144,9 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     throw levelExceedsRoot(level, rootLevelOf(state));
   }
 
-  // tuple to use as guide
-  const target = _target ?? nodeOf(state);
+  // guides currentIndex during traversal
+  const guide: (nodes: Node[]) => number =
+    _guide ?? defaultGuide(nodeOf(state));
 
   const stateCopy: CursorState<Code, Alg> = { ...state };
 
@@ -159,11 +172,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
     }
 
     // set to index of node which is greater than or equal to target
-    stateCopy.currentIndex = 
-      findFailureOrLastIndex(
-        bucketOf(stateCopy).nodes,
-        (n) => compareTuples(target, n) > 0,
-      )
+    stateCopy.currentIndex = guide(bucketOf(stateCopy).nodes);
   }
 
   Object.assign(state, stateCopy);
@@ -172,7 +181,7 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy  = cloneCursorState(state);
+  const stateCopy = cloneCursorState(state);
 
   // find a level which allows increasing currentIndex
   while (overflows(stateCopy)) {
@@ -192,7 +201,7 @@ export const moveSideways = async <Code extends number, Alg extends number>(
     await moveToLevel(
       stateCopy,
       levelOf(state),
-      nodeOf(state), // use original tuple as target
+      () => 0, // always first index
     );
   }
 
@@ -207,19 +216,19 @@ export const moveToTupleOnLevel = async <
   tuple: Tuple,
   level: number,
 ): Promise<void> => {
-  const stateCopy  = cloneCursorState(state);
+  const stateCopy = cloneCursorState(state);
 
   // move up until finding a node greater than tuple
   while (
     compareTuples(tuple, lastOf(state)) > 0 &&
     levelOf(state) < rootLevelOf(state)
   ) {
-    await moveToLevel(state, levelOf(state) + 1, tuple);
+    await moveToLevel(state, levelOf(state) + 1, defaultGuide(tuple));
   }
 
   // move to level targeting tuple
   if (levelOf(state) !== level) {
-    await moveToLevel(state, level, tuple);
+    await moveToLevel(state, level, defaultGuide(tuple));
   }
 
   Object.assign(state, stateCopy);
@@ -228,7 +237,7 @@ export const moveToTupleOnLevel = async <
 export const moveToNextBucket = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy  = cloneCursorState(state);
+  const stateCopy = cloneCursorState(state);
 
   stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
@@ -248,7 +257,7 @@ export const createNextOnLevel =
       return;
     }
 
-    const stateCopy  = cloneCursorState(state);
+    const stateCopy = cloneCursorState(state);
 
     if (levelOf(stateCopy) !== level) {
       await moveToLevel(stateCopy, level);

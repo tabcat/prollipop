@@ -160,32 +160,24 @@ describe("cursor", () => {
       const cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
 
-      const lowHash = new Uint8Array(
-        bucketOf(rootCursorState).getHash().length,
-      );
-
-      await moveToLevel(cursorState, 0, { timestamp: 0, hash: lowHash });
+      await moveToLevel(cursorState, 0, () => 0);
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
         currentIndex: 0,
         currentBuckets: treeState.map(firstElement),
       });
 
-      const highHash = new Uint8Array(lowHash.length).fill(255);
-
-      await moveToLevel(cursorState, levelOf(rootCursorState), {
-        timestamp: Infinity,
-        hash: highHash,
-      });
+      await moveToLevel(
+        cursorState,
+        levelOf(rootCursorState),
+        (nodes) => nodes.length - 1,
+      );
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
         currentIndex: bucketOf(rootCursorState).nodes.length - 1,
       });
 
-      await moveToLevel(cursorState, 0, {
-        timestamp: Infinity,
-        hash: highHash,
-      });
+      await moveToLevel(cursorState, 0, (nodes) => nodes.length - 1);
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
         currentIndex: lastElement(lastElement(treeState)).nodes.length - 1,

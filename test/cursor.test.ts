@@ -360,7 +360,7 @@ describe("cursor", () => {
       await nextOnLevel(rootLevelOf(cursorState));
       expect(cursorState).to.deep.equal({
         ...createCursorState(blockstore, tree),
-        currentIndex: 2,
+        currentIndex: 1,
       });
     });
 

@@ -201,7 +201,7 @@ export const moveSideways = async <Code extends number, Alg extends number>(
     await moveToLevel(
       stateCopy,
       levelOf(state),
-      () => 0, // always first index
+      () => 0, // always first index when descending
     );
   }
 
@@ -259,11 +259,15 @@ export const createNextOnLevel =
 
     const stateCopy = cloneCursorState(state);
 
-    if (levelOf(stateCopy) !== level) {
+    if (level > levelOf(stateCopy)) {
       await moveToLevel(stateCopy, level);
+      await moveSideways(stateCopy);
+    } else if (level < levelOf(stateCopy)) {
+      // result of right side backbone
+      await moveToLevel(stateCopy, level, () => 0);
+    } else {
+      await moveSideways(stateCopy);
     }
-
-    await moveSideways(stateCopy);
 
     Object.assign(state, stateCopy);
   };

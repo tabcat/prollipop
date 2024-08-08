@@ -18,6 +18,7 @@ import {
 
 export interface Cursor<Code extends number, Alg extends number> {
   current(): Node;
+  level(): number;
   path(): CID[];
   buckets(): Bucket<Code, Alg>[];
   next(): Promise<void>;
@@ -287,6 +288,7 @@ export function createCursorFromState<Code extends number, Alg extends number>(
     path: () => pathOf(state),
     buckets: () => state.currentBuckets,
     current: () => nodeOf(state),
+    level: () => levelOf(state),
     done: () => state.isDone,
     // don't use these methods concurrently
     next: () => nextAtLevel(levelOf(state)),

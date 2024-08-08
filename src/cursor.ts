@@ -39,13 +39,14 @@ export const createCursorState = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   currentBuckets: Bucket<Code, Alg>[] = [tree.root],
-  currentIndex: number = 0,
+  currentIndex?: number,
 ): CursorState<Code, Alg> => ({
   blockstore,
   codec: tree.getCodec(),
   hasher: tree.getHasher(),
   currentBuckets,
-  currentIndex,
+  currentIndex:
+    currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1),
   isDone: false,
 });
 
@@ -277,8 +278,6 @@ export function createCursorFromState<Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Cursor<Code, Alg> {
   const nextAtLevel = createNextOnLevel(state);
-
-  state.currentIndex = bucketOf(state).nodes.length - 1;
 
   if (state.currentIndex === -1) {
     state.isDone = true;

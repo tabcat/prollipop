@@ -36,11 +36,16 @@ const levelOfBuckets = <Code extends number, Alg extends number>(
   nodeLevel: Node[][],
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
-): Bucket<Code, Alg>[] =>
-  nodeLevel.map((nodes) => {
+): Bucket<Code, Alg>[] => {
+  if (nodeLevel.length === 0) {
+    nodeLevel.push([]);
+  }
+
+  return nodeLevel.map((nodes) => {
     const bytes = encodeBucket(prefix, nodes, codec);
     return new DefaultBucket(prefix, nodes, bytes, hasher.digest(bytes).digest);
   });
+};
 
 const nextLevelNodes = <Code extends number, Alg extends number>(
   buckets: Bucket<Code, Alg>[],

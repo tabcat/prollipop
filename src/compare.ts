@@ -23,4 +23,7 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
 
-export const compareBuckets = <Code extends number, Alg extends number>(a: Bucket<Code, Alg>, b: Bucket<Code, Alg>): number => compareHash(a.getHash(), b.getHash())
+export const compareBuckets = <Code extends number, Alg extends number>(
+  a: Bucket<Code, Alg>,
+  b: Bucket<Code, Alg>,
+): number => compareHash(a.getHash(), b.getHash());

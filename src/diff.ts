@@ -126,7 +126,7 @@ async function ffwUnequalLevel0<Code extends number, Alg extends number>(
         lc.buckets(),
         rc.buckets(),
       );
-      const level = lc.level()
+      const level = lc.level();
       // could be sped up by checking when the bucket will end
       // skip the matchingBucketsLength for every .nextAtLevel call
       await Promise.all([
@@ -173,17 +173,19 @@ export async function* diff<Code extends number, Alg extends number>(
   let lastLeftBuckets = { value: lc.buckets() };
   let lastRightBuckets = { value: rc.buckets() };
 
-  const getLeftBucketDiff = () => getBucketDiff(lc, rc, lastLeftBuckets, leftDiffer)
-  const getRightBucketDiff = () => getBucketDiff(rc, lc, lastRightBuckets, rightDiffer)
+  const getLeftBucketDiff = () =>
+    getBucketDiff(lc, rc, lastLeftBuckets, leftDiffer);
+  const getRightBucketDiff = () =>
+    getBucketDiff(rc, lc, lastRightBuckets, rightDiffer);
 
   // handle empty buckets
   // can probably be generalized later
-  d.buckets.push(...getLeftBucketDiff())
-  d.buckets.push(...getRightBucketDiff())
+  d.buckets.push(...getLeftBucketDiff());
+  d.buckets.push(...getRightBucketDiff());
 
   while (!lc.done() && !rc.done()) {
     const [lv, rv] = [lc.current(), rc.current()];
-    const comparison = compareTuples(lv, rv)
+    const comparison = compareTuples(lv, rv);
 
     if (comparison < 0) {
       d.nodes.push(leftDiffer(lv));
@@ -196,13 +198,13 @@ export async function* diff<Code extends number, Alg extends number>(
     }
 
     // may cause both cursor buckets to change so bucket diffs must be done after ffw
-    await ffwUnequalLevel0(lc, rc)
-    
-    // would like to have these ordered in diff based on range start/end
-    d.buckets.push(...getLeftBucketDiff(), ...getRightBucketDiff())
+    await ffwUnequalLevel0(lc, rc);
 
-    lastLeftBuckets.value = lc.buckets()
-    lastRightBuckets.value = rc.buckets()
+    // would like to have these ordered in diff based on range start/end
+    d.buckets.push(...getLeftBucketDiff(), ...getRightBucketDiff());
+
+    lastLeftBuckets.value = lc.buckets();
+    lastRightBuckets.value = rc.buckets();
 
     if (d.buckets.length > 0) {
       yield d;
@@ -214,8 +216,8 @@ export async function* diff<Code extends number, Alg extends number>(
     d.nodes.push(leftDiffer(lc.current()));
     await lc.nextAtLevel(0);
 
-    d.buckets.push(...getLeftBucketDiff())
-    lastLeftBuckets.value = lc.buckets()
+    d.buckets.push(...getLeftBucketDiff());
+    lastLeftBuckets.value = lc.buckets();
 
     if (d.buckets.length > 0) {
       yield d;
@@ -227,8 +229,8 @@ export async function* diff<Code extends number, Alg extends number>(
     d.nodes.push(rightDiffer(rc.current()));
     await rc.nextAtLevel(0);
 
-    d.buckets.push(...getRightBucketDiff())
-    lastRightBuckets.value = rc.buckets()
+    d.buckets.push(...getRightBucketDiff());
+    lastRightBuckets.value = rc.buckets();
 
     if (d.buckets.length > 0) {
       yield d;

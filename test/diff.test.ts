@@ -71,7 +71,7 @@ const [higherTree, higherTreeState] = createProllyTree(
 );
 const higherTreeBuckets = higherTreeState.flat().sort(compareBuckets);
 
-const randomTreeNodes  = createProllyTreeNodes(
+const randomTreeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
     .fill(0)
     .map((_, i) => i)
@@ -193,13 +193,13 @@ describe("diff", () => {
       await checkDiffs(subTree, higherTree);
 
       // randomTree
-      await checkDiffs(randomTree, randomTree)
-      await checkDiffs(randomTree, emptyTree)
-      await checkDiffs(emptyTree, randomTree)
-      await checkDiffs(randomTree, subTree)
-      await checkDiffs(subTree, randomTree)
-      await checkDiffs(randomTree, superTree)
-      await checkDiffs(superTree, randomTree)
+      await checkDiffs(randomTree, randomTree);
+      await checkDiffs(randomTree, emptyTree);
+      await checkDiffs(emptyTree, randomTree);
+      await checkDiffs(randomTree, subTree);
+      await checkDiffs(subTree, randomTree);
+      await checkDiffs(randomTree, superTree);
+      await checkDiffs(superTree, randomTree);
     });
   });
 });

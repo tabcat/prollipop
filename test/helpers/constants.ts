@@ -54,9 +54,14 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
 
 export const blockstore = new MemoryBlockstore();
 
-export const treeNodesMax = 256
+export const treeNodesMax = 256;
 
-export const treeNodes = createProllyTreeNodes(Array(treeNodesMax).fill(0).map((_, i) => i), sha256SyncHasher)
+export const treeNodes = createProllyTreeNodes(
+  Array(treeNodesMax)
+    .fill(0)
+    .map((_, i) => i),
+  sha256SyncHasher,
+);
 export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,

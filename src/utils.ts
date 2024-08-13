@@ -42,11 +42,11 @@ export const findFailureOrLastIndex = <T>(
   test: (element: T) => boolean,
 ): number => {
   if (array.length === 0) {
-    throw new TypeError('Received empty array.')
+    throw new TypeError("Received empty array.");
   }
 
   return Math.min(array.length - 1, findFailure(array, test));
-}
+};
 
 /**
  * Returns a copied prefix at a specific level.

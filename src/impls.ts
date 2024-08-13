@@ -1,11 +1,11 @@
+import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
-import { base32 } from "multiformats/bases/base32";
 
-const nodeInspectSymbol = Symbol.for('nodejs.util.inspect.custom')
+const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
 
 export class DefaultNode implements Node {
   constructor(
@@ -14,16 +14,16 @@ export class DefaultNode implements Node {
     readonly message: Node["message"],
   ) {}
 
-  [nodeInspectSymbol] () {
+  [nodeInspectSymbol]() {
     return {
       timestamp: this.timestamp,
       hash: base32.encode(this.hash),
-      message: base32.encode(this.message)
-    }
+      message: base32.encode(this.message),
+    };
   }
 
   get [Symbol.toStringTag]() {
-    return JSON.stringify(this[nodeInspectSymbol]())
+    return JSON.stringify(this[nodeInspectSymbol]());
   }
 }
 
@@ -55,16 +55,16 @@ export class DefaultBucket<Code extends number, Alg extends number>
     return bucketDigestToCid(this.prefix)(this.getHash());
   }
 
-  [nodeInspectSymbol] () {
+  [nodeInspectSymbol]() {
     return {
       prefix: this.prefix,
       nodes: this.nodes,
-      hash: base32.encode(this.#hash)
-    }
+      hash: base32.encode(this.#hash),
+    };
   }
 
   get [Symbol.toStringTag]() {
-    return JSON.stringify(this[nodeInspectSymbol]())
+    return JSON.stringify(this[nodeInspectSymbol]());
   }
 }
 

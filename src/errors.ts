@@ -20,10 +20,14 @@ export const averageLessThanOne = (average: number) =>
   });
 
 export const averageNotWhole = (average: number) =>
-  new CodeError(`Average must be a whole number. Received ${average}`, { code: INVALID_AVERAGE });
+  new CodeError(`Average must be a whole number. Received ${average}`, {
+    code: INVALID_AVERAGE,
+  });
 
 export const averageExceedsMax = (average: number) =>
-  new CodeError(`Average exceeds max uint32. Received ${average}`, { code: INVALID_AVERAGE });
+  new CodeError(`Average exceeds max uint32. Received ${average}`, {
+    code: INVALID_AVERAGE,
+  });
 
 export const unexpectedBucketHash = () =>
   new CodeError("Bucket hash did not match requested bucket hash.", {

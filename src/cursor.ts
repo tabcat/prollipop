@@ -49,7 +49,7 @@ export const createCursorState = <Code extends number, Alg extends number>(
   currentIndex:
     currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1),
   isDone: false,
-  isLocked: false
+  isLocked: false,
 });
 
 export const cloneCursorState = <Code extends number, Alg extends number>(
@@ -254,9 +254,9 @@ export const createNextOnLevel =
   <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>
   async (level: number): Promise<void> => {
     if (state.isLocked) {
-      throw new Error('lock is held')
+      throw new Error("lock is held");
     }
-    state.isLocked = true
+    state.isLocked = true;
 
     if (level > rootLevelOf(state)) {
       state.isDone = true;
@@ -279,7 +279,7 @@ export const createNextOnLevel =
     }
 
     Object.assign(state, stateCopy);
-    state.isLocked = false
+    state.isLocked = false;
   };
 
 export function createCursorFromState<Code extends number, Alg extends number>(

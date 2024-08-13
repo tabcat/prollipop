@@ -17,7 +17,9 @@ const levelOfNodes = <Code extends number, Alg extends number>(
 ): Node[][] => {
   const level: Node[][] = [[]];
   for (const node of nodes) {
-    lastElement(level).push(new DefaultNode(node.timestamp, node.hash, node.message));
+    lastElement(level).push(
+      new DefaultNode(node.timestamp, node.hash, node.message),
+    );
 
     if (isBoundaryNode(prefix.average, prefix.level)(node)) {
       level.push([]);
@@ -105,7 +107,8 @@ export const createProllyTree = <Code extends number, Alg extends number>(
 export const createProllyTreeNodes = <Alg extends number>(
   ids: number[],
   hasher: SyncMultihashHasher<Alg>,
-): Node[] => ids.map((id) => {
-  const hash = hasher.digest(new Uint8Array(Array(id).fill(id))).digest
-  return new DefaultNode(id, hash, hash);
-})
+): Node[] =>
+  ids.map((id) => {
+    const hash = hasher.digest(new Uint8Array(Array(id).fill(id))).digest;
+    return new DefaultNode(id, hash, hash);
+  });

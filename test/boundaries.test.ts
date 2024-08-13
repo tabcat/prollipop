@@ -4,7 +4,12 @@ import {
   isBoundaryHash,
   isBoundaryNode,
 } from "../src/boundaries.js";
-import { averageExceedsMax, averageLessThanOne, averageNotWhole, insufficientHashLength } from "../src/errors.js";
+import {
+  averageExceedsMax,
+  averageLessThanOne,
+  averageNotWhole,
+  insufficientHashLength,
+} from "../src/errors.js";
 
 const average = 2;
 const limit = MAX_UINT32 / average;
@@ -43,20 +48,20 @@ describe("isBoundaryNode", () => {
   });
 
   it("throws if average is less than 1", () => {
-    expect(
-      () => isBoundaryNode(0.0001, 0),
-    ).to.throw().and.deep.equals(averageLessThanOne(0.0001));
-  })
+    expect(() => isBoundaryNode(0.0001, 0))
+      .to.throw()
+      .and.deep.equals(averageLessThanOne(0.0001));
+  });
 
-  it('throws if average is greater than max uint32', () => {
-    expect(
-      () => isBoundaryNode(MAX_UINT32 + 1, 0),
-    ).to.throw().and.deep.equals(averageExceedsMax(MAX_UINT32 + 1));
-  })
+  it("throws if average is greater than max uint32", () => {
+    expect(() => isBoundaryNode(MAX_UINT32 + 1, 0))
+      .to.throw()
+      .and.deep.equals(averageExceedsMax(MAX_UINT32 + 1));
+  });
 
-  it('throws if average is not a whole number', () => {
-    expect(
-      () => isBoundaryNode(3.14, 0),
-    ).to.throw().and.deep.equals(averageNotWhole(3.14));
-  })
+  it("throws if average is not a whole number", () => {
+    expect(() => isBoundaryNode(3.14, 0))
+      .to.throw()
+      .and.deep.equals(averageNotWhole(3.14));
+  });
 });

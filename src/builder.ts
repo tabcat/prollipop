@@ -135,7 +135,7 @@ const updateBucket = <Code extends number, Alg extends number>(
 export async function* mutateTree<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  _updates: Update[],
+  updates: Update[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let diffs = createProllyTreeDiff<Code, Alg>();
 
@@ -147,7 +147,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     visitedLevelTail &&
     visitedLevelHead;
 
-  const updates: LeveledUpdate[] = _updates.map((u) =>
+  const updts: LeveledUpdate[] = updates.map((u) =>
     Object.assign(u, { level: 0 }),
   );
 
@@ -157,9 +157,9 @@ export async function* mutateTree<Code extends number, Alg extends number>(
   let visitedLevelTail: boolean = false;
   let visitedLevelHead: boolean = false;
 
-  while (updates.length > 0 && !newRootFound()) {
-    const firstBucketOfLevel: boolean = level !== firstElement(updates).level;
-    level = firstElement(updates).level;
+  while (updts.length > 0 && !newRootFound()) {
+    const firstBucketOfLevel: boolean = level !== firstElement(updts).level;
+    level = firstElement(updts).level;
 
     if (firstBucketOfLevel) {
       newBuckets = [];
@@ -172,8 +172,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       if (leftovers.length === 0) {
         await moveToTupleOnLevel(
           cursorState,
-          firstElement(updates).value,
-          firstElement(updates).level,
+          firstElement(updts).value,
+          firstElement(updts).level,
         );
       } else {
         await moveToNextBucket(cursorState);
@@ -197,10 +197,10 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     const [buckets, afterbound, nodeDiffs] = updateBucket(
       updatee,
       leftovers,
-      updates.splice(
+      updts.splice(
         0,
         findFailure(
-          updates,
+          updts,
           (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0,
         ),
       ),
@@ -227,7 +227,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       );
 
       // add bucket update for next level
-      updates.push(
+      updts.push(
         ...buckets.map(
           (b: Bucket<Code, Alg>): LeveledUpdate => ({
             op: "add",

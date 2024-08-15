@@ -75,8 +75,9 @@ const updateBucket = <Code extends number, Alg extends number>(
   isHead: boolean,
 ): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
   const buckets: Bucket<Code, Alg>[] = [];
-  const afterbound: Node[] = [];
   const nodeDiffs: NodeDiff[] = [];
+
+  let afterbound: Node[] = [];
 
   const isBoundary = isBoundaryNode(bucket.prefix.average, bucket.prefix.level);
 
@@ -87,28 +88,26 @@ const updateBucket = <Code extends number, Alg extends number>(
   )) {
     let addedNode: Node | null = null;
     let nodeDiff: NodeDiff | null = null;
+
     if (update == null) {
       addedNode = node;
     } else {
       [addedNode, nodeDiff] = handleUpdate(node, update);
+      nodeDiff && nodeDiffs.push(nodeDiff);
     }
-
-    if (nodeDiff) nodeDiffs.push(nodeDiff);
 
     if (addedNode) {
       afterbound.push(addedNode);
       if (isBoundary(addedNode)) {
-        buckets.push(
-          createBucket(bucket.prefix, afterbound.splice(0), codec, hasher),
-        );
+        buckets.push(createBucket(bucket.prefix, afterbound, codec, hasher));
+        afterbound = [];
       }
     }
   }
 
-  if (isHead && leftovers.length > 0) {
-    buckets.push(
-      createBucket(bucket.prefix, leftovers.splice(0), codec, hasher),
-    );
+  if (isHead && afterbound.length > 0) {
+    buckets.push(createBucket(bucket.prefix, afterbound, codec, hasher));
+    afterbound = [];
   }
 
   return [buckets, afterbound, nodeDiffs];
@@ -191,7 +190,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       visitedLevelHead,
     );
     newBuckets.push(...buckets);
-    leftovers.push(...afterbound);
+    leftovers = afterbound;
 
     // there were changes
     if (nodeDiffs.length > 0) {
@@ -224,6 +223,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
       yield {
         // node diffs up to last bucket diff boundary
+        // afterbound updates have been applied but not commited to a bucket
         nodes: diffs.nodes.splice(
           0,
           findFailure(

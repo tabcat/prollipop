@@ -142,23 +142,20 @@ describe("utils", () => {
 
   describe("createEmptyTree", () => {
     it("returns an empty tree", () => {
+      const prefix = {
+        level: 0,
+        average: 30,
+        mc: cborTreeCodec.code,
+        mh: sha256SyncHasher.code,
+      };
+
       expect(
         createEmptyTree(cborTreeCodec, sha256SyncHasher, {
-          averageBucketSize: 30,
+          averageBucketSize: prefix.average,
         }),
       ).to.deep.equal(
         new DefaultProllyTree(
-          createBucket(
-            {
-              average: 30,
-              level: 0,
-              mc: cborTreeCodec.code,
-              mh: sha256SyncHasher.code,
-            },
-            [],
-            cborTreeCodec,
-            sha256SyncHasher,
-          ),
+          createBucket(prefix, [], cborTreeCodec, sha256SyncHasher),
           cborTreeCodec,
           sha256SyncHasher,
         ),

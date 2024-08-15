@@ -258,8 +258,6 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     }
   }
 
-  tree.root = firstElement(newBuckets);
-
   // add all higher level buckets in path to removed
   if (level < rootLevelOf(cursorState)) {
     diffs.buckets.push(
@@ -268,5 +266,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         .map((b): BucketDiff<Code, Alg> => [b, null]),
     );
   }
+
   yield diffs;
+
+  tree.root = firstElement(newBuckets);
 }

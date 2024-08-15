@@ -38,6 +38,14 @@ export type LeveledUpdate = Update & { level: number };
 const compareNodeToUpdate = (a: Node, b: LeveledUpdate): number =>
   compareTuples(a, b.value);
 
+/**
+ * Takes a node and update of equal tuples and returns whether a change must be made.
+ * The node may be null but the update will always be defined.
+ *
+ * @param node
+ * @param update
+ * @returns
+ */
 const handleUpdate = (
   node: Node | null,
   update: LeveledUpdate,
@@ -66,6 +74,17 @@ const handleUpdate = (
   throw new Error("unrecognized op");
 };
 
+/**
+ * Helper function to create new buckets. Eases rebuilding of the tree from the updates.
+ *
+ * @param bucket - The bucket to be updated.
+ * @param leftovers - Nodes which could not be included within the previous bucket's boundary.
+ * @param updates - Updates to make to the bucket.
+ * @param codec - Codec to use for encoding/decoding buckets and nodes.
+ * @param hasher - Hasher to use to find the hash of the bucket.
+ * @param isHead - Tells the function whether the bucket being updated is the level head.
+ * @returns
+ */
 const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],

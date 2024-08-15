@@ -132,6 +132,14 @@ const updateBucket = <Code extends number, Alg extends number>(
   return [buckets, afterbound, nodeDiffs];
 };
 
+/**
+ * Mutate a prolly-tree with updates.
+ * Instead of rebuilding a tree from a complete list of leaf nodes, this function will edit and update buckets all the way to root.
+ *
+ * @param blockstore
+ * @param tree
+ * @param updates
+ */
 export async function* mutateTree<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,

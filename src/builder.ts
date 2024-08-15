@@ -252,8 +252,9 @@ export async function* mutateTree<Code extends number, Alg extends number>(
           ),
         ),
         // all bucket diffs
-        buckets: diffs.buckets.splice(0, diffs.buckets.length),
+        buckets: diffs.buckets,
       };
+      diffs.buckets = [];
     }
   }
 

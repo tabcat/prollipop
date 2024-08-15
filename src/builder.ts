@@ -37,6 +37,34 @@ export type LeveledUpdate = Update & { level: number };
 const compareNodeToUpdate = (a: Node, b: LeveledUpdate): number =>
   compareTuples(a, b.value);
 
+const handleUpdate = (
+  node: Node | null,
+  update: LeveledUpdate,
+): [Node | null, NodeDiff | null] => {
+  if (update.op === "add") {
+    const addedNode = update.value;
+    if (node != null) {
+      if (compareNodes(node, addedNode) !== 0) {
+        return [addedNode, [node, addedNode]];
+      } else {
+        return [node, null];
+      }
+    } else {
+      return [addedNode, [null, addedNode]];
+    }
+  }
+
+  if (update.op === "rm") {
+    if (node != null) {
+      return [null, [node, null]];
+    } else {
+      return [null, null];
+    }
+  }
+
+  throw new Error("unrecognized op");
+};
+
 const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
@@ -50,34 +78,6 @@ const updateBucket = <Code extends number, Alg extends number>(
   const nodeDiffs: NodeDiff[] = [];
 
   const isBoundary = isBoundaryNode(bucket.prefix.average, bucket.prefix.level);
-
-  const handleUpdate = (
-    node: Node | null,
-    update: Update,
-  ): [Node | null, NodeDiff | null] => {
-    if (update.op === "add") {
-      const addedNode = update.value as Update<"add">["value"];
-      if (node != null) {
-        if (compareNodes(node, addedNode) !== 0) {
-          return [addedNode, [node, addedNode]];
-        } else {
-          return [node, null];
-        }
-      } else {
-        return [addedNode, [null, addedNode]];
-      }
-    }
-
-    if (update.op === "rm") {
-      if (node != null) {
-        return [null, [node, null]];
-      } else {
-        return [null, null];
-      }
-    }
-
-    throw new Error("unrecognized op");
-  };
 
   for (const [node, update] of pairwiseTraversal(
     [...leftovers, ...bucket.nodes],

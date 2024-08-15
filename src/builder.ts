@@ -2,9 +2,10 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
+import { compare } from "uint8arrays";
 import { isBoundaryNode } from "./boundaries.js";
 import { TreeCodec } from "./codec.js";
-import { compareNodes, compareTuples } from "./compare.js";
+import { compareTuples } from "./compare.js";
 import {
   bucketOf,
   createCursorState,
@@ -44,7 +45,7 @@ const handleUpdate = (
   if (update.op === "add") {
     const addedNode = update.value;
     if (node != null) {
-      if (compareNodes(node, addedNode) !== 0) {
+      if (compare(node.message, addedNode.message) !== 0) {
         return [addedNode, [node, addedNode]];
       } else {
         return [node, null];

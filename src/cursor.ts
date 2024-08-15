@@ -263,6 +263,7 @@ export const createNextOnLevel =
     }
 
     if (state.isDone) {
+      state.isLocked = false;
       return;
     }
 

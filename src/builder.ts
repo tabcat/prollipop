@@ -23,20 +23,24 @@ import {
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, findFailure, prefixWithLevel } from "./utils.js";
 
-type Ops = "rm" | "add";
-export interface Update<Op extends Ops = Ops, Level extends number = number> {
-  op: Op;
-  level: Level;
-  value: Op extends "add" ? Node : Tuple;
+export interface AddUpdate {
+  op: "add";
+  value: Node;
 }
+export interface RmUpdate {
+  op: "rm";
+  value: Tuple;
+}
+export type Update = AddUpdate | RmUpdate;
+export type LeveledUpdate = Update & { level: number };
 
-const compareNodeToUpdate = (a: Node, b: Update): number =>
+const compareNodeToUpdate = (a: Node, b: LeveledUpdate): number =>
   compareTuples(a, b.value);
 
 const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
-  updates: Update[],
+  updates: LeveledUpdate[],
   codec: TreeCodec<Code, Alg>,
   hasher: SyncMultihashHasher<Alg>,
   isHead: boolean,
@@ -112,7 +116,7 @@ const updateBucket = <Code extends number, Alg extends number>(
 export async function* mutateTree<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  updates: Update<Ops, number>[],
+  _updates: Update[],
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let diffs = createProllyTreeDiff<Code, Alg>();
 
@@ -123,6 +127,10 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     leftovers.length === 0 &&
     visitedLevelTail &&
     visitedLevelHead;
+
+  const updates: LeveledUpdate[] = _updates.map((u) =>
+    Object.assign(u, { level: 0 }),
+  );
 
   let level: number = -1;
   let newBuckets: Bucket<Code, Alg>[] = [];
@@ -201,7 +209,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
       updates.push(
         ...buckets.map(
-          (b: Bucket<Code, Alg>): Update<"add"> => ({
+          (b: Bucket<Code, Alg>): LeveledUpdate => ({
             op: "add",
             level: level + 1,
             value: lastElement(b.nodes),

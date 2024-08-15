@@ -5,7 +5,7 @@ import { Blockstore } from "interface-blockstore";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
 import { MultihashDigest, SyncMultihashHasher } from "multiformats/interface";
-import { Update, mutateTree } from "./builder.js";
+import { mutateTree, Update } from "./builder.js";
 import { TreeCodec, handleBuffer } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursorState, moveToTupleOnLevel, nodeOf } from "./cursor.js";
@@ -91,7 +91,7 @@ export async function* insert<Code extends number, Alg extends number>(
   return mutateTree(
     blockstore,
     tree,
-    nodes.map((n): Update<"add", 0> => ({ op: "add", level: 0, value: n })),
+    nodes.map((n): Update => ({ op: "add", value: n })),
   );
 }
 
@@ -103,6 +103,6 @@ export async function* remove<Code extends number, Alg extends number>(
   return mutateTree(
     blockstore,
     tree,
-    tuples.map((t): Update<"rm", 0> => ({ op: "rm", level: 0, value: t })),
+    tuples.map((t): Update => ({ op: "rm", value: t })),
   );
 }

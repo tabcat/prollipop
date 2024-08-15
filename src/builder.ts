@@ -207,6 +207,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         ...buckets.map((b): BucketDiff<Code, Alg> => [null, b]),
       );
 
+      // add bucket update for next level
       updates.push(
         ...buckets.map(
           (b: Bucket<Code, Alg>): LeveledUpdate => ({
@@ -239,8 +240,8 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
   tree.root = firstElement(newBuckets);
 
+  // add all higher level buckets in path to removed
   if (level < rootLevelOf(cursorState)) {
-    // add all higher level buckets in path to removed
     diffs.buckets.push(
       ...cursorState.currentBuckets
         .slice(0, cursorState.currentBuckets.length - level)

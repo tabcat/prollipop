@@ -228,6 +228,10 @@ export const moveToTupleOnLevel = async <
 ): Promise<void> => {
   const stateCopy = cloneCursorState(state);
 
+  if (state.isDone) {
+    return
+  }
+
   // move up until finding a node greater than tuple
   while (
     compareTuples(tuple, lastOf(state)) > 0 &&

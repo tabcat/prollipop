@@ -39,17 +39,23 @@ export interface CursorState<Code extends number, Alg extends number> {
 export const createCursorState = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
-  currentBuckets: Bucket<Code, Alg>[] = [tree.root],
+  currentBuckets?: Bucket<Code, Alg>[],
   currentIndex?: number,
-): CursorState<Code, Alg> => ({
-  blockstore,
-  codec: tree.getCodec(),
-  hasher: tree.getHasher(),
-  currentBuckets,
-  currentIndex:
-    currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1),
-  isDone: false,
-  isLocked: false,
+): CursorState<Code, Alg> => {
+  currentBuckets = currentBuckets ?? [tree.root]
+  currentIndex = currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1)
+
+  return {
+    blockstore,
+    codec: tree.getCodec(),
+    hasher: tree.getHasher(),
+    currentBuckets,
+    currentIndex,
+    isDone: currentIndex === -1,
+    isLocked: false,
+  }
+}
+  ({
 });
 
 export const cloneCursorState = <Code extends number, Alg extends number>(
@@ -287,10 +293,6 @@ export function createCursorFromState<Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Cursor<Code, Alg> {
   const nextAtLevel = createNextOnLevel(state);
-
-  if (state.currentIndex === -1) {
-    state.isDone = true;
-  }
 
   return {
     path: () => pathOf(state),

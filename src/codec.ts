@@ -156,7 +156,7 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
     throw unexpectedHasher(hasher.code, mh);
   }
 
-  return { average, level, mc, mh };
+  return { level, average, mc, mh };
 };
 
 export function decodeBucket<Code extends number, Alg extends number>(

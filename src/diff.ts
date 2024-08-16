@@ -17,7 +17,7 @@
 
 import { ithElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
-import { compareBuckets, compareTuples } from "./compare.js";
+import { compareBuckets, compareNodes, compareTuples } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
 
@@ -119,8 +119,7 @@ async function ffwUnequalLevel0<Code extends number, Alg extends number>(
   // while both cursors are not done AND the level is not 0 or the comparison is 0
   // ensures that returned cursors are on level 0 and unequal OR one of the cursors is done
   while (!lc.done() && !rc.done()) {
-    // only comparing tuples right now, should compare nodes in the future
-    if (compareTuples(lc.current(), rc.current()) === 0) {
+    if (compareNodes(lc.current(), rc.current()) === 0) {
       // move to comparison that is non-equal or one or more cursors done
       const matchingBucketsLength = getMatchingBucketsLength(
         lc.buckets(),

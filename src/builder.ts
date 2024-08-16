@@ -149,28 +149,28 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
   const cursorState = createCursorState(blockstore, tree);
 
-  const newRootFound = () =>
-    newBuckets.length === 1 &&
-    leftovers.length === 0 &&
-    visitedLevelTail &&
-    visitedLevelHead;
-
   const updts: LeveledUpdate[] = updates.map((u) =>
     Object.assign(u, { level: 0 }),
   );
 
-  let level: number = -1;
-  let newBuckets: Bucket<Code, Alg>[] = [];
+  let level: number = -1; // start at -1 to init firstBucketOfLevel
+  let bucketsOnLevel: number = 0;
   let leftovers: Node[] = [];
   let visitedLevelTail: boolean = false;
   let visitedLevelHead: boolean = false;
 
-  while (updts.length > 0 && !newRootFound()) {
-    const firstBucketOfLevel: boolean = level !== firstElement(updts).level;
-    level = firstElement(updts).level;
+  let newRoot: Bucket<Code, Alg> | null = null;
+  let i = 0
+
+  while (updts.length > 0 && i < 1000) {
+    i++
+    const updtLevel = firstElement(updts).level;
+
+    const firstBucketOfLevel: boolean = level !== updtLevel;
+    level = updtLevel;
 
     if (firstBucketOfLevel) {
-      newBuckets = [];
+      bucketsOnLevel = 0;
     }
 
     const pastRootLevel = level > rootLevelOf(cursorState);
@@ -189,7 +189,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
       updatee = bucketOf(cursorState);
       visitedLevelTail =
-        visitedLevelHead || (firstBucketOfLevel && getIsTail(cursorState));
+        visitedLevelTail || (firstBucketOfLevel && getIsTail(cursorState));
       visitedLevelHead = getIsHead(cursorState);
     } else {
       updatee = createBucket(
@@ -202,21 +202,25 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       visitedLevelHead = true;
     }
 
-    const [buckets, afterbound, nodeDiffs] = updateBucket(
-      updatee,
-      leftovers,
-      updts.splice(
+    const updtBatch = updts.splice(
         0,
         findFailure(
           updts,
-          (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0,
+          updatee.nodes.length > 0
+            ? (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0
+            : (u) => u.level <= level
         ),
-      ),
+      );
+
+    const [buckets, afterbound, nodeDiffs] = updateBucket(
+      updatee,
+      leftovers,
+      updtBatch,
       tree.getCodec(),
       tree.getHasher(),
       visitedLevelHead,
     );
-    newBuckets.push(...buckets);
+    bucketsOnLevel += buckets.length;
     leftovers = afterbound;
 
     // there were changes
@@ -230,22 +234,13 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       if (!pastRootLevel) {
         diffs.buckets.push([updatee, null]);
       }
+      // always add any new buckets to diff
       diffs.buckets.push(
         ...buckets.map((b): BucketDiff<Code, Alg> => [null, b]),
       );
-
-      // add bucket update for next level
-      updts.push(
-        ...buckets.map(
-          (b: Bucket<Code, Alg>): LeveledUpdate => ({
-            op: "add",
-            level: level + 1,
-            value: lastElement(b.nodes),
-          }),
-        ),
-      );
     }
 
+    // only yield a diff if there are new buckets
     if (buckets.length > 0) {
       const boundary = lastElement(lastElement(buckets).nodes);
 
@@ -264,6 +259,34 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       };
       diffs.buckets = [];
     }
+
+    const newRootFound =
+      bucketsOnLevel === 1 &&
+      leftovers.length === 0 &&
+      visitedLevelTail &&
+      visitedLevelHead;
+
+    if (newRootFound) {
+      newRoot = firstElement(buckets);
+      if (updts.length > 0) {
+        throw new Error("");
+      }
+    } else {
+      // add bucket update for next level
+      updts.push(
+        ...buckets.map(
+          (b: Bucket<Code, Alg>): LeveledUpdate => ({
+            op: "add",
+            level: level + 1,
+            value: lastElement(b.nodes),
+          }),
+        ),
+      );
+    }
+  }
+
+  if (newRoot == null) {
+    throw new Error("no new root found");
   }
 
   // add all higher level buckets in path to removed
@@ -277,5 +300,5 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
   yield diffs;
 
-  tree.root = firstElement(newBuckets);
+  tree.root = newRoot;
 }

@@ -124,7 +124,8 @@ const updateBucket = <Code extends number, Alg extends number>(
     }
   }
 
-  if (isHead && afterbound.length > 0) {
+  // handle empty bucket
+  if (isHead && (afterbound.length > 0 || buckets.length === 0)) {
     buckets.push(createBucket(bucket.prefix, afterbound, codec, hasher));
     afterbound = [];
   }
@@ -160,10 +161,10 @@ export async function* mutateTree<Code extends number, Alg extends number>(
   let visitedLevelHead: boolean = false;
 
   let newRoot: Bucket<Code, Alg> | null = null;
-  let i = 0
+  let i = 0;
 
   while (updts.length > 0 && i < 1000) {
-    i++
+    i++;
     const updtLevel = firstElement(updts).level;
 
     const firstBucketOfLevel: boolean = level !== updtLevel;
@@ -203,14 +204,14 @@ export async function* mutateTree<Code extends number, Alg extends number>(
     }
 
     const updtBatch = updts.splice(
-        0,
-        findFailure(
-          updts,
-          updatee.nodes.length > 0
-            ? (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0
-            : (u) => u.level <= level
-        ),
-      );
+      0,
+      findFailure(
+        updts,
+        updatee.nodes.length > 0
+          ? (u) => compareTuples(u.value, lastElement(updatee.nodes)) <= 0
+          : (u) => u.level <= level,
+      ),
+    );
 
     const [buckets, afterbound, nodeDiffs] = updateBucket(
       updatee,
@@ -242,7 +243,11 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
     // only yield a diff if there are new buckets
     if (buckets.length > 0) {
-      const boundary = lastElement(lastElement(buckets).nodes);
+      // needs to be cleaned up later, empty buckets will be common. too many conditionals
+      const boundary: Node | null =
+        lastElement(buckets).nodes.length > 0
+          ? lastElement(lastElement(buckets).nodes)
+          : null;
 
       yield {
         // node diffs up to last bucket diff boundary
@@ -251,7 +256,9 @@ export async function* mutateTree<Code extends number, Alg extends number>(
           0,
           findFailure(
             diffs.nodes,
-            (d) => compareTuples(d[0] ?? d[1], boundary) <= 0,
+            boundary != null
+              ? (d) => compareTuples(d[0] ?? d[1], boundary) <= 0
+              : () => true,
           ),
         ),
         // all bucket diffs

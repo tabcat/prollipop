@@ -134,10 +134,10 @@ export function createEmptyTree<Code extends number, Alg extends number>(
    * data which is prefixed to each bucket, only the level ever changes
    */
   const prefix: Prefix<Code, Alg> = {
-    level: 0,
     average: options.averageBucketSize,
     mc: codec.code,
     mh: hasher.code,
+    level: 0,
   };
 
   return new DefaultProllyTree(

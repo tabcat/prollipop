@@ -27,10 +27,10 @@ export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 export type Mc = typeof treeCodec.code;
 export type Mh = typeof syncHasher.code;
 export const prefix: Prefix<Mc, Mh> = {
-  level: 0,
   average: 30,
   mc: treeCodec.code,
   mh: syncHasher.code,
+  level: 0,
 };
 export const prefixBytes = cbor.encode(prefix, encodeOptions);
 export const bucketBytes = new Uint8Array([...prefixBytes, ...nodeBytes]);

@@ -142,13 +142,6 @@ describe("utils", () => {
 
   describe("createEmptyTree", () => {
     it("returns an empty tree", () => {
-      const prefix = {
-        level: 0,
-        average: 30,
-        mc: cborTreeCodec.code,
-        mh: sha256SyncHasher.code,
-      };
-
       expect(
         createEmptyTree(cborTreeCodec, sha256SyncHasher, {
           averageBucketSize: prefix.average,

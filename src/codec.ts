@@ -23,9 +23,10 @@ export const handleBuffer = <T>(bytes: Bytes<T>): ByteView<T> =>
   bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
 
 /**
- * Similar to BlockCodec from multiformats but decode functions return values with unknown types
+ * Similar to the BlockCodec interface from multiformats but decode functions return values with unknown types.
+ * Also includes the decodeFirst method from @ipld/dag-cbor.
  */
-interface SafeBlockCodec<Code extends number, Universe = any> {
+export interface SafeBlockCodec<Code extends number, Universe = any> {
   name: string;
   code: Code;
   encode<T extends Universe>(data: T): ByteView<T>;

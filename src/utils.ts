@@ -146,3 +146,19 @@ export function createEmptyTree<Code extends number, Alg extends number>(
     hasher,
   );
 }
+
+/**
+ * Creates a new NamedError class.
+ *
+ * @param name - Specifies the string to set as the .name property.
+ * @returns
+ */
+export const createNamedErrorClass = <S extends string>(name: S) =>
+  class NamedError extends Error {
+    override readonly name: S;
+
+    constructor(message?: string, options?: ErrorOptions) {
+      super(message, options);
+      this.name = name;
+    }
+  };

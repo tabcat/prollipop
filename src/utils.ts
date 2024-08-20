@@ -49,7 +49,7 @@ export const findFailureOrLastIndex = <T>(
 };
 
 /**
- * Returns a copied prefix at a specific level.
+ * Returns a new prefix object set to a specific level.
  *
  * @param prefix
  * @param level

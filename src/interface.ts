@@ -12,10 +12,10 @@ export interface Node extends Tuple {
 }
 
 export interface Prefix<Code extends number, Alg extends number> {
-  readonly level: number; // changes based on level of the bucket in the tree, leaves are always level 0
   readonly average: number; // same for all buckets of the same tree
   readonly mc: Code; // same for all buckets of the same tree
   readonly mh: Alg; // same for all buckets of the same tree
+  readonly level: number; // changes based on level of the bucket in the tree, leaves are always level 0
 }
 
 export interface Bucket<Code extends number, Alg extends number> {

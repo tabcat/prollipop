@@ -28,7 +28,7 @@ export interface Cursor<Code extends number, Alg extends number> {
 
 export interface CursorState<Code extends number, Alg extends number> {
   blockstore: Blockstore;
-  codec: TreeCodec<Code, Alg>;
+  codec: TreeCodec<Code>;
   hasher: SyncMultihashHasher<Alg>;
   currentBuckets: Bucket<Code, Alg>[];
   currentIndex: number;

@@ -13,10 +13,7 @@ import { ProllyTreeDiff } from "./diff.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { InitOptions, createEmptyTree } from "./utils.js";
 
-export const cborTreeCodec: TreeCodec<
-  typeof dagCbor.code,
-  typeof mh_sha256.code
-> = {
+export const cborTreeCodec: TreeCodec<typeof dagCbor.code> = {
   ...dagCbor,
   encode: (value) => encode(value, dagCbor.encodeOptions),
   decode: (bytes) => decode(handleBuffer(bytes), dagCbor.decodeOptions),

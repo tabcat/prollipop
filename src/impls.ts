@@ -71,19 +71,19 @@ export class DefaultBucket<Code extends number, Alg extends number>
 export class DefaultProllyTree<Code extends number, Alg extends number>
   implements ProllyTree<Code, Alg>
 {
-  #codec: TreeCodec<Code, Alg>;
+  #codec: TreeCodec<Code>;
   #hasher: SyncMultihashHasher<Alg>;
 
   constructor(
     public root: Bucket<Code, Alg>,
-    codec: TreeCodec<Code, Alg>,
+    codec: TreeCodec<Code>,
     hasher: SyncMultihashHasher<Alg>,
   ) {
     this.#codec = codec;
     this.#hasher = hasher;
   }
 
-  getCodec(): TreeCodec<Code, Alg> {
+  getCodec(): TreeCodec<Code> {
     return this.#codec;
   }
 

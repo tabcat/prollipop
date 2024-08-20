@@ -89,7 +89,7 @@ const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
   updates: LeveledUpdate[],
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
   isHead: boolean,
 ): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {

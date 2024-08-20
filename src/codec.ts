@@ -34,17 +34,17 @@ export interface SafeBlockCodec<Code extends number, Universe = any> {
   decodeFirst(bytes: Uint8Array): [unknown, Uint8Array];
 }
 
-export interface TreeCodec<Code extends number, Alg extends number>
-  extends SafeBlockCodec<Code, Prefix<Code, Alg> | EncodedNode> {}
+export interface TreeCodec<Code extends number>
+  extends SafeBlockCodec<Code, Prefix<number, number> | EncodedNode> {}
 
 export type EncodedTuple = [Tuple["timestamp"], Tuple["hash"]];
 export type EncodedNode = [...EncodedTuple, Node["message"]];
 
-export function encodeNode<Code extends number, Alg extends number>(
+export function encodeNode<Code extends number>(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
 ): ByteView<EncodedNode> {
   return codec.encode([timestamp, hash, message]);
 }
@@ -73,9 +73,9 @@ export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
   return [timestamp, hash, message];
 };
 
-export function decodeNodeFirst<Code extends number, Alg extends number>(
+export function decodeNodeFirst<Code extends number>(
   bytes: Uint8Array,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
 ): [DefaultNode, Uint8Array] {
   const [encodedNode, remainder]: [unknown, Uint8Array] =
     codec.decodeFirst(bytes);
@@ -91,7 +91,7 @@ export type EncodedBucket<Code extends number, Alg extends number> = [
 export function encodeBucket<Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
 ): ByteView<EncodedBucket<Code, Alg>> {
   const encodedPrefix: ByteView<Prefix<Code, Alg>> = codec.encode(prefix);
   const bytedNodes: Uint8Array[] = [];
@@ -124,7 +124,7 @@ export function encodeBucket<Code extends number, Alg extends number>(
 
 export const getValidatedPrefix = <Code extends number, Alg extends number>(
   prefix: unknown,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Prefix<Code, Alg> => {
   if (typeof prefix !== "object") {
@@ -162,7 +162,7 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
 
 export function decodeBucket<Code extends number, Alg extends number>(
   bytes: Uint8Array,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
   const decoded: [unknown, Uint8Array] = codec.decodeFirst(bytes);

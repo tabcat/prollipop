@@ -78,7 +78,7 @@ export const bucketBytesToDigest = <Alg extends number>(
 export const createBucket = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> => {
   const bytes = encodeBucket(prefix, nodes, codec);
@@ -94,7 +94,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   hash: Uint8Array,
   expectedPrefix: Prefix<Code, Alg>,
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Promise<Bucket<Code, Alg>> {
   let bytes: Uint8Array;
@@ -126,7 +126,7 @@ export interface InitOptions {
 }
 
 export function createEmptyTree<Code extends number, Alg extends number>(
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
   options: InitOptions,
 ): ProllyTree<Code, Alg> {

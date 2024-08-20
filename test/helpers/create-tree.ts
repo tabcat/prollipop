@@ -36,7 +36,7 @@ const levelOfNodes = <Code extends number, Alg extends number>(
 const levelOfBuckets = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodeLevel: Node[][],
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg>[] => {
   if (nodeLevel.length === 0) {
@@ -63,7 +63,7 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code, Alg>,
+  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): [ProllyTree<Code, Alg>, Bucket<Code, Alg>[][]] => {
   let level: number = 0;

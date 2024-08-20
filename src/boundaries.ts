@@ -27,7 +27,7 @@ export function isBoundaryHash(hash: Uint8Array, limit: number): boolean {
   return new DataView(hash.buffer, hash.byteOffset, 4).getUint32(0) < limit;
 }
 
-export const isBoundaryNode = (average: number, level: number) => {
+export const isBoundaryNode = (average: number, level: number): (node: Node) => boolean => {
   if (average < 1) {
     throw averageLessThanOne(average);
   }
@@ -40,7 +40,7 @@ export const isBoundaryNode = (average: number, level: number) => {
     throw averageNotWhole(average);
   }
 
-  return (node: Node): boolean =>
+  return (node) =>
     isBoundaryHash(
       level === 0 ? node.hash : node.message,
       MAX_UINT32 / Math.max(average, 1),

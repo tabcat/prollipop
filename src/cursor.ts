@@ -55,8 +55,6 @@ export const createCursorState = <Code extends number, Alg extends number>(
     isLocked: false,
   }
 }
-  ({
-});
 
 export const cloneCursorState = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,

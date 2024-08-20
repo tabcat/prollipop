@@ -16,6 +16,7 @@ import {
 } from "./errors.js";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
+import { cborTreeCodec } from "./index.js";
 
 export type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
@@ -93,7 +94,8 @@ export function encodeBucket<Code extends number, Alg extends number>(
   nodes: Node[],
   codec: TreeCodec<Code>,
 ): ByteView<EncodedBucket<Code, Alg>> {
-  const encodedPrefix: ByteView<Prefix<Code, Alg>> = codec.encode(prefix);
+  // prefix must be dag-cbor encoded
+  const encodedPrefix: ByteView<Prefix<Code, Alg>> = cborTreeCodec.encode(prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
@@ -165,7 +167,8 @@ export function decodeBucket<Code extends number, Alg extends number>(
   codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
-  const decoded: [unknown, Uint8Array] = codec.decodeFirst(bytes);
+  // prefix is always dag-cbor
+  const decoded: [unknown, Uint8Array] = cborTreeCodec.decodeFirst(bytes);
 
   const prefix = getValidatedPrefix(decoded[0], codec, hasher);
 

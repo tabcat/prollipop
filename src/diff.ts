@@ -77,7 +77,8 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
     if (
       // out of bounds will only occur when comparing buckets from first and second cursors, not last
       i >= subtrahend.length ||
-      compareBucketHashes(ithElement(minuend, i), ithElement(subtrahend, i)) !== 0
+      compareBucketHashes(ithElement(minuend, i), ithElement(subtrahend, i)) !==
+        0
     ) {
       yield differ(ithElement(minuend, i));
     }

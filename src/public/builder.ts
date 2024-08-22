@@ -1,4 +1,1 @@
-export {
-  type Update,
-  mutateTree
-} from '../builder.js'
+export { mutateTree, type Update } from "../builder.js";

@@ -2,16 +2,13 @@ import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
 import {
-  createBucket,
-  loadBucket,
-} from "../src/utils.js";
-import {
   bucketCidToDigest,
   bucketDigestToCid,
   findFailure,
   findFailureOrLastIndex,
   prefixWithLevel,
 } from "../src/internal.js";
+import { createBucket, loadBucket } from "../src/utils.js";
 import {
   bucket,
   bucketBytes,
@@ -105,7 +102,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toSatisfy(e => e instanceof Error);
+      ).rejects.toSatisfy((e) => e instanceof Error);
     });
 
     it("throws if bucket level mismatches level of expected prefix", () => {
@@ -117,7 +114,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toSatisfy(e => e instanceof TypeError);
+      ).rejects.toSatisfy((e) => e instanceof TypeError);
     });
 
     it("throws if bucket hash does not match requested hash", () => {
@@ -131,7 +128,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toSatisfy(e => e instanceof Error);
+      ).rejects.toSatisfy((e) => e instanceof Error);
     });
   });
 });

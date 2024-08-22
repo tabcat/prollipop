@@ -15,7 +15,7 @@ describe("builder", () => {
   describe("mutateTree", () => {
     it("adds and removes nodes to/from an empty tree", async () => {
       const nodes = createProllyTreeNodes([1], sha256SyncHasher);
-      const tree = createEmptyTree()
+      const tree = createEmptyTree();
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
       for await (const _ of mutateTree(

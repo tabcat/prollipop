@@ -263,10 +263,10 @@ export const guideByLowestIndex = () => 0;
 
 /**
  * Moves the cursor vertically. Never causes the cursor to increment without a provided _guide parameter.
- * 
- * @param state 
- * @param level 
- * @param _guide 
+ *
+ * @param state
+ * @param level
+ * @param _guide
  */
 export const moveToLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
@@ -326,14 +326,14 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
 
 /**
  * Increments the cursor by one on the same level. Handles traversing buckets if necessary.
- * 
- * @param state 
- * @returns 
+ *
+ * @param state
+ * @returns
  */
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy = cloneCursorState(state)
+  const stateCopy = cloneCursorState(state);
 
   // find a higher level which allows increasing currentIndex
   while (overflows(stateCopy)) {

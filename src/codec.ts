@@ -2,7 +2,7 @@
  * Encoding/decoding of nodes and buckets
  */
 
-import { encodeOptions, decodeOptions } from "@ipld/dag-cbor";
+import { decodeOptions, encodeOptions } from "@ipld/dag-cbor";
 import * as cborg from "cborg";
 import type {
   ArrayBufferView,

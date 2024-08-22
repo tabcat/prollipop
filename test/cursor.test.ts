@@ -311,11 +311,11 @@ describe("cursor", () => {
       const cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
 
-      const cursor = createCursorFromState(cursorState)
+      const cursor = createCursorFromState(cursorState);
 
       cursorState.currentBuckets = treeState.map(firstElement);
 
-      await cursor.nextBucket()
+      await cursor.nextBucket();
 
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
@@ -331,9 +331,9 @@ describe("cursor", () => {
       let cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
 
-      let cursor = createCursorFromState(cursorState)
+      let cursor = createCursorFromState(cursorState);
 
-      await cursor.nextBucket()
+      await cursor.nextBucket();
 
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
@@ -344,9 +344,9 @@ describe("cursor", () => {
       cursorState = createCursorState(blockstore, tree);
       cursorState.currentBuckets = treeState.map(lastElement);
 
-      cursor = createCursorFromState(cursorState)
+      cursor = createCursorFromState(cursorState);
 
-      await cursor.nextBucket()
+      await cursor.nextBucket();
 
       expect(cursorState).to.deep.equal({
         ...rootCursorState,

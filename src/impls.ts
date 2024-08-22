@@ -3,7 +3,7 @@ import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
 import { TreeCodec } from "./codec.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
-import { bucketDigestToCid } from "./utils.js";
+import { bucketDigestToCid } from "./internal.js";
 
 const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
 

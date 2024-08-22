@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AddUpdate, RmUpdate, mutateTree } from "../src/builder.js";
-import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
-import { createEmptyTree } from "../src/utils.js";
+import {
+  cborTreeCodec,
+  createEmptyTree,
+  sha256SyncHasher,
+} from "../src/index.js";
 import { blockstore, prefix } from "./helpers/constants.js";
 import {
   createProllyTree,
@@ -12,9 +15,7 @@ describe("builder", () => {
   describe("mutateTree", () => {
     it("adds and removes nodes to/from an empty tree", async () => {
       const nodes = createProllyTreeNodes([1], sha256SyncHasher);
-      const tree = createEmptyTree(cborTreeCodec, sha256SyncHasher, {
-        averageBucketSize: prefix.average,
-      });
+      const tree = createEmptyTree()
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
       for await (const _ of mutateTree(

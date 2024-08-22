@@ -1,7 +1,4 @@
 import type { Node } from "./interface.js";
-import { createNamedErrorClass } from "./internal.js";
-
-export const BoundaryError = createNamedErrorClass("BoundaryError");
 
 /**
  * Returns true if hash meets 1/average threshold, false otherwise
@@ -16,7 +13,7 @@ export const BoundaryError = createNamedErrorClass("BoundaryError");
  */
 export function isBoundaryHash(hash: Uint8Array, limit: number): boolean {
   if (hash.length < 4) {
-    throw new BoundaryError(
+    throw new TypeError(
       `Hash parameter must have a byte length greater than or equal to 4. Received hash byte length: ${hash.length}`,
     );
   }
@@ -31,19 +28,19 @@ export const isBoundaryNode = (
   level: number,
 ): ((node: Node) => boolean) => {
   if (average < 1) {
-    throw new BoundaryError(
+    throw new TypeError(
       `Average parameter must be greater than or equal to 1. Received average: ${average}`,
     );
   }
 
   if (average > MAX_UINT32) {
-    throw new BoundaryError(
+    throw new TypeError(
       `Average parameter must be less than max uint32. Received average: ${average}`,
     );
   }
 
   if (average % 1 !== 0) {
-    throw new BoundaryError(
+    throw new TypeError(
       `Average parameter must be a whole number. Received average: ${average}`,
     );
   }

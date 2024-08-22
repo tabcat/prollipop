@@ -1,22 +1,17 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
-import {
-  errNotFound,
-  unexpectedBucketHash,
-  unexpectedBucketLevel,
-} from "../src/errors.js";
-import { DefaultProllyTree } from "../src/impls.js";
 import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
+import {
+  createBucket,
+  loadBucket,
+} from "../src/utils.js";
 import {
   bucketCidToDigest,
   bucketDigestToCid,
-  createBucket,
-  createEmptyTree,
   findFailure,
   findFailureOrLastIndex,
-  loadBucket,
   prefixWithLevel,
-} from "../src/utils.js";
+} from "../src/internal.js";
 import {
   bucket,
   bucketBytes,
@@ -110,7 +105,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toMatchObject(errNotFound());
+      ).rejects.toSatisfy(e => e instanceof Error);
     });
 
     it("throws if bucket level mismatches level of expected prefix", () => {
@@ -122,7 +117,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toMatchObject(unexpectedBucketLevel(0, 1));
+      ).rejects.toSatisfy(e => e instanceof TypeError);
     });
 
     it("throws if bucket hash does not match requested hash", () => {
@@ -136,23 +131,7 @@ describe("utils", () => {
           cborTreeCodec,
           sha256SyncHasher,
         ),
-      ).rejects.toMatchObject(unexpectedBucketHash());
-    });
-  });
-
-  describe("createEmptyTree", () => {
-    it("returns an empty tree", () => {
-      expect(
-        createEmptyTree(cborTreeCodec, sha256SyncHasher, {
-          averageBucketSize: prefix.average,
-        }),
-      ).to.deep.equal(
-        new DefaultProllyTree(
-          createBucket(prefix, [], cborTreeCodec, sha256SyncHasher),
-          cborTreeCodec,
-          sha256SyncHasher,
-        ),
-      );
+      ).rejects.toSatisfy(e => e instanceof Error);
     });
   });
 });

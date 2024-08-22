@@ -6,15 +6,7 @@ import { compare } from "uint8arrays";
 import { isBoundaryNode } from "./boundaries.js";
 import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import {
-  bucketOf,
-  createCursorState,
-  getIsHead,
-  getIsTail,
-  moveToNextBucket,
-  moveToTupleOnLevel,
-  rootLevelOf,
-} from "./cursor.js";
+import { createCursor } from "./cursor.js";
 import {
   BucketDiff,
   NodeDiff,
@@ -22,7 +14,8 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { createBucket, findFailure, prefixWithLevel } from "./utils.js";
+import { findFailure, prefixWithLevel } from "./internal.js";
+import { createBucket } from "./utils.js";
 
 export interface AddUpdate {
   op: "add";
@@ -46,7 +39,7 @@ const compareNodeToUpdate = (a: Node, b: LeveledUpdate): number =>
  * @param update
  * @returns
  */
-const handleUpdate = (
+export const handleUpdate = (
   node: Node | null,
   update: LeveledUpdate,
 ): [Node | null, NodeDiff | null] => {
@@ -85,7 +78,7 @@ const handleUpdate = (
  * @param isHead - Tells the function whether the bucket being updated is the level head.
  * @returns
  */
-const updateBucket = <Code extends number, Alg extends number>(
+export const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
   updates: LeveledUpdate[],
@@ -148,7 +141,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 ): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
   let diffs = createProllyTreeDiff<Code, Alg>();
 
-  const cursorState = createCursorState(blockstore, tree);
+  const cursor = createCursor(blockstore, tree);
 
   const updts: LeveledUpdate[] = updates.map((u) =>
     Object.assign(u, { level: 0 }),
@@ -174,24 +167,20 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       bucketsOnLevel = 0;
     }
 
-    const pastRootLevel = level > rootLevelOf(cursorState);
+    const pastRootLevel = level > cursor.rootLevel();
 
     let updatee: Bucket<Code, Alg>;
     if (!pastRootLevel) {
       if (leftovers.length === 0) {
-        await moveToTupleOnLevel(
-          cursorState,
-          firstElement(updts).value,
-          firstElement(updts).level,
-        );
+        await cursor.ffw(firstElement(updts).value, firstElement(updts).level);
       } else {
-        await moveToNextBucket(cursorState);
+        await cursor.nextBucket();
       }
 
-      updatee = bucketOf(cursorState);
+      updatee = cursor.currentBucket();
       visitedLevelTail =
-        visitedLevelTail || (firstBucketOfLevel && getIsTail(cursorState));
-      visitedLevelHead = getIsHead(cursorState);
+        visitedLevelTail || (firstBucketOfLevel && cursor.isAtTail());
+      visitedLevelHead = cursor.isAtHead();
     } else {
       updatee = createBucket(
         prefixWithLevel(tree.root.prefix, level),
@@ -297,10 +286,11 @@ export async function* mutateTree<Code extends number, Alg extends number>(
   }
 
   // add all higher level buckets in path to removed
-  if (level < rootLevelOf(cursorState)) {
+  if (level < cursor.rootLevel()) {
     diffs.buckets.push(
-      ...cursorState.currentBuckets
-        .slice(0, cursorState.currentBuckets.length - level)
+      ...cursor
+        .buckets()
+        .slice(0, cursor.buckets().length - level)
         .map((b): BucketDiff<Code, Alg> => [b, null]),
     );
   }

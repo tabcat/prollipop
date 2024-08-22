@@ -1,80 +1,21 @@
 import { Blockstore } from "interface-blockstore";
-import { CID } from "multiformats/cid";
-import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
 import { TreeCodec, decodeBucket, encodeBucket } from "./codec.js";
-import {
-  errNotFound,
-  unexpectedBucketHash,
-  unexpectedBucketLevel,
-} from "./errors.js";
-import { DefaultBucket, DefaultProllyTree } from "./impls.js";
-import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
+import { DefaultBucket } from "./impls.js";
+import { Bucket, Node, Prefix } from "./interface.js";
+import { bucketBytesToDigest, bucketDigestToCid } from "./internal.js";
 
 /**
- * Returns the index of the first element to fail a test.
- * If no failure is found then it returns the length of the array.
- *
- * @param array
- * @param test
- * @returns
- */
-export const findFailure = <T>(
-  array: Array<T>,
-  test: (element: T) => boolean,
-): number => {
-  let i = 0;
-
-  for (const element of array) {
-    if (test(element) === false) {
-      return i;
-    }
-
-    i++;
-  }
-
-  return i;
-};
-
-export const findFailureOrLastIndex = <T>(
-  array: Array<T>,
-  test: (element: T) => boolean,
-): number => {
-  if (array.length === 0) {
-    throw new TypeError("Received empty array.");
-  }
-
-  return Math.min(array.length - 1, findFailure(array, test));
-};
-
-/**
- * Returns a new prefix object set to a specific level.
+ * Creates a new bucket from the provided nodes. Does not handle boundary creation.
+ * This is a low level function and is easy to use incorrectly.
  *
  * @param prefix
- * @param level
+ * @param nodes
+ * @param codec
+ * @param hasher
  * @returns
  */
-export const prefixWithLevel = <Code extends number, Alg extends number>(
-  prefix: Prefix<Code, Alg>,
-  level: number,
-): Prefix<Code, Alg> => ({
-  ...prefix,
-  level,
-});
-
-export const bucketDigestToCid =
-  <Code extends number, Alg extends number>(prefix: Prefix<Code, Alg>) =>
-  (digest: Uint8Array): CID =>
-    CID.createV1(prefix.mc, createMultihashDigest(prefix.mh, digest));
-
-export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
-
-export const bucketBytesToDigest = <Alg extends number>(
-  bytes: Uint8Array,
-  hasher: SyncMultihashHasher<Alg>,
-): Uint8Array => hasher.digest(bytes).digest;
-
 export const createBucket = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
@@ -90,6 +31,16 @@ export const createBucket = <Code extends number, Alg extends number>(
   );
 };
 
+/**
+ * Fetches a bucket from the provided blockstore.
+ *
+ * @param blockstore
+ * @param hash
+ * @param expectedPrefix
+ * @param codec
+ * @param hasher
+ * @returns
+ */
 export async function loadBucket<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   hash: Uint8Array,
@@ -102,63 +53,23 @@ export async function loadBucket<Code extends number, Alg extends number>(
     bytes = await blockstore.get(bucketDigestToCid(expectedPrefix)(hash));
   } catch (e) {
     if (e instanceof Error && e.message === "Not Found") {
-      throw errNotFound();
+      throw new Error("Bucket not found in blockstore.", { cause: e });
     } else {
-      throw e;
+      throw new Error("Unable to fetch bucket from blockstore.", { cause: e });
     }
   }
 
   const bucket = decodeBucket(bytes, codec, hasher);
 
   if (bucket.prefix.level !== expectedPrefix.level) {
-    throw unexpectedBucketLevel(bucket.prefix.level, expectedPrefix.level);
+    throw new TypeError(
+      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${bucket.prefix.level}`,
+    );
   }
 
   if (compareBytes(hash, bucket.getHash()) !== 0) {
-    throw unexpectedBucketHash();
+    throw new Error("Unexpected bucket hash.");
   }
 
   return bucket;
 }
-
-export interface InitOptions {
-  averageBucketSize: number;
-}
-
-export function createEmptyTree<Code extends number, Alg extends number>(
-  codec: TreeCodec<Code>,
-  hasher: SyncMultihashHasher<Alg>,
-  options: InitOptions,
-): ProllyTree<Code, Alg> {
-  /**
-   * data which is prefixed to each bucket, only the level ever changes
-   */
-  const prefix: Prefix<Code, Alg> = {
-    average: options.averageBucketSize,
-    mc: codec.code,
-    mh: hasher.code,
-    level: 0,
-  };
-
-  return new DefaultProllyTree(
-    createBucket(prefix, [], codec, hasher),
-    codec,
-    hasher,
-  );
-}
-
-/**
- * Creates a new NamedError class.
- *
- * @param name - Specifies the string to set as the .name property.
- * @returns
- */
-export const createNamedErrorClass = <S extends string>(name: S) =>
-  class NamedError extends Error {
-    override readonly name: S;
-
-    constructor(message?: string, options?: ErrorOptions) {
-      super(message, options);
-      this.name = name;
-    }
-  };

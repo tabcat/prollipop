@@ -2,26 +2,22 @@ import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";
 import {
+  CursorError,
   CursorState,
   bucketOf,
+  createCursorFromState,
   createCursorState,
-  createNextOnLevel,
   getIsExtremity,
   levelOf,
   moveSideways,
   moveToLevel,
-  moveToNextBucket,
+  nextAtLevel,
   nodeOf,
   rootLevelOf,
 } from "../src/cursor.js";
-import {
-  levelExceedsRoot,
-  levelIsNegative,
-  levelMustChange,
-} from "../src/errors.js";
 import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
-import { Bucket, Tuple } from "../src/interface.js";
-import { findFailure, findFailureOrLastIndex } from "../src/utils.js";
+import { Bucket } from "../src/interface.js";
+import { findFailureOrLastIndex } from "../src/internal.js";
 import { blockstore, prefix } from "./helpers/constants.js";
 import {
   createProllyTree,
@@ -127,36 +123,22 @@ describe("cursor", () => {
       const cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
 
-      const findBucket =
-        (target: Tuple) =>
-        <Code extends number, Alg extends number>(
-          buckets: Bucket<Code, Alg>[],
-        ): Bucket<Code, Alg> =>
-          ithElement(
-            buckets,
-            Math.min(
-              findFailure(
-                buckets,
-                (b) => compareTuples(target, lastElement(b.nodes)) > 0,
-              ),
-              buckets.length - 1,
-            ),
-          );
-
+      // holds left while descending
       await moveToLevel(cursorState, 0);
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
-        currentIndex: bucketOf(cursorState).nodes.length - 1,
-        currentBuckets: treeState.map(findBucket(nodeOf(rootCursorState))),
+        currentIndex: 0,
+        currentBuckets: treeState.map(firstElement),
       });
 
+      // follows the tuple when ascending
       await moveToLevel(cursorState, levelOf(rootCursorState));
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
       });
     });
 
-    it("accepts optional target", async () => {
+    it("accepts optional guide", async () => {
       const cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
 
@@ -189,13 +171,13 @@ describe("cursor", () => {
       const cursorState = createCursorState(blockstore, tree);
       expect(() =>
         moveToLevel(cursorState, levelOf(cursorState)),
-      ).rejects.toMatchObject(levelMustChange(levelOf(cursorState)));
+      ).rejects.toSatisfy((e) => e instanceof CursorError);
     });
 
     it("rejects if given level is negative", () => {
       const cursorState = createCursorState(blockstore, tree);
-      expect(() => moveToLevel(cursorState, -1)).rejects.toMatchObject(
-        levelIsNegative(),
+      expect(() => moveToLevel(cursorState, -1)).rejects.toSatisfy(
+        (e) => e instanceof CursorError,
       );
     });
 
@@ -204,7 +186,7 @@ describe("cursor", () => {
       const currentLevel = levelOf(cursorState);
       expect(() =>
         moveToLevel(cursorState, currentLevel + 1),
-      ).rejects.toMatchObject(levelExceedsRoot(currentLevel + 1, currentLevel));
+      ).rejects.toSatisfy((e) => e instanceof CursorError);
     });
   });
 
@@ -258,61 +240,12 @@ describe("cursor", () => {
     });
   });
 
-  describe("moveToTupleOnLevel", () => {
-    it("moves the cursor to the closest tuple on the requested level", () => {});
-  });
-
-  describe("moveToNextBucket", () => {
-    it("moves the cursor to the next bucket on the same level", async () => {
-      const cursorState = createCursorState(blockstore, tree);
-      const rootCursorState = createCursorState(blockstore, tree);
-
-      cursorState.currentBuckets = treeState.map(firstElement);
-
-      await moveToNextBucket(cursorState);
-
-      expect(cursorState).to.deep.equal({
-        ...rootCursorState,
-        currentBuckets: treeState.map((buckets, i, levels) =>
-          i === levels.length - 1
-            ? ithElement(buckets, 1)
-            : firstElement(buckets),
-        ),
-      });
-    });
-
-    it("if overflows then set cursor to done", async () => {
-      let cursorState = createCursorState(blockstore, tree);
-      const rootCursorState = createCursorState(blockstore, tree);
-
-      await moveToNextBucket(cursorState);
-
-      expect(cursorState).to.deep.equal({
-        ...rootCursorState,
-        currentIndex: firstElement(treeState.map(lastElement)).nodes.length - 1,
-        isDone: true,
-      });
-
-      cursorState = createCursorState(blockstore, tree);
-      cursorState.currentBuckets = treeState.map(lastElement);
-
-      await moveToNextBucket(cursorState);
-
-      expect(cursorState).to.deep.equal({
-        ...rootCursorState,
-        currentBuckets: treeState.map(lastElement),
-        currentIndex: lastElement(treeState.map(lastElement)).nodes.length - 1,
-        isDone: true,
-      });
-    });
-  });
-
-  describe("createNextOnLevel", () => {
+  describe("nextAtLevel", () => {
     it("moves to next tuple on requested level", async () => {
       // same level, no overflow
       let cursorState = createCursorState(blockstore, tree);
-      let nextOnLevel = createNextOnLevel(cursorState);
-      await nextOnLevel(rootLevelOf(cursorState));
+
+      await nextAtLevel(cursorState, rootLevelOf(cursorState));
       expect(cursorState).to.deep.equal({
         ...createCursorState(blockstore, tree),
         currentIndex: 1,
@@ -320,11 +253,10 @@ describe("cursor", () => {
 
       // same level, overflows
       cursorState = createCursorState(blockstore, tree);
-      nextOnLevel = createNextOnLevel(cursorState);
       cursorState.currentBuckets = treeState.map(firstElement);
       cursorState.currentIndex =
         firstElement(lastElement(treeState)).nodes.length - 1;
-      await nextOnLevel(0);
+      await nextAtLevel(cursorState, 0);
       expect(cursorState).to.deep.equal({
         ...createCursorState(blockstore, tree),
         currentBuckets: treeState.map((buckets, i, levels) =>
@@ -337,8 +269,7 @@ describe("cursor", () => {
 
       // lower level
       cursorState = createCursorState(blockstore, tree);
-      nextOnLevel = createNextOnLevel(cursorState);
-      await nextOnLevel(0);
+      await nextAtLevel(cursorState, 0);
       expect(cursorState).to.deep.equal({
         ...createCursorState(blockstore, tree),
         currentBuckets: treeState.map((buckets) =>
@@ -355,9 +286,8 @@ describe("cursor", () => {
 
       // higher level
       cursorState = createCursorState(blockstore, tree);
-      nextOnLevel = createNextOnLevel(cursorState);
-      await nextOnLevel(0);
-      await nextOnLevel(rootLevelOf(cursorState));
+      await nextAtLevel(cursorState, 0);
+      await nextAtLevel(cursorState, rootLevelOf(cursorState));
       expect(cursorState).to.deep.equal({
         ...createCursorState(blockstore, tree),
         currentIndex: 1,
@@ -367,8 +297,7 @@ describe("cursor", () => {
     it("sets cursor to done if requested level is > root", async () => {
       const cursorState = createCursorState(blockstore, tree);
       const rootCursorState = createCursorState(blockstore, tree);
-      const nextOnLevel = createNextOnLevel(cursorState);
-      await nextOnLevel(rootLevelOf(cursorState) + 1);
+      await nextAtLevel(cursorState, rootLevelOf(cursorState) + 1);
 
       expect(cursorState).to.deep.equal({
         ...rootCursorState,
@@ -376,4 +305,57 @@ describe("cursor", () => {
       });
     });
   });
+
+  describe("nextBucketAtLevel", () => {
+    it("moves the cursor to the next bucket on the same level", async () => {
+      const cursorState = createCursorState(blockstore, tree);
+      const rootCursorState = createCursorState(blockstore, tree);
+
+      const cursor = createCursorFromState(cursorState)
+
+      cursorState.currentBuckets = treeState.map(firstElement);
+
+      await cursor.nextBucket()
+
+      expect(cursorState).to.deep.equal({
+        ...rootCursorState,
+        currentBuckets: treeState.map((buckets, i, levels) =>
+          i === levels.length - 1
+            ? ithElement(buckets, 1)
+            : firstElement(buckets),
+        ),
+      });
+    });
+
+    it("if overflows then set cursor to done", async () => {
+      let cursorState = createCursorState(blockstore, tree);
+      const rootCursorState = createCursorState(blockstore, tree);
+
+      let cursor = createCursorFromState(cursorState)
+
+      await cursor.nextBucket()
+
+      expect(cursorState).to.deep.equal({
+        ...rootCursorState,
+        currentIndex: firstElement(treeState.map(lastElement)).nodes.length - 1,
+        isDone: true,
+      });
+
+      cursorState = createCursorState(blockstore, tree);
+      cursorState.currentBuckets = treeState.map(lastElement);
+
+      cursor = createCursorFromState(cursorState)
+
+      await cursor.nextBucket()
+
+      expect(cursorState).to.deep.equal({
+        ...rootCursorState,
+        currentBuckets: treeState.map(lastElement),
+        currentIndex: lastElement(treeState.map(lastElement)).nodes.length - 1,
+        isDone: true,
+      });
+    });
+  });
+
+  describe("ffwToTupleOnLevel", () => {});
 });

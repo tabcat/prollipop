@@ -4,27 +4,19 @@ import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import {
-  levelExceedsRoot,
-  levelIsNegative,
-  levelMustChange,
-} from "./errors.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import {
+  createNamedErrorClass,
   findFailureOrLastIndex,
-  loadBucket,
   prefixWithLevel,
-} from "./utils.js";
+} from "./internal.js";
+import { loadBucket } from "./utils.js";
 
-export interface Cursor<Code extends number, Alg extends number> {
-  current(): Node;
-  level(): number;
-  path(): CID[];
-  buckets(): Bucket<Code, Alg>[];
-  next(): Promise<void>;
-  nextAtLevel(level: number): Promise<void>;
-  done(): boolean;
-}
+export const CursorError = createNamedErrorClass("CursorError");
+export const CursorLockError = createNamedErrorClass("CursorLockError");
+
+const failedToAquireLockErr = () =>
+  new CursorLockError("Failed to aquire cursor lock.");
 
 export interface CursorState<Code extends number, Alg extends number> {
   blockstore: Blockstore;
@@ -36,14 +28,33 @@ export interface CursorState<Code extends number, Alg extends number> {
   isLocked: boolean;
 }
 
+const FailedToCreateCursorState = "Failed to create cursor state: ";
+
 export const createCursorState = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   tree: ProllyTree<Code, Alg>,
   currentBuckets?: Bucket<Code, Alg>[],
   currentIndex?: number,
 ): CursorState<Code, Alg> => {
-  currentBuckets = currentBuckets ?? [tree.root]
-  currentIndex = currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1)
+  currentBuckets = currentBuckets ?? [tree.root];
+  currentIndex =
+    currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1);
+
+  if (currentBuckets.length === 0) {
+    throw new CursorError(
+      `${FailedToCreateCursorState}currentBuckets.length === 0`,
+    );
+  }
+
+  if (currentIndex >= lastElement(currentBuckets).nodes.length) {
+    throw new CursorError(
+      `${FailedToCreateCursorState}currentIndex >= bucket.nodes.length`,
+    );
+  }
+
+  if (currentIndex < -1) {
+    throw new CursorError(`${FailedToCreateCursorState}currentIndex > -1`);
+  }
 
   return {
     blockstore,
@@ -53,7 +64,129 @@ export const createCursorState = <Code extends number, Alg extends number>(
     currentIndex,
     isDone: currentIndex === -1,
     isLocked: false,
-  }
+  };
+};
+
+export interface Cursor<Code extends number, Alg extends number> {
+  /**
+   * Returns the current level of the cursor.
+   */
+  level(): number;
+  /**
+   * Returns the root level of the tree.
+   */
+  rootLevel(): number;
+
+  /**
+   * Returns the index of the current node in the bucket. If index is -1 the bucket is empty and current() will throw an error.
+   */
+  index(): number;
+  /**
+   * Returns the current node in the bucket. If the bucket is empty this method will throw an error.
+   */
+  current(): Node;
+
+  /**
+   * Returns an array of buckets from root to current level.
+   */
+  buckets(): Bucket<Code, Alg>[];
+  /**
+   * Returns an array of bucket CIDs from root to current level.
+   */
+  path(): CID[];
+  /**
+   * Returns the current bucket. The last bucket in the array returned by the buckets() method.
+   */
+  currentBucket(): Bucket<Code, Alg>;
+
+  /**
+   * Increments the cursor to the next tuple on the current level.
+   */
+  next(): Promise<void>;
+  /**
+   * Increments the cursor to the next tuple on a specified level.
+   *
+   * @param level - The level to increment the cursor at.
+   */
+  nextAtLevel(level: number): Promise<void>;
+  /**
+   * Increments the cursor to the beginning of the next bucket on the current level.
+   */
+  nextBucket(): Promise<void>;
+  /**
+   * Increments the cursor to the beginning of the next bucket on the specified level.
+
+   * @param level - The level to increment the cursor at.
+   */
+  nextBucketAtLevel(level: number): Promise<void>;
+  /**
+   * Fast forwards the cursor to
+   *
+   * @param tuple
+   * @param level
+   */
+  ffw(tuple: Tuple, level: number): Promise<void>;
+
+  /**
+   * Returns true or false depending on whether the cursor is at the tail bucket for the level.
+   */
+  isAtTail(): boolean;
+  /**
+   * Returns true or false depending on whether the cursor is at the head bucket for the level.
+   */
+  isAtHead(): boolean;
+
+  /**
+   * Returns true or false depending on whether the cursor is currently being incremented.
+   */
+  locked(): boolean;
+  /**
+   * Returns true or false depending on whether the cursor has reached the end of the tree.
+   */
+  done(): boolean;
+
+  /**
+   * Returns a clone of the cursor instance.
+   */
+  clone(): Cursor<Code, Alg>;
+}
+
+export function createCursorFromState<Code extends number, Alg extends number>(
+  state: CursorState<Code, Alg>,
+): Cursor<Code, Alg> {
+  return {
+    level: () => levelOf(state),
+    rootLevel: () => rootLevelOf(state),
+
+    index: () => state.currentIndex,
+    current: () => nodeOf(state),
+
+    buckets: () => Array.from(state.currentBuckets),
+    path: () => state.currentBuckets.map((b) => b.getCID()),
+    currentBucket: () => bucketOf(state),
+
+    next: () => nextAtLevel(state, levelOf(state)),
+    nextAtLevel: (level) => nextAtLevel(state, level),
+    nextBucket: () => nextBucketAtLevel(state, levelOf(state)),
+    nextBucketAtLevel: (level) => nextBucketAtLevel(state, level),
+    ffw: (tuple, level) => ffwToTupleOnLevel(state, tuple, level),
+
+    isAtTail: () => getIsAtTail(state),
+    isAtHead: () => getIsAtHead(state),
+
+    clone: () => createCursorFromState(cloneCursorState(state)),
+
+    locked: () => state.isLocked,
+    done: () => state.isDone,
+  };
+}
+
+export function createCursor<Code extends number, Alg extends number>(
+  blockstore: Blockstore,
+  tree: ProllyTree<Code, Alg>,
+): Cursor<Code, Alg> {
+  const state = createCursorState(blockstore, tree);
+  return createCursorFromState(state);
 }
 
 export const cloneCursorState = <Code extends number, Alg extends number>(
@@ -63,10 +196,6 @@ export const cloneCursorState = <Code extends number, Alg extends number>(
   currentBuckets: Array.from(state.currentBuckets),
 });
 
-export const levelOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>,
-): number => bucketOf(state).prefix.level;
-
 export const bucketOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Bucket<Code, Alg> => lastElement(state.currentBuckets);
@@ -75,48 +204,40 @@ export const nodeOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Node => ithElement(bucketOf(state).nodes, state.currentIndex);
 
-export const pathOf = <Code extends number, Alg extends number>(
+export const levelOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): CID[] => state.currentBuckets.map((bucket) => bucket.getCID());
+): number => bucketOf(state).prefix.level;
 
 export const rootLevelOf = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): number => firstElement(state.currentBuckets).prefix.level;
 
-export const lastOf = <Code extends number, Alg extends number>(
-  state: CursorState<Code, Alg>,
-): Node => lastElement(bucketOf(state).nodes);
-
 export const getIsExtremity = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  findExtemity: (nodes: Node[]) => Node, // firstElement or lastElement
+  findExtemity: (nodes: Node[]) => Node,
 ): boolean => {
-  let lastBucket: Bucket<Code, Alg> | null = null;
-  let i = state.currentBuckets.length - 1;
+  let i = 0;
 
-  // traverse from level 0
-  while (i >= 0) {
-    const bucket = ithElement(state.currentBuckets, i);
+  // length - 1 because we are accessing i + 1
+  while (i < state.currentBuckets.length - 1) {
+    const parent = ithElement(state.currentBuckets, i);
+    const child = ithElement(state.currentBuckets, i + 1);
 
-    // skips level 0
-    if (
-      lastBucket != null &&
-      compare(findExtemity(bucket.nodes).message, lastBucket.getHash()) !== 0
-    ) {
+    // check if the extreme node of the parent matches the current child all the way down from root
+    if (compare(findExtemity(parent.nodes).message, child.getHash()) !== 0) {
       return false;
     }
 
-    lastBucket = bucket;
-    i--;
+    i++;
   }
 
   return true;
 };
 
-export const getIsTail = <Code extends number, Alg extends number>(
+export const getIsAtTail = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): boolean => getIsExtremity(state, firstElement);
-export const getIsHead = <Code extends number, Alg extends number>(
+export const getIsAtHead = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): boolean => getIsExtremity(state, lastElement);
 
@@ -128,70 +249,93 @@ export const getIsHead = <Code extends number, Alg extends number>(
  */
 const overflows = <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): boolean => state.currentIndex === bucketOf(state).nodes.length - 1;
+): boolean =>
+  state.currentIndex === lastElement(state.currentBuckets).nodes.length - 1;
 
-export const defaultGuide =
+export const guideByTuple =
   (target: Tuple) =>
   (nodes: Node[]): number =>
     findFailureOrLastIndex(nodes, (n) => compareTuples(target, n) > 0);
 
+// when descending it is important to keep to the left side
+// otherwise nodes are skipped
+export const guideByLowestIndex = () => 0;
+
+/**
+ * Moves the cursor vertically. Never causes the cursor to increment without a provided _guide parameter.
+ * 
+ * @param state 
+ * @param level 
+ * @param _guide 
+ */
 export const moveToLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
   level: number,
   _guide?: (nodes: Node[]) => number,
 ): Promise<void> => {
-  if (levelOf(state) === level) {
-    throw levelMustChange(level);
+  if (level === levelOf(state)) {
+    throw new CursorError("Level to move to cannot be same as current level.");
   }
 
   if (level < 0) {
-    throw levelIsNegative();
+    throw new CursorError("Level to move to cannot be less than 0.");
   }
 
   if (level > rootLevelOf(state)) {
-    throw levelExceedsRoot(level, rootLevelOf(state));
+    throw new CursorError(
+      "Level to move to cannot exceed height of root level.",
+    );
   }
 
   // guides currentIndex during traversal
   const guide: (nodes: Node[]) => number =
-    _guide ?? defaultGuide(nodeOf(state));
+    _guide ??
+    // 0 index when descending, current tuple when ascending
+    (level < levelOf(state) ? guideByLowestIndex : guideByTuple(nodeOf(state)));
 
-  const stateCopy: CursorState<Code, Alg> = { ...state };
+  while (level !== levelOf(state)) {
+    if (level > levelOf(state)) {
+      // jump up to higher level
+      const difference = levelOf(state) - level;
 
-  while (level !== levelOf(stateCopy)) {
-    if (level > levelOf(stateCopy)) {
-      // jump to level
-      const difference = levelOf(stateCopy) - level;
-
-      stateCopy.currentBuckets.splice(difference, -difference);
+      state.currentBuckets.splice(difference, -difference);
     } else {
-      // walk to level
-      const digest = nodeOf(stateCopy).message;
-
-      stateCopy.currentBuckets.push(
-        await loadBucket(
-          stateCopy.blockstore,
-          digest,
-          prefixWithLevel(bucketOf(stateCopy).prefix, levelOf(stateCopy) - 1),
-          state.codec,
-          state.hasher,
-        ),
+      // walk down to lower level
+      const digest = nodeOf(state).message;
+      const bucket = await loadBucket(
+        state.blockstore,
+        digest,
+        prefixWithLevel(bucketOf(state).prefix, levelOf(state) - 1),
+        state.codec,
+        state.hasher,
       );
+
+      if (bucket.nodes.length === 0) {
+        throw new CursorError(
+          "Malformed tree: fetched a child bucket with empty node set.",
+        );
+      }
+
+      state.currentBuckets.push(bucket);
     }
 
-    // set to index of node which is greater than or equal to target
-    stateCopy.currentIndex = guide(bucketOf(stateCopy).nodes);
+    // set to guided index
+    state.currentIndex = guide(bucketOf(state).nodes);
   }
-
-  Object.assign(state, stateCopy);
 };
 
+/**
+ * Increments the cursor by one on the same level. Handles traversing buckets if necessary.
+ * 
+ * @param state 
+ * @returns 
+ */
 export const moveSideways = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
 ): Promise<void> => {
-  const stateCopy = cloneCursorState(state);
+  const stateCopy = cloneCursorState(state)
 
-  // find a level which allows increasing currentIndex
+  // find a higher level which allows increasing currentIndex
   while (overflows(stateCopy)) {
     // cannot increase currentIndex anymore, so done
     if (stateCopy.currentBuckets.length === 1) {
@@ -204,52 +348,67 @@ export const moveSideways = async <Code extends number, Alg extends number>(
 
   stateCopy.currentIndex += 1;
 
-  // get back to same level
+  // get back down to same level
   while (levelOf(stateCopy) !== levelOf(state)) {
-    await moveToLevel(
-      stateCopy,
-      levelOf(state),
-      () => 0, // always first index when descending
-    );
+    await moveToLevel(stateCopy, levelOf(state));
   }
 
   Object.assign(state, stateCopy);
 };
 
-export const moveToTupleOnLevel = async <
-  Code extends number,
-  Alg extends number,
->(
+export const nextAtLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-  tuple: Tuple,
   level: number,
 ): Promise<void> => {
-  const stateCopy = cloneCursorState(state);
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+  }
 
   if (state.isDone) {
-    return
+    return;
   }
 
-  // move up until finding a node greater than tuple
-  while (
-    compareTuples(tuple, lastOf(state)) > 0 &&
-    levelOf(state) < rootLevelOf(state)
-  ) {
-    await moveToLevel(state, levelOf(state) + 1, defaultGuide(tuple));
+  if (state.isLocked) {
+    throw failedToAquireLockErr();
   }
 
-  // move to level targeting tuple
-  if (levelOf(state) !== level) {
-    await moveToLevel(state, level, defaultGuide(tuple));
+  const stateCopy = cloneCursorState(state);
+  state.isLocked = true;
+
+  if (level !== levelOf(stateCopy)) {
+    await moveToLevel(stateCopy, level);
+  }
+
+  // only increment if level was higher or equal to original level
+  if (level >= levelOf(state)) {
+    await moveSideways(stateCopy);
   }
 
   Object.assign(state, stateCopy);
 };
 
-export const moveToNextBucket = async <Code extends number, Alg extends number>(
+const nextBucketAtLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
+  level: number,
 ): Promise<void> => {
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+  }
+
+  if (state.isDone) {
+    return;
+  }
+
+  if (state.isLocked) {
+    throw failedToAquireLockErr();
+  }
+
   const stateCopy = cloneCursorState(state);
+  state.isLocked = true;
+
+  if (level !== levelOf(state)) {
+    await moveToLevel(stateCopy, level);
+  }
 
   stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
@@ -258,60 +417,44 @@ export const moveToNextBucket = async <Code extends number, Alg extends number>(
   Object.assign(state, stateCopy);
 };
 
-export const createNextOnLevel =
-  <Code extends number, Alg extends number>(state: CursorState<Code, Alg>) =>
-  async (level: number): Promise<void> => {
-    if (state.isLocked) {
-      throw new Error("lock is held");
-    }
-    state.isLocked = true;
-
-    if (level > rootLevelOf(state)) {
-      state.isDone = true;
-    }
-
-    if (state.isDone) {
-      state.isLocked = false;
-      return;
-    }
-
-    const stateCopy = cloneCursorState(state);
-
-    if (level > levelOf(stateCopy)) {
-      await moveToLevel(stateCopy, level);
-      await moveSideways(stateCopy);
-    } else if (level < levelOf(stateCopy)) {
-      // result of right side backbone
-      await moveToLevel(stateCopy, level, () => 0);
-    } else {
-      await moveSideways(stateCopy);
-    }
-
-    Object.assign(state, stateCopy);
-    state.isLocked = false;
-  };
-
-export function createCursorFromState<Code extends number, Alg extends number>(
+const ffwToTupleOnLevel = async <Code extends number, Alg extends number>(
   state: CursorState<Code, Alg>,
-): Cursor<Code, Alg> {
-  const nextAtLevel = createNextOnLevel(state);
+  tuple: Tuple,
+  level: number,
+): Promise<void> => {
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+  }
 
-  return {
-    path: () => pathOf(state),
-    buckets: () => state.currentBuckets,
-    current: () => nodeOf(state),
-    level: () => levelOf(state),
-    done: () => state.isDone,
-    // don't use these methods concurrently
-    next: () => nextAtLevel(levelOf(state)),
-    nextAtLevel,
-  };
-}
+  if (state.isDone) {
+    return;
+  }
 
-export function createCursor<Code extends number, Alg extends number>(
-  blockstore: Blockstore,
-  tree: ProllyTree<Code, Alg>,
-): Cursor<Code, Alg> {
-  const state = createCursorState(blockstore, tree);
-  return createCursorFromState(state);
-}
+  if (state.isLocked) {
+    throw failedToAquireLockErr();
+  }
+
+  const stateCopy = cloneCursorState(state);
+  state.isLocked = true;
+
+  // move up until finding a node greater than tuple
+  // could be sped up by checking currentBuckets directly
+  while (
+    levelOf(state) < rootLevelOf(state) &&
+    compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0
+  ) {
+    await moveToLevel(state, levelOf(state) + 1, guideByTuple(tuple));
+  }
+
+  // move to level targeting tuple
+  if (level !== levelOf(state)) {
+    await moveToLevel(state, level, guideByTuple(tuple));
+  }
+
+  // could not find a node greater than or equal to tuple
+  if (compareTuples(tuple, nodeOf(state)) > 0) {
+    stateCopy.isDone;
+  }
+
+  Object.assign(state, stateCopy);
+};

@@ -1,6 +1,6 @@
 import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { describe, expect, it } from "vitest";
-import { compareBuckets, compareTuples } from "../src/compare.js";
+import { compareBucketHashes, compareTuples } from "../src/compare.js";
 import { NodeDiff, diff } from "../src/diff.js";
 import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
 import { Bucket, Node, ProllyTree } from "../src/interface.js";
@@ -39,7 +39,7 @@ const [superTree, superTreeState] = createProllyTree(
   cborTreeCodec,
   sha256SyncHasher,
 );
-const superTreeBuckets = superTreeState.flat().sort(compareBuckets);
+const superTreeBuckets = superTreeState.flat().sort(compareBucketHashes);
 
 const subTreeNodes = createProllyTreeNodes(
   Array(Math.floor(treeNodesMax / 2))
@@ -54,7 +54,7 @@ const [subTree, subTreeState] = createProllyTree(
   cborTreeCodec,
   sha256SyncHasher,
 );
-const subTreeBuckets = subTreeState.flat().sort(compareBuckets);
+const subTreeBuckets = subTreeState.flat().sort(compareBucketHashes);
 
 const higherTreeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
@@ -69,7 +69,7 @@ const [higherTree, higherTreeState] = createProllyTree(
   cborTreeCodec,
   sha256SyncHasher,
 );
-const higherTreeBuckets = higherTreeState.flat().sort(compareBuckets);
+const higherTreeBuckets = higherTreeState.flat().sort(compareBucketHashes);
 
 const randomTreeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
@@ -85,7 +85,7 @@ const [randomTree, randomTreeState] = createProllyTree(
   cborTreeCodec,
   sha256SyncHasher,
 );
-const randomTreeBuckets = randomTreeState.flat().sort(compareBuckets);
+const randomTreeBuckets = randomTreeState.flat().sort(compareBucketHashes);
 
 const treesToStates: WeakMap<
   ProllyTree<Mc, Mh>,
@@ -137,10 +137,10 @@ async function checkDiffs(
   }
 
   // would be nice to have this more granular
-  leftBuckets.sort(compareBuckets);
-  rightBuckets.sort(compareBuckets);
+  leftBuckets.sort(compareBucketHashes);
+  rightBuckets.sort(compareBucketHashes);
   const bucketDiffs = Array.from(
-    orderedDiff(leftBuckets, rightBuckets, compareBuckets<Mc, Mh>),
+    orderedDiff(leftBuckets, rightBuckets, compareBucketHashes<Mc, Mh>),
   );
 
   expect(nodeDiffs).to.deep.equal(
@@ -157,7 +157,7 @@ async function checkDiffs(
       orderedDiff(
         treesToStates.get(tree1)!.buckets,
         treesToStates.get(tree2)!.buckets,
-        compareBuckets<Mc, Mh>,
+        compareBucketHashes<Mc, Mh>,
       ),
     ),
   );

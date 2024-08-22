@@ -17,7 +17,7 @@
 
 import { ithElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
-import { compareBuckets, compareNodes, compareTuples } from "./compare.js";
+import { compareBucketHashes, compareNodes, compareTuples } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
 
@@ -77,7 +77,7 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
     if (
       // out of bounds will only occur when comparing buckets from first and second cursors, not last
       i >= subtrahend.length ||
-      compareBuckets(ithElement(minuend, i), ithElement(subtrahend, i)) !== 0
+      compareBucketHashes(ithElement(minuend, i), ithElement(subtrahend, i)) !== 0
     ) {
       yield differ(ithElement(minuend, i));
     }
@@ -98,7 +98,7 @@ const getMatchingBucketsLength = <Code extends number, Alg extends number>(
 
   // increment i for every matching bucket from level 0
   while (i < a.length && i < b.length) {
-    if (compareBuckets(ithElement(a, i), ithElement(b, i)) !== 0) {
+    if (compareBucketHashes(ithElement(a, i), ithElement(b, i)) !== 0) {
       break;
     }
 

@@ -3,9 +3,33 @@
   "version": "0.0.0",
   "description": "modded prolly-tree with (number, uint8array) tuples for keys",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
-  "files": [],
+  "files": ["./dist/src"],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./codec": {
+      "types": "./dist/src/codec.d.ts",
+      "import": "./dist/src/codec.js"
+    },
+    "./compare": {
+      "types": "./dist/src/compare.d.ts",
+      "import": "./dist/src/compare.js"
+    },
+    "./cursor": {
+      "types": "./dist/src/public/cursor.d.ts",
+      "import": "./dist/src/public/cursor.js"
+    },
+    "./diff": {
+      "types": "./dist/src/public/diff.d.ts",
+      "import": "./dist/src/public/diff.js"
+    },
+    "./interface": {
+      "types": "./dist/src/interface.d.ts",
+      "import": "./dist/src/interface.js"
+    }
+  },
   "scripts": {
     "format": "prettier src test --write",
     "build": "tsc",

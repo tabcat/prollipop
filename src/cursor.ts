@@ -438,18 +438,19 @@ const ffwToTupleOnLevel = async <Code extends number, Alg extends number>(
   state.isLocked = true;
 
   // move up until finding a node greater than tuple
-  // could be sped up by checking currentBuckets directly
   while (
-    levelOf(state) < rootLevelOf(state) &&
-    compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0
+    compareTuples(tuple, lastElement(bucketOf(stateCopy).nodes)) > 0 &&
+    stateCopy.currentBuckets.length > 1
   ) {
-    await moveToLevel(state, levelOf(state) + 1, guideByTuple(tuple));
+    await moveToLevel(stateCopy, levelOf(state) + 1, guideByTuple(tuple));
   }
 
   // move to level targeting tuple
-  if (level !== levelOf(state)) {
-    await moveToLevel(state, level, guideByTuple(tuple));
+  if (level !== levelOf(stateCopy)) {
+    await moveToLevel(stateCopy, level, guideByTuple(tuple));
   }
+
+  stateCopy.currentIndex = guideByTuple(tuple)(bucketOf(stateCopy).nodes)
 
   // could not find a node greater than or equal to tuple
   if (compareTuples(tuple, nodeOf(state)) > 0) {

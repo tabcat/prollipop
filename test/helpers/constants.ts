@@ -11,7 +11,7 @@ import {
   sha256SyncHasher as syncHasher,
   cborTreeCodec as treeCodec,
 } from "../../src/index.js";
-import { Bucket, Prefix } from "../../src/interface.js";
+import { Bucket, Prefix, Tuple } from "../../src/interface.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
 
 // nodes
@@ -54,7 +54,7 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
 
 export const blockstore = new MemoryBlockstore();
 
-export const treeNodesMax = 256;
+export const treeNodesMax = 64;
 
 export const treeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
@@ -62,6 +62,7 @@ export const treeNodes = createProllyTreeNodes(
     .map((_, i) => i),
   sha256SyncHasher,
 );
+export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({ timestamp, hash }))
 export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,

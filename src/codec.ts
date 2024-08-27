@@ -72,7 +72,7 @@ export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
 export function decodeNodeFirst<Code extends number>(
   bytes: Uint8Array,
   codec: TreeCodec<Code>,
-): [DefaultNode, Uint8Array] {
+): [Node, Uint8Array] {
   const [encodedNode, remainder]: [unknown, Uint8Array] =
     codec.decodeFirst(bytes);
 

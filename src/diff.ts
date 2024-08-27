@@ -72,6 +72,7 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
 
   let i = 0;
 
+  const b: Diff<Bucket<Code, Alg>>[] = []
   while (i < minuend.length) {
     // yield minued[i] if i out of subtrahend bounds or comparison is unequal
     if (
@@ -80,11 +81,13 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
       compareBucketHashes(ithElement(minuend, i), ithElement(subtrahend, i)) !==
         0
     ) {
-      yield differ(ithElement(minuend, i));
+      b.push(differ(ithElement(minuend, i)));
     }
 
     i++;
   }
+
+  yield * b.reverse()
 };
 
 const getMatchingBucketsLength = <Code extends number, Alg extends number>(

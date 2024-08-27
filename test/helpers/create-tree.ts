@@ -8,7 +8,12 @@ import {
   DefaultNode,
   DefaultProllyTree,
 } from "../../src/impls.js";
-import type { Bucket, Node, Prefix, ProllyTree } from "../../src/interface.js";
+import type {
+  Bucket,
+  Node,
+  Prefix,
+  ProllyTree,
+} from "../../src/interface.js";
 import { prefixWithLevel } from "../../src/internal.js";
 
 const levelOfNodes = <Code extends number, Alg extends number>(

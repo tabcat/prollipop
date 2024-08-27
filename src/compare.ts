@@ -1,4 +1,5 @@
 import { compare as compareHash } from "uint8arrays";
+import { Update } from "./builder.js";
 import { Bucket, Node, Tuple } from "./interface.js";
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
@@ -22,6 +23,11 @@ export const compareNodes = (a: Node, b: Node): number => {
 
   return compareHash(a.message, b.message);
 };
+
+export const compareUpdates = (a: Update, b: Update): number =>
+  a.op === "add" && b.op === "add"
+    ? compareNodes(a.value, b.value)
+    : compareTuples(a.value, b.value);
 
 export const compareBucketHashes = <Code extends number, Alg extends number>(
   a: Bucket<Code, Alg>,

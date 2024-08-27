@@ -3,8 +3,19 @@ import { SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
 import { TreeCodec, decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
-import { Bucket, Node, Prefix } from "./interface.js";
+import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 import { bucketBytesToDigest, bucketDigestToCid } from "./internal.js";
+
+/**
+ * Returns a new tuple for the provided node or tuple.
+ * 
+ * @param node
+ * @returns 
+ */
+export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
+  timestamp,
+  hash,
+});
 
 /**
  * Creates a new bucket from the provided nodes. Does not handle boundary creation.

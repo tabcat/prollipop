@@ -92,17 +92,14 @@ export function decodeNodeFirst(bytes: Uint8Array): [Node, Uint8Array] {
   return [new DefaultNode(...getValidatedEncodedNode(encodedNode)), remainder];
 }
 
-export type EncodedBucket<Code extends number, Alg extends number> = [
-  Prefix<Code, Alg>,
-  ...EncodedNode[],
-];
+export type EncodedBucket = [Prefix, ...EncodedNode[]];
 
-export function encodeBucket<Code extends number, Alg extends number>(
-  prefix: Prefix<Code, Alg>,
+export function encodeBucket(
+  prefix: Prefix,
   nodes: Node[],
-): ByteView<EncodedBucket<Code, Alg>> {
+): ByteView<EncodedBucket> {
   // prefix must be dag-cbor encoded
-  const encodedPrefix: ByteView<Prefix<Code, Alg>> = encoder.encode(prefix);
+  const encodedPrefix: ByteView<Prefix> = encoder.encode(prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
@@ -116,7 +113,7 @@ export function encodeBucket<Code extends number, Alg extends number>(
     len += bytes.length;
   }
 
-  const encodedBucket: ByteView<EncodedBucket<Code, Alg>> = new Uint8Array(
+  const encodedBucket: ByteView<EncodedBucket> = new Uint8Array(
     encodedPrefix.length + len,
   );
 
@@ -130,14 +127,12 @@ export function encodeBucket<Code extends number, Alg extends number>(
   return encodedBucket;
 }
 
-export const getValidatedPrefix = <Code extends number, Alg extends number>(
-  prefix: unknown,
-): Prefix<Code, Alg> => {
+export const getValidatedPrefix = (prefix: unknown): Prefix => {
   if (typeof prefix !== "object") {
     throw new CodecError("Expected bucket prefix to be an object.");
   }
 
-  const { average, level, mc, mh } = prefix as Partial<Prefix<Code, Alg>>;
+  const { average, level } = prefix as Partial<Prefix>;
 
   if (typeof average !== "number") {
     throw new CodecError("Expected prefix average field to be a number.");
@@ -147,47 +142,22 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
     throw new CodecError("Expected prefix level field to be a number.");
   }
 
-  if (typeof mc !== "number") {
-    throw new CodecError("Expected prefix mc field to be a number.");
-  }
-  if (encoder.code !== mc) {
-    throw new CodecError(
-      `Expected multicodec code to be ${encoder.code}. Received ${mc}.`,
-    );
-  }
-
-  if (typeof mh !== "number") {
-    throw new CodecError("Expected prefix mh field to be a number.");
-  }
-  if (hasher.code !== mh) {
-    throw new CodecError(
-      `Expected multihash code to be ${hasher.code}. Received ${mh}.`,
-    );
-  }
-
-  return { average, mc, mh, level };
+  return { average, level };
 };
 
-export function decodeBucket<Code extends number, Alg extends number>(
-  bytes: Uint8Array,
-): Bucket<Code, Alg> {
+export function decodeBucket(bytes: Uint8Array): Bucket {
   // prefix is always dag-cbor
   const decoded: [unknown, Uint8Array] = cborg.decodeFirst(
     bytes,
     decodeOptions,
   );
 
-  const prefix: Prefix<Code, Alg> = getValidatedPrefix(decoded[0]);
+  const prefix: Prefix = getValidatedPrefix(decoded[0]);
 
   const nodes: Node[] = [];
   while (decoded[1].length > 0) {
     [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1]);
   }
 
-  return new DefaultBucket<Code, Alg>(
-    prefix,
-    nodes,
-    bytes,
-    hasher.digest(bytes).digest,
-  );
+  return new DefaultBucket(prefix, nodes, bytes, hasher.digest(bytes).digest);
 }

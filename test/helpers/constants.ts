@@ -18,12 +18,8 @@ export const nodeBytes = cbor.encode(encodedNode, encodeOptions);
 export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 
 // buckets
-export type Mc = typeof encoder.code;
-export type Mh = typeof hasher.code;
-export const prefix: Prefix<Mc, Mh> = {
+export const prefix: Prefix = {
   average: 30,
-  mc: encoder.code,
-  mh: hasher.code,
   level: 0,
 };
 export const prefixBytes = cbor.encode(prefix, encodeOptions);
@@ -33,13 +29,13 @@ export const bucketCid = CID.createV1(
   encoder.code,
   createMultihashDigest(hasher.code, bucketHash),
 );
-export const bucket: Bucket<Mc, Mh> = new DefaultBucket(
+export const bucket: Bucket = new DefaultBucket(
   prefix,
   [node],
   bucketBytes,
   bucketHash,
 );
-export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
+export const emptyBucket: Bucket = new DefaultBucket(
   prefix,
   [],
   prefixBytes,
@@ -54,7 +50,6 @@ export const treeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
     .fill(0)
     .map((_, i) => i),
-  hasher,
 );
 export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({
   timestamp,
@@ -64,5 +59,4 @@ export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,
   treeNodes,
-  hasher,
 );

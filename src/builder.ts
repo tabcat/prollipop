@@ -85,13 +85,13 @@ export const handleUpdate = (
  * @param isHead - Tells the function whether the bucket being updated is the level head.
  * @returns
  */
-export const updateBucket = <Code extends number, Alg extends number>(
-  bucket: Bucket<Code, Alg>,
+export const updateBucket = (
+  bucket: Bucket,
   leftovers: Node[],
   updates: LeveledUpdate[],
   isHead: boolean,
-): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
-  const buckets: Bucket<Code, Alg>[] = [];
+): [Bucket[], Node[], NodeDiff[]] => {
+  const buckets: Bucket[] = [];
   const nodeDiffs: NodeDiff[] = [];
 
   let afterbound: Node[] = [];
@@ -131,9 +131,7 @@ export const updateBucket = <Code extends number, Alg extends number>(
   return [buckets, afterbound, nodeDiffs];
 };
 
-export const bucketToParentNode = <Code extends number, Alg extends number>(
-  bucket: Bucket<Code, Alg>,
-): Node => {
+export const bucketToParentNode = (bucket: Bucket): Node => {
   const { timestamp, hash } = lastElement(bucket.nodes);
   return new DefaultNode(timestamp, hash, bucket.getHash());
 };
@@ -146,16 +144,16 @@ export const bucketToParentNode = <Code extends number, Alg extends number>(
  * @param tree
  * @param updates
  */
-export async function* mutateTree<Code extends number, Alg extends number>(
+export async function* mutateTree(
   blockstore: Blockstore,
-  tree: ProllyTree<Code, Alg>,
+  tree: ProllyTree,
   updates: Update[],
-): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
+): AsyncIterable<ProllyTreeDiff> {
   if (updates.length === 0) {
     return;
   }
 
-  let diff = createProllyTreeDiff<Code, Alg>();
+  let diff = createProllyTreeDiff();
 
   // helper code so that created empty trees are found
   await blockstore.put(tree.root.getCID(), tree.root.getBytes());
@@ -172,7 +170,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
   let visitedLevelTail: boolean = false;
   let visitedLevelHead: boolean = false;
 
-  let newRoot: Bucket<Code, Alg> | null = null;
+  let newRoot: Bucket | null = null;
   let i = 0;
 
   while (updts.length > 0 && i < 100) {
@@ -188,7 +186,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
     const pastRootLevel = level > cursor.rootLevel();
 
-    let updatee: Bucket<Code, Alg>;
+    let updatee: Bucket;
     if (!pastRootLevel) {
       if (leftovers.length === 0) {
         await cursor.ffw(firstElement(updts).value, firstElement(updts).level);
@@ -239,9 +237,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         diff.buckets.push([updatee, null]);
       }
       // always add any new buckets to diff
-      diff.buckets.push(
-        ...buckets.map((b): BucketDiff<Code, Alg> => [null, b]),
-      );
+      diff.buckets.push(...buckets.map((b): BucketDiff => [null, b]));
     }
 
     // only yield a diff if there are new buckets
@@ -286,7 +282,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       // add bucket update for next level
       updts.push(
         ...buckets.map(
-          (b: Bucket<Code, Alg>): LeveledUpdate => ({
+          (b: Bucket): LeveledUpdate => ({
             op: "add",
             level: level + 1,
             value: bucketToParentNode(b),
@@ -317,7 +313,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       ...cursor
         .buckets()
         .slice(0, cursor.buckets().length - 1 + level) // should always be level 0 so
-        .map((b): BucketDiff<Code, Alg> => [b, null]),
+        .map((b): BucketDiff => [b, null]),
     );
   }
 

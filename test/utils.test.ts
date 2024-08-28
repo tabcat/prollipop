@@ -57,7 +57,7 @@ describe("utils", () => {
 
   describe("bucketDigestToCid", () => {
     it("returns the cid for a given bucket hash", () => {
-      expect(bucketDigestToCid(prefix)(bucketHash)).to.deep.equal(bucketCid);
+      expect(bucketDigestToCid(bucketHash)).to.deep.equal(bucketCid);
     });
   });
 

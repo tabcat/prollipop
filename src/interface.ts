@@ -9,21 +9,19 @@ export interface Node extends Tuple {
   readonly message: Uint8Array;
 }
 
-export interface Prefix<Code extends number, Alg extends number> {
+export interface Prefix {
   readonly average: number; // same for all buckets of the same tree
-  readonly mc: Code; // same for all buckets of the same tree
-  readonly mh: Alg; // same for all buckets of the same tree
   readonly level: number; // changes based on level of the bucket in the tree, leaves are always level 0
 }
 
-export interface Bucket<Code extends number, Alg extends number> {
-  readonly prefix: Prefix<Code, Alg>;
+export interface Bucket {
+  readonly prefix: Prefix;
   readonly nodes: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;
   getHash(): Uint8Array;
 }
 
-export interface ProllyTree<Code extends number, Alg extends number> {
-  root: Bucket<Code, Alg>;
+export interface ProllyTree {
+  root: Bucket;
 }

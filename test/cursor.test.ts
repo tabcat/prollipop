@@ -1,6 +1,5 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import { describe, expect, it } from "vitest";
-import { hasher } from "../src/codec.js";
 import { compareTuples } from "../src/compare.js";
 import {
   CursorError,
@@ -28,20 +27,18 @@ const nodes = createProllyTreeNodes(
   Array(1000)
     .fill(0)
     .map((_, i) => i),
-  hasher,
 );
 const [tree, treeState] = createProllyTree(
   blockstore,
   { ...prefix, average: 10 },
   nodes,
-  hasher,
 );
 
-const moveToExtremityOnLevel = <Code extends number, Alg extends number>(
-  treeState: Bucket<Code, Alg>[][],
-  cursorState: CursorState<Code, Alg>,
+const moveToExtremityOnLevel = (
+  treeState: Bucket[][],
+  cursorState: CursorState,
   level: number,
-  findExtemity: (buckets: Bucket<Code, Alg>[]) => Bucket<Code, Alg>,
+  findExtemity: (buckets: Bucket[]) => Bucket,
 ) => {
   const path = treeState
     .map((bucketLevel) => findExtemity(bucketLevel))

@@ -31,31 +31,26 @@ const rightDiffer = <T>(value: T): RightDiff<T> => [null, value];
 type Diff<T> = LeftDiff<T> | RightDiff<T> | LeftAndRightDiff<T>;
 
 export type NodeDiff = Diff<Node>;
-export type BucketDiff<Code extends number, Alg extends number> = Diff<
-  Bucket<Code, Alg>
->;
+export type BucketDiff = Diff<Bucket>;
 
-export interface ProllyTreeDiff<Code extends number, Alg extends number> {
+export interface ProllyTreeDiff {
   nodes: NodeDiff[];
-  buckets: BucketDiff<Code, Alg>[];
+  buckets: BucketDiff[];
 }
 
-export const createProllyTreeDiff = <
-  Code extends number,
-  Alg extends number,
->(): ProllyTreeDiff<Code, Alg> => ({
+export const createProllyTreeDiff = (): ProllyTreeDiff => ({
   nodes: [],
   buckets: [],
 });
 
-const getBucketDiff = function* <Code extends number, Alg extends number>(
-  firstCursor: Cursor<Code, Alg>,
-  secondCursor: Cursor<Code, Alg>,
-  last: { value: Bucket<Code, Alg>[] },
+const getBucketDiff = function* (
+  firstCursor: Cursor,
+  secondCursor: Cursor,
+  last: { value: Bucket[] },
   differ: typeof leftDiffer | typeof rightDiffer,
-): Iterable<BucketDiff<Code, Alg>> {
-  let minuend: Bucket<Code, Alg>[];
-  let subtrahend: Bucket<Code, Alg>[];
+): Iterable<BucketDiff> {
+  let minuend: Bucket[];
+  let subtrahend: Bucket[];
   if (!firstCursor.done()) {
     // compare last buckets with current buckets
     minuend = last.value;
@@ -72,7 +67,7 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
 
   let i = 0;
 
-  const b: Diff<Bucket<Code, Alg>>[] = [];
+  const b: Diff<Bucket>[] = [];
   while (i < minuend.length) {
     // yield minued[i] if i out of subtrahend bounds or comparison is unequal
     if (
@@ -90,10 +85,7 @@ const getBucketDiff = function* <Code extends number, Alg extends number>(
   yield* b.reverse();
 };
 
-const getMatchingBucketsLength = <Code extends number, Alg extends number>(
-  a: Bucket<Code, Alg>[],
-  b: Bucket<Code, Alg>[],
-): number => {
+const getMatchingBucketsLength = (a: Bucket[], b: Bucket[]): number => {
   // low level buckets first
   a = a.slice().reverse();
   b = b.slice().reverse();
@@ -112,10 +104,7 @@ const getMatchingBucketsLength = <Code extends number, Alg extends number>(
   return i;
 };
 
-async function ffwUnequalLevel0<Code extends number, Alg extends number>(
-  lc: Cursor<Code, Alg>,
-  rc: Cursor<Code, Alg>,
-): Promise<void> {
+async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
   if (lc.level() !== rc.level()) {
     throw new Error("expected cursors to be same level");
   }
@@ -148,19 +137,16 @@ async function ffwUnequalLevel0<Code extends number, Alg extends number>(
   }
 }
 
-export async function* diff<Code extends number, Alg extends number>(
+export async function* diff(
   blockstore: Blockstore,
-  left: ProllyTree<Code, Alg>,
-  right: ProllyTree<Code, Alg>,
+  left: ProllyTree,
+  right: ProllyTree,
   rightBlockstore?: Blockstore,
-): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
-  let d = createProllyTreeDiff<Code, Alg>();
+): AsyncIterable<ProllyTreeDiff> {
+  let d = createProllyTreeDiff();
 
-  const lc: Cursor<Code, Alg> = createCursor(blockstore, left);
-  const rc: Cursor<Code, Alg> = createCursor(
-    rightBlockstore ?? blockstore,
-    right,
-  );
+  const lc: Cursor = createCursor(blockstore, left);
+  const rc: Cursor = createCursor(rightBlockstore ?? blockstore, right);
 
   // move higher cursor to level of lower cursor
   if (lc.level() > rc.level()) {

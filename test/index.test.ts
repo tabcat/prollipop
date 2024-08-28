@@ -14,7 +14,7 @@ import {
   superTree,
   treesToStates,
 } from "./helpers/check-diffs.js";
-import { Mc, Mh, blockstore, prefix, tree } from "./helpers/constants.js";
+import { blockstore, prefix, tree } from "./helpers/constants.js";
 
 describe("index", () => {
   describe("createEmptyTree", () => {
@@ -35,8 +35,8 @@ describe("index", () => {
 
   describe("search", () => {
     const checkSearch = async (
-      tree1: ProllyTree<Mc, Mh>,
-      tree2: ProllyTree<Mc, Mh>,
+      tree1: ProllyTree,
+      tree2: ProllyTree,
     ): Promise<void> => {
       const states1 = treesToStates.get(tree1)!;
       const states2 = treesToStates.get(tree2)!;
@@ -71,8 +71,8 @@ describe("index", () => {
 
   describe("mutate", () => {
     const checkMutate = async (
-      tree1: ProllyTree<Mc, Mh>,
-      tree2: ProllyTree<Mc, Mh>,
+      tree1: ProllyTree,
+      tree2: ProllyTree,
     ): Promise<void> => {
       const rm: Node[] = treesToStates.get(tree1)!.nodes;
       const add: Node[] = treesToStates.get(tree2)!.nodes;
@@ -80,8 +80,8 @@ describe("index", () => {
       const clone1 = cloneTree(tree1);
 
       const actualNodes: NodeDiff[] = [];
-      const actualRemovals: Bucket<Mc, Mh>[] = [];
-      const actualAdditions: Bucket<Mc, Mh>[] = [];
+      const actualRemovals: Bucket[] = [];
+      const actualAdditions: Bucket[] = [];
       for await (const { nodes, buckets } of mutate(
         blockstore,
         clone1,
@@ -100,8 +100,8 @@ describe("index", () => {
       expect(clone1).to.deep.equal(tree2);
 
       const expectedNodes: NodeDiff[] = [];
-      const expectedRemovals: Bucket<Mc, Mh>[] = [];
-      const expectedAdditions: Bucket<Mc, Mh>[] = [];
+      const expectedRemovals: Bucket[] = [];
+      const expectedAdditions: Bucket[] = [];
       for await (const { nodes, buckets } of diff(blockstore, tree1, tree2)) {
         expectedNodes.push(...nodes);
         buckets.forEach(([a, b]) =>

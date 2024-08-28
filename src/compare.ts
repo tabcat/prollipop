@@ -29,7 +29,5 @@ export const compareUpdates = (a: Update, b: Update): number =>
     ? compareNodes(a.value, b.value)
     : compareTuples(a.value, b.value);
 
-export const compareBucketHashes = <Code extends number, Alg extends number>(
-  a: Bucket<Code, Alg>,
-  b: Bucket<Code, Alg>,
-): number => compareHash(a.getHash(), b.getHash());
+export const compareBucketHashes = (a: Bucket, b: Bucket): number =>
+  compareHash(a.getHash(), b.getHash());

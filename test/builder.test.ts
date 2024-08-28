@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { AddUpdate, RmUpdate, mutateTree } from "../src/builder.js";
-import { hasher } from "../src/codec.js";
 import { createEmptyTree } from "../src/index.js";
 import { blockstore, prefix } from "./helpers/constants.js";
 import {
@@ -11,7 +10,7 @@ import {
 describe("builder", () => {
   describe("mutateTree", () => {
     it("adds and removes nodes to/from an empty tree", async () => {
-      const nodes = createProllyTreeNodes([1], hasher);
+      const nodes = createProllyTreeNodes([1]);
       const tree = createEmptyTree();
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
@@ -23,7 +22,7 @@ describe("builder", () => {
       }
 
       expect(tree).to.deep.equal(
-        createProllyTree(blockstore, prefix, nodes, hasher)[0],
+        createProllyTree(blockstore, prefix, nodes)[0],
       );
 
       for await (const _ of mutateTree(
@@ -33,14 +32,12 @@ describe("builder", () => {
       )) {
       }
 
-      expect(tree).to.deep.equal(
-        createProllyTree(blockstore, prefix, [], hasher)[0],
-      );
+      expect(tree).to.deep.equal(createProllyTree(blockstore, prefix, [])[0]);
     });
 
     it("removes and adds nodes from/to a tree", async () => {
-      const nodes = createProllyTreeNodes([1], hasher);
-      const tree = createProllyTree(blockstore, prefix, nodes, hasher)[0];
+      const nodes = createProllyTreeNodes([1]);
+      const tree = createProllyTree(blockstore, prefix, nodes)[0];
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
       for await (const _ of mutateTree(
@@ -50,9 +47,7 @@ describe("builder", () => {
       )) {
       }
 
-      expect(tree).to.deep.equal(
-        createProllyTree(blockstore, prefix, [], hasher)[0],
-      );
+      expect(tree).to.deep.equal(createProllyTree(blockstore, prefix, [])[0]);
 
       for await (const _ of mutateTree(
         blockstore,
@@ -62,7 +57,7 @@ describe("builder", () => {
       }
 
       expect(tree).to.deep.equal(
-        createProllyTree(blockstore, prefix, nodes, hasher)[0],
+        createProllyTree(blockstore, prefix, nodes)[0],
       );
     });
   });

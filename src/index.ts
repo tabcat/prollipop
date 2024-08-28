@@ -1,44 +1,33 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { Update, mutateTree } from "./builder.js";
-import { encoder, hasher } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Node, ProllyTree, Tuple } from "./interface.js";
+import { Node, Prefix, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
 export interface InitOptions {
   averageBucketSize: number;
 }
 
-export function createEmptyTree(): ProllyTree<
-  typeof encoder.code,
-  typeof hasher.code
->;
-export function createEmptyTree<Code extends number, Alg extends number>(
-  options: InitOptions,
-): ProllyTree<Code, Alg>;
+export function createEmptyTree(options?: InitOptions): ProllyTree;
 export function createEmptyTree(options?: InitOptions) {
   const average = options?.averageBucketSize ?? 30;
 
   /**
    * data which is prefixed to each bucket, only the level ever changes
    */
-  const prefix = {
+  const prefix: Prefix = {
     average,
-    mc: encoder.code,
-    mh: hasher.code,
     level: 0,
   };
 
   return new DefaultProllyTree(createBucket(prefix, []));
 }
 
-export function cloneTree<Code extends number, Alg extends number>(
-  tree: ProllyTree<Code, Alg>,
-): ProllyTree<Code, Alg> {
+export function cloneTree(tree: ProllyTree): ProllyTree {
   // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
   return new DefaultProllyTree(tree.root);
 }
@@ -51,9 +40,9 @@ export function cloneTree<Code extends number, Alg extends number>(
  *
  * @returns Associated Node if found, otherwise returns Tuple
  */
-export async function* search<Code extends number, Alg extends number>(
+export async function* search(
   blockstore: Blockstore,
-  tree: ProllyTree<Code, Alg>,
+  tree: ProllyTree,
   tuples: Tuple[],
 ): AsyncIterable<Node | Tuple> {
   tuples = tuples.slice().sort(compareTuples).map(nodeToTuple);
@@ -81,12 +70,12 @@ export async function* search<Code extends number, Alg extends number>(
   }
 }
 
-export async function* mutate<Code extends number, Alg extends number>(
+export async function* mutate(
   blockstore: Blockstore,
-  tree: ProllyTree<Code, Alg>,
+  tree: ProllyTree,
   add: Node[],
   rm: Tuple[],
-): AsyncIterable<ProllyTreeDiff<Code, Alg>> {
+): AsyncIterable<ProllyTreeDiff> {
   const updates: Update[] = [];
 
   // it is vital that add and rm do not have duplicate tuples within themselves

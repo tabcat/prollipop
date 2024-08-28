@@ -26,10 +26,7 @@ export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
  * @param hasher
  * @returns
  */
-export const createBucket = <Code extends number, Alg extends number>(
-  prefix: Prefix<Code, Alg>,
-  nodes: Node[],
-): Bucket<Code, Alg> => {
+export const createBucket = (prefix: Prefix, nodes: Node[]): Bucket => {
   const bytes = encodeBucket(prefix, nodes);
   return new DefaultBucket(
     prefix,
@@ -49,14 +46,14 @@ export const createBucket = <Code extends number, Alg extends number>(
  * @param hasher
  * @returns
  */
-export async function loadBucket<Code extends number, Alg extends number>(
+export async function loadBucket(
   blockstore: Blockstore,
   hash: Uint8Array,
-  expectedPrefix: Prefix<Code, Alg>,
-): Promise<Bucket<Code, Alg>> {
+  expectedPrefix: Prefix,
+): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
-    bytes = await blockstore.get(bucketDigestToCid(expectedPrefix)(hash));
+    bytes = await blockstore.get(bucketDigestToCid(hash));
   } catch (e) {
     if (e instanceof Error && e.message === "Not Found") {
       throw new Error("Bucket not found in blockstore.", { cause: e });
@@ -65,7 +62,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
     }
   }
 
-  const bucket: Bucket<Code, Alg> = decodeBucket(bytes);
+  const bucket: Bucket = decodeBucket(bytes);
 
   if (bucket.prefix.level !== expectedPrefix.level) {
     throw new TypeError(

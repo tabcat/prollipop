@@ -25,14 +25,12 @@ export class DefaultNode implements Node {
   }
 }
 
-export class DefaultBucket<Code extends number, Alg extends number>
-  implements Bucket<Code, Alg>
-{
+export class DefaultBucket implements Bucket {
   #bytes: Uint8Array;
   #hash: Uint8Array;
 
   constructor(
-    readonly prefix: Prefix<Code, Alg>,
+    readonly prefix: Prefix,
     readonly nodes: Node[],
     bytes: Uint8Array,
     hash: Uint8Array,
@@ -50,7 +48,7 @@ export class DefaultBucket<Code extends number, Alg extends number>
   }
 
   getCID(): CID {
-    return bucketDigestToCid(this.prefix)(this.getHash());
+    return bucketDigestToCid(this.getHash());
   }
 
   [nodeInspectSymbol]() {
@@ -66,8 +64,6 @@ export class DefaultBucket<Code extends number, Alg extends number>
   }
 }
 
-export class DefaultProllyTree<Code extends number, Alg extends number>
-  implements ProllyTree<Code, Alg>
-{
-  constructor(public root: Bucket<Code, Alg>) {}
+export class DefaultProllyTree implements ProllyTree {
+  constructor(public root: Bucket) {}
 }

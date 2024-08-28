@@ -46,18 +46,13 @@ export const findFailureOrLastIndex = <T>(
  * @param level
  * @returns
  */
-export const prefixWithLevel = <Code extends number, Alg extends number>(
-  prefix: Prefix<Code, Alg>,
-  level: number,
-): Prefix<Code, Alg> => ({
+export const prefixWithLevel = (prefix: Prefix, level: number): Prefix => ({
   ...prefix,
   level,
 });
 
-export const bucketDigestToCid =
-  <Code extends number, Alg extends number>(prefix: Prefix<Code, Alg>) =>
-  (digest: Uint8Array): CID =>
-    CID.createV1(prefix.mc, createMultihashDigest(prefix.mh, digest));
+export const bucketDigestToCid = (digest: Uint8Array): CID =>
+  CID.createV1(113, createMultihashDigest(18, digest));
 
 export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
 

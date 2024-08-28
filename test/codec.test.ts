@@ -9,7 +9,7 @@ import {
 import {
   sha256SyncHasher as syncHasher,
   cborTreeCodec as treeCodec,
-} from "../src/index.js";
+} from "../src/codec.js";
 import {
   bucket,
   bucketBytes,

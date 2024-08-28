@@ -2,13 +2,19 @@
  * Encoding/decoding of nodes and buckets
  */
 
+import * as dagCbor from "@ipld/dag-cbor";
 import { decodeOptions, encodeOptions } from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
 import * as cborg from "cborg";
+import { decode, decodeFirst, encode } from "cborg";
 import type {
   ArrayBufferView,
   ByteView,
   SyncMultihashHasher,
 } from "multiformats";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
+import { MultihashDigest } from "multiformats/interface";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 import { createNamedErrorClass } from "./internal.js";
@@ -37,6 +43,20 @@ export interface TreeCodec<Code extends number>
 
 export type EncodedTuple = [Tuple["timestamp"], Tuple["hash"]];
 export type EncodedNode = [...EncodedTuple, Node["message"]];
+
+export const cborTreeCodec: TreeCodec<typeof dagCbor.code> = {
+  ...dagCbor,
+  encode: (value) => encode(value, dagCbor.encodeOptions),
+  decode: (bytes) => decode(handleBuffer(bytes), dagCbor.decodeOptions),
+  decodeFirst: (bytes) =>
+    decodeFirst(handleBuffer(bytes), dagCbor.decodeOptions),
+};
+
+export const sha256SyncHasher: SyncMultihashHasher<typeof mh_sha256.code> = {
+  ...mh_sha256,
+  digest: (input: Uint8Array): MultihashDigest<typeof mh_sha256.code> =>
+    createMultihashDigest(mh_sha256.code, sha256(input)),
+};
 
 export function encodeNode<Code extends number>(
   timestamp: number,

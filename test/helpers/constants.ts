@@ -8,9 +8,7 @@ import { DefaultBucket, DefaultNode } from "../../src/impls.js";
 import {
   cborTreeCodec,
   sha256SyncHasher,
-  sha256SyncHasher as syncHasher,
-  cborTreeCodec as treeCodec,
-} from "../../src/index.js";
+} from "../../src/codec.js";
 import { Bucket, Prefix, Tuple } from "../../src/interface.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
 
@@ -24,20 +22,20 @@ export const nodeBytes = cbor.encode(encodedNode, encodeOptions);
 export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 
 // buckets
-export type Mc = typeof treeCodec.code;
-export type Mh = typeof syncHasher.code;
+export type Mc = typeof cborTreeCodec.code;
+export type Mh = typeof sha256SyncHasher.code;
 export const prefix: Prefix<Mc, Mh> = {
   average: 30,
-  mc: treeCodec.code,
-  mh: syncHasher.code,
+  mc: cborTreeCodec.code,
+  mh: sha256SyncHasher.code,
   level: 0,
 };
 export const prefixBytes = cbor.encode(prefix, encodeOptions);
 export const bucketBytes = new Uint8Array([...prefixBytes, ...nodeBytes]);
-export const bucketHash = syncHasher.digest(bucketBytes).digest;
+export const bucketHash = sha256SyncHasher.digest(bucketBytes).digest;
 export const bucketCid = CID.createV1(
-  treeCodec.code,
-  createMultihashDigest(syncHasher.code, bucketHash),
+  cborTreeCodec.code,
+  createMultihashDigest(sha256SyncHasher.code, bucketHash),
 );
 export const bucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
@@ -49,7 +47,7 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
   [],
   prefixBytes,
-  syncHasher.digest(prefixBytes).digest,
+  sha256SyncHasher.digest(prefixBytes).digest,
 );
 
 export const blockstore = new MemoryBlockstore();

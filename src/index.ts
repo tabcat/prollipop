@@ -1,33 +1,14 @@
-import * as dagCbor from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
-import { decode, decodeFirst, encode } from "cborg";
 import { Blockstore } from "interface-blockstore";
-import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
-import { MultihashDigest, SyncMultihashHasher } from "multiformats/interface";
+import { SyncMultihashHasher } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
-import { TreeCodec, handleBuffer } from "./codec.js";
+import { cborTreeCodec, sha256SyncHasher, TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
-
-export const cborTreeCodec: TreeCodec<typeof dagCbor.code> = {
-  ...dagCbor,
-  encode: (value) => encode(value, dagCbor.encodeOptions),
-  decode: (bytes) => decode(handleBuffer(bytes), dagCbor.decodeOptions),
-  decodeFirst: (bytes) =>
-    decodeFirst(handleBuffer(bytes), dagCbor.decodeOptions),
-};
-
-export const sha256SyncHasher: SyncMultihashHasher<typeof mh_sha256.code> = {
-  ...mh_sha256,
-  digest: (input: Uint8Array): MultihashDigest<typeof mh_sha256.code> =>
-    createMultihashDigest(mh_sha256.code, sha256(input)),
-};
 
 export interface InitOptions<Code extends number, Alg extends number> {
   codec: TreeCodec<Code>;
@@ -70,7 +51,7 @@ export function cloneTree<Code extends number, Alg extends number>(
   tree: ProllyTree<Code, Alg>,
 ): ProllyTree<Code, Alg> {
   // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
-  return new DefaultProllyTree(tree.root, tree.getCodec(), tree.getHasher())
+  return new DefaultProllyTree(tree.root, tree.getCodec(), tree.getHasher());
 }
 
 /**

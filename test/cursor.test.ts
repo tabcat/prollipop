@@ -15,7 +15,7 @@ import {
   nodeOf,
   rootLevelOf,
 } from "../src/cursor.js";
-import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
+import { cborTreeCodec, sha256SyncHasher } from "../src/codec.js";
 import { Bucket } from "../src/interface.js";
 import { findFailureOrLastIndex } from "../src/internal.js";
 import { blockstore, prefix } from "./helpers/constants.js";
@@ -357,5 +357,5 @@ describe("cursor", () => {
     });
   });
 
-  describe("ffwToTupleOnLevel", () => {});
+  // describe("ffwToTupleOnLevel", () => {});
 });

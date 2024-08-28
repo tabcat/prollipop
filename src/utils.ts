@@ -1,16 +1,15 @@
 import { Blockstore } from "interface-blockstore";
-import { SyncMultihashHasher } from "multiformats/interface";
 import { compare as compareBytes } from "uint8arrays";
-import { decodeBucket, encodeBucket } from "./codec.js";
+import { decodeBucket, encodeBucket, hasher } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 import { bucketBytesToDigest, bucketDigestToCid } from "./internal.js";
 
 /**
  * Returns a new tuple for the provided node or tuple.
- * 
+ *
  * @param node
- * @returns 
+ * @returns
  */
 export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
   timestamp,
@@ -30,7 +29,6 @@ export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
 export const createBucket = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> => {
   const bytes = encodeBucket(prefix, nodes);
   return new DefaultBucket(
@@ -55,7 +53,6 @@ export async function loadBucket<Code extends number, Alg extends number>(
   blockstore: Blockstore,
   hash: Uint8Array,
   expectedPrefix: Prefix<Code, Alg>,
-  hasher: SyncMultihashHasher<Alg>,
 ): Promise<Bucket<Code, Alg>> {
   let bytes: Uint8Array;
   try {
@@ -68,7 +65,7 @@ export async function loadBucket<Code extends number, Alg extends number>(
     }
   }
 
-  const bucket: Bucket<Code, Alg> = decodeBucket(bytes, hasher);
+  const bucket: Bucket<Code, Alg> = decodeBucket(bytes);
 
   if (bucket.prefix.level !== expectedPrefix.level) {
     throw new TypeError(

@@ -5,7 +5,6 @@ import {
   encodeBucket,
   encodeNode,
   handleBuffer,
-  hasher as syncHasher,
 } from "../src/codec.js";
 import {
   bucket,
@@ -51,7 +50,7 @@ describe("codec", () => {
 
   describe("decodeBucket", () => {
     it("turns a byte array into a bucket", () => {
-      expect(decodeBucket(bucketBytes, syncHasher)).to.deep.equal(bucket);
+      expect(decodeBucket(bucketBytes)).to.deep.equal(bucket);
     });
   });
 });

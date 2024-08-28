@@ -3,11 +3,8 @@ import { MemoryBlockstore } from "blockstore-core";
 import * as cbor from "cborg";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { EncodedNode, encoder } from "../../src/codec.js";
+import { EncodedNode, encoder, hasher } from "../../src/codec.js";
 import { DefaultBucket, DefaultNode } from "../../src/impls.js";
-import {
-  hasher,
-} from "../../src/codec.js";
 import { Bucket, Prefix, Tuple } from "../../src/interface.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
 
@@ -59,7 +56,10 @@ export const treeNodes = createProllyTreeNodes(
     .map((_, i) => i),
   hasher,
 );
-export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({ timestamp, hash }))
+export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({
+  timestamp,
+  hash,
+}));
 export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,

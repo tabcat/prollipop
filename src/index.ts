@@ -1,6 +1,5 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
-import { SyncMultihashHasher } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
 import { encoder, hasher } from "./codec.js";
 import { compareTuples } from "./compare.js";
@@ -10,8 +9,7 @@ import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
-export interface InitOptions<Code extends number, Alg extends number> {
-  hasher: SyncMultihashHasher<Alg>;
+export interface InitOptions {
   averageBucketSize: number;
 }
 
@@ -20,11 +18,9 @@ export function createEmptyTree(): ProllyTree<
   typeof hasher.code
 >;
 export function createEmptyTree<Code extends number, Alg extends number>(
-  options: InitOptions<Code, Alg>,
+  options: InitOptions,
 ): ProllyTree<Code, Alg>;
-export function createEmptyTree<Code extends number, Alg extends number>(
-  options?: InitOptions<Code, Alg>,
-) {
+export function createEmptyTree(options?: InitOptions) {
   const average = options?.averageBucketSize ?? 30;
 
   /**
@@ -37,17 +33,14 @@ export function createEmptyTree<Code extends number, Alg extends number>(
     level: 0,
   };
 
-  return new DefaultProllyTree(
-    createBucket(prefix, [], hasher),
-    hasher,
-  );
+  return new DefaultProllyTree(createBucket(prefix, []));
 }
 
 export function cloneTree<Code extends number, Alg extends number>(
   tree: ProllyTree<Code, Alg>,
 ): ProllyTree<Code, Alg> {
   // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
-  return new DefaultProllyTree(tree.root, tree.getHasher());
+  return new DefaultProllyTree(tree.root);
 }
 
 /**

@@ -1,6 +1,5 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
-import { hasher } from "../src/codec.js";
 import {
   bucketCidToDigest,
   bucketDigestToCid,
@@ -70,9 +69,7 @@ describe("utils", () => {
 
   describe("createBucket", () => {
     it("returns a bucket", () => {
-      expect(createBucket(prefix, [node], hasher)).to.deep.equal(
-        bucket,
-      );
+      expect(createBucket(prefix, [node])).to.deep.equal(bucket);
     });
   });
 
@@ -81,26 +78,21 @@ describe("utils", () => {
     blockstore.put(bucketCid, bucketBytes);
 
     it("returns a bucket from a blockstore for the given hash", async () => {
-      expect(
-        await loadBucket(blockstore, bucketHash, prefix,  hasher),
-      ).to.deep.equal(bucket);
+      expect(await loadBucket(blockstore, bucketHash, prefix)).to.deep.equal(
+        bucket,
+      );
     });
 
     it("throws if bucket is not found in blockstore", () => {
       const blockstore = new MemoryBlockstore();
       expect(() =>
-        loadBucket(blockstore, bucketHash, prefix,  hasher),
+        loadBucket(blockstore, bucketHash, prefix),
       ).rejects.toSatisfy((e) => e instanceof Error);
     });
 
     it("throws if bucket level mismatches level of expected prefix", () => {
       expect(() =>
-        loadBucket(
-          blockstore,
-          bucketHash,
-          { ...prefix, level: 1 },
-          hasher,
-        ),
+        loadBucket(blockstore, bucketHash, { ...prefix, level: 1 }),
       ).rejects.toSatisfy((e) => e instanceof TypeError);
     });
 
@@ -108,12 +100,7 @@ describe("utils", () => {
       const blockstore = new MemoryBlockstore();
       blockstore.put(emptyBucket.getCID(), bucketBytes);
       expect(() =>
-        loadBucket(
-          blockstore,
-          emptyBucket.getHash(),
-          prefix,
-          hasher,
-        ),
+        loadBucket(blockstore, emptyBucket.getHash(), prefix),
       ).rejects.toSatisfy((e) => e instanceof Error);
     });
   });

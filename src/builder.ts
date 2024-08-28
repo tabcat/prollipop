@@ -1,7 +1,6 @@
 import { firstElement, lastElement } from "@tabcat/ith-element";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
-import { SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { isBoundaryNode } from "./boundaries.js";
 import { compareTuples, compareUpdates } from "./compare.js";
@@ -33,11 +32,11 @@ const compareNodeToUpdate = (a: Node, b: LeveledUpdate): number =>
 
 const compareLeveledUpdates = (a: LeveledUpdate, b: LeveledUpdate) => {
   if (a.level !== b.level) {
-    return a.level - b.level
+    return a.level - b.level;
   }
 
-  return compareUpdates(a, b)
-}
+  return compareUpdates(a, b);
+};
 
 /**
  * Takes a node and update of equal tuples and returns whether a change must be made.
@@ -90,7 +89,6 @@ export const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
   updates: LeveledUpdate[],
-  hasher: SyncMultihashHasher<Alg>,
   isHead: boolean,
 ): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
   const buckets: Bucket<Code, Alg>[] = [];
@@ -118,7 +116,7 @@ export const updateBucket = <Code extends number, Alg extends number>(
     if (addedNode) {
       afterbound.push(addedNode);
       if (isBoundary(addedNode)) {
-        buckets.push(createBucket(bucket.prefix, afterbound, hasher));
+        buckets.push(createBucket(bucket.prefix, afterbound));
         afterbound = [];
       }
     }
@@ -126,7 +124,7 @@ export const updateBucket = <Code extends number, Alg extends number>(
 
   // handle empty bucket
   if (isHead && (afterbound.length > 0 || buckets.length === 0)) {
-    buckets.push(createBucket(bucket.prefix, afterbound, hasher));
+    buckets.push(createBucket(bucket.prefix, afterbound));
     afterbound = [];
   }
 
@@ -203,11 +201,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         visitedLevelTail || (firstBucketOfLevel && cursor.isAtTail());
       visitedLevelHead = cursor.isAtHead();
     } else {
-      updatee = createBucket(
-        prefixWithLevel(tree.root.prefix, level),
-        [],
-        tree.getHasher(),
-      );
+      updatee = createBucket(prefixWithLevel(tree.root.prefix, level), []);
       visitedLevelTail = true;
       visitedLevelHead = true;
     }
@@ -228,7 +222,6 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       updatee,
       leftovers,
       updtBatch,
-      tree.getHasher(),
       visitedLevelHead,
     );
     bucketsOnLevel += buckets.length;
@@ -285,7 +278,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
 
     if (newRootFound) {
       newRoot = firstElement(buckets);
-      updts.length = 0
+      updts.length = 0;
       // if (updts.length > 0) {
       //   throw new Error("whoa, why are there still updates?");
       // }
@@ -310,7 +303,7 @@ export async function* mutateTree<Code extends number, Alg extends number>(
         });
       }
 
-      updts.sort(compareLeveledUpdates)
+      updts.sort(compareLeveledUpdates);
     }
   }
 

@@ -170,7 +170,6 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
 
 export function decodeBucket<Code extends number, Alg extends number>(
   bytes: Uint8Array,
-  hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
   // prefix is always dag-cbor
   const decoded: [unknown, Uint8Array] = cborg.decodeFirst(

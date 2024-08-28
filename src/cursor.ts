@@ -1,6 +1,6 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
-import { CID, SyncMultihashHasher } from "multiformats";
+import { CID } from "multiformats";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
@@ -19,7 +19,6 @@ const failedToAquireLockErr = () =>
 
 export interface CursorState<Code extends number, Alg extends number> {
   blockstore: Blockstore;
-  hasher: SyncMultihashHasher<Alg>;
   currentBuckets: Bucket<Code, Alg>[];
   currentIndex: number;
   isDone: boolean;
@@ -56,7 +55,6 @@ export const createCursorState = <Code extends number, Alg extends number>(
 
   return {
     blockstore,
-    hasher: tree.getHasher(),
     currentBuckets,
     currentIndex,
     isDone: currentIndex === -1,
@@ -303,7 +301,6 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
         state.blockstore,
         digest,
         prefixWithLevel(bucketOf(state).prefix, levelOf(state) - 1),
-        state.hasher,
       );
 
       if (bucket.nodes.length === 0) {
@@ -446,7 +443,7 @@ const ffwToTupleOnLevel = async <Code extends number, Alg extends number>(
     await moveToLevel(stateCopy, level, guideByTuple(tuple));
   }
 
-  stateCopy.currentIndex = guideByTuple(tuple)(bucketOf(stateCopy).nodes)
+  stateCopy.currentIndex = guideByTuple(tuple)(bucketOf(stateCopy).nodes);
 
   // could not find a node greater than or equal to tuple
   if (compareTuples(tuple, nodeOf(state)) > 0) {

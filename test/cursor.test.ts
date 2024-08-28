@@ -1,5 +1,6 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import { describe, expect, it } from "vitest";
+import { hasher } from "../src/codec.js";
 import { compareTuples } from "../src/compare.js";
 import {
   CursorError,
@@ -15,7 +16,6 @@ import {
   nodeOf,
   rootLevelOf,
 } from "../src/cursor.js";
-import {  hasher } from "../src/codec.js";
 import { Bucket } from "../src/interface.js";
 import { findFailureOrLastIndex } from "../src/internal.js";
 import { blockstore, prefix } from "./helpers/constants.js";

@@ -1,6 +1,5 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
-import { SyncMultihashHasher } from "multiformats/interface";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./internal.js";
 
@@ -70,16 +69,5 @@ export class DefaultBucket<Code extends number, Alg extends number>
 export class DefaultProllyTree<Code extends number, Alg extends number>
   implements ProllyTree<Code, Alg>
 {
-  #hasher: SyncMultihashHasher<Alg>;
-
-  constructor(
-    public root: Bucket<Code, Alg>,
-    hasher: SyncMultihashHasher<Alg>,
-  ) {
-    this.#hasher = hasher;
-  }
-
-  getHasher(): SyncMultihashHasher<Alg> {
-    return this.#hasher;
-  }
+  constructor(public root: Bucket<Code, Alg>) {}
 }

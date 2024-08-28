@@ -1,1 +1,1 @@
-export type { SafeBlockCodec, TreeCodec } from "../codec.js";
+export type { SafeBlockCodec } from "../codec.js";

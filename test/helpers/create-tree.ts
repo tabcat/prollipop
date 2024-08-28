@@ -2,18 +2,13 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
 import { isBoundaryNode } from "../../src/boundaries.js";
-import {  encodeBucket } from "../../src/codec.js";
+import { encodeBucket } from "../../src/codec.js";
 import {
   DefaultBucket,
   DefaultNode,
   DefaultProllyTree,
 } from "../../src/impls.js";
-import type {
-  Bucket,
-  Node,
-  Prefix,
-  ProllyTree,
-} from "../../src/interface.js";
+import type { Bucket, Node, Prefix, ProllyTree } from "../../src/interface.js";
 import { prefixWithLevel } from "../../src/internal.js";
 
 const levelOfNodes = <Code extends number, Alg extends number>(
@@ -100,7 +95,7 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   }
 
   return [
-    new DefaultProllyTree(firstElement(bucketLevel), hasher),
+    new DefaultProllyTree(firstElement(bucketLevel)),
     treeState.reverse(),
   ];
 };

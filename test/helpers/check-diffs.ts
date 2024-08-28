@@ -1,11 +1,11 @@
 import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { expect } from "vitest";
+import { hasher } from "../../src/codec.js";
 import { compareBucketHashes, compareTuples } from "../../src/compare.js";
 import { NodeDiff, diff } from "../../src/diff.js";
 import { Bucket, Node, ProllyTree } from "../../src/interface.js";
 import { Mc, Mh, blockstore, prefix, treeNodesMax } from "./constants.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
-import { hasher } from "../../src/codec.js";
 
 export const emptyTreeNodes: Node[] = [];
 export const [emptyTree, emptyTreeState] = createProllyTree(

@@ -1,7 +1,6 @@
 import { difference } from "@tabcat/ordered-sets/difference";
 import { intersection } from "@tabcat/ordered-sets/intersection";
 import { describe, expect, it } from "vitest";
-import { hasher } from "../src/codec.js";
 import { compareBucketHashes, compareTuples } from "../src/compare.js";
 import { NodeDiff, diff } from "../src/diff.js";
 import { DefaultProllyTree } from "../src/impls.js";
@@ -21,10 +20,7 @@ describe("index", () => {
   describe("createEmptyTree", () => {
     it("returns an empty tree", () => {
       expect(createEmptyTree()).to.deep.equal(
-        new DefaultProllyTree(
-          createBucket(prefix, [], hasher),
-          hasher,
-        ),
+        new DefaultProllyTree(createBucket(prefix, [])),
       );
     });
   });

@@ -55,6 +55,13 @@ export class DefaultBucket implements Bucket {
     return this.nodes[this.nodes.length - 1] ?? null;
   }
 
+  getParentNode(): Node | null {
+    const { timestamp, hash } = this.getBoundary() ?? {};
+    return timestamp != null && hash != null
+      ? new DefaultNode(timestamp, hash, this.getHash())
+      : null;
+  }
+
   [nodeInspectSymbol]() {
     return {
       prefix: this.prefix,

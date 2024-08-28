@@ -51,6 +51,10 @@ export class DefaultBucket implements Bucket {
     return bucketDigestToCid(this.getHash());
   }
 
+  getBoundary(): Node | null {
+    return this.nodes[this.nodes.length - 1] ?? null;
+  }
+
   [nodeInspectSymbol]() {
     return {
       prefix: this.prefix,

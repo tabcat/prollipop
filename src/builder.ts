@@ -132,7 +132,7 @@ export const updateBucket = (
 };
 
 export const bucketToParentNode = (bucket: Bucket): Node => {
-  const { timestamp, hash } = lastElement(bucket.nodes);
+  const { timestamp, hash } = bucket.getBoundary()!
   return new DefaultNode(timestamp, hash, bucket.getHash());
 };
 
@@ -210,7 +210,7 @@ export async function* mutateTree(
         updts,
         updatee.nodes.length > 0 && !visitedLevelHead
           ? (u) =>
-              compareTuples(u.value, lastElement(updatee.nodes)) <= 0 &&
+              compareTuples(u.value, updatee.getBoundary()!) <= 0 &&
               u.level <= level
           : (u) => u.level <= level,
       ),
@@ -243,10 +243,7 @@ export async function* mutateTree(
     // only yield a diff if there are new buckets
     if (diff.buckets.length > 0 && buckets.length > 0) {
       // needs to be cleaned up later, empty buckets will be common. too many conditionals
-      const boundary: Node | null =
-        lastElement(buckets).nodes.length > 0
-          ? lastElement(lastElement(buckets).nodes)
-          : null;
+      const boundary: Node | null = lastElement(buckets).getBoundary()
 
       yield {
         // node diffs up to last bucket diff boundary
@@ -291,11 +288,11 @@ export async function* mutateTree(
       );
 
       // rm old bucket from parent
-      if (nodeDiffs.length > 0 && updatee.nodes.length) {
+      if (nodeDiffs.length > 0 && updatee.nodes.length > 0) {
         updts.push({
           op: "rm",
           level: level + 1,
-          value: lastElement(updatee.nodes),
+          value: updatee.getBoundary()!,
         });
       }
 

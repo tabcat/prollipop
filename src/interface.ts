@@ -20,6 +20,7 @@ export interface Bucket {
   getBytes(): Uint8Array;
   getCID(): CID;
   getHash(): Uint8Array;
+  getBoundary(): Node | null; // null if bucket is empty
 }
 
 export interface ProllyTree {

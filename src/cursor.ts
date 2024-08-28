@@ -415,7 +415,7 @@ const ffwToTupleOnLevel = async (
 
   // move up until finding a node greater than tuple
   while (
-    compareTuples(tuple, lastElement(bucketOf(stateCopy).nodes)) > 0 &&
+    compareTuples(tuple, bucketOf(stateCopy).getBoundary()!) > 0 &&
     stateCopy.currentBuckets.length > 1
   ) {
     await moveToLevel(stateCopy, levelOf(state) + 1, guideByTuple(tuple));

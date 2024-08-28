@@ -2,8 +2,7 @@
  * Encoding/decoding of nodes and buckets
  */
 
-import * as dagCbor from "@ipld/dag-cbor";
-import { decodeOptions, encodeOptions } from "@ipld/dag-cbor";
+import { code, decodeOptions, encodeOptions, name } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import * as cborg from "cborg";
 import { decode, decodeFirst, encode } from "cborg";
@@ -38,33 +37,30 @@ export interface SafeBlockCodec<Code extends number, Universe = any> {
   decodeFirst(bytes: Uint8Array): [unknown, Uint8Array];
 }
 
-export interface TreeCodec<Code extends number>
-  extends SafeBlockCodec<Code, EncodedNode> {}
-
 export type EncodedTuple = [Tuple["timestamp"], Tuple["hash"]];
 export type EncodedNode = [...EncodedTuple, Node["message"]];
 
-export const cborTreeCodec: TreeCodec<typeof dagCbor.code> = {
-  ...dagCbor,
-  encode: (value) => encode(value, dagCbor.encodeOptions),
-  decode: (bytes) => decode(handleBuffer(bytes), dagCbor.decodeOptions),
-  decodeFirst: (bytes) =>
-    decodeFirst(handleBuffer(bytes), dagCbor.decodeOptions),
+export const encoder: SafeBlockCodec<113> = {
+  name,
+  code,
+  encode: (value) => encode(value, encodeOptions),
+  decode: (bytes) => decode(handleBuffer(bytes), decodeOptions),
+  decodeFirst: (bytes) => decodeFirst(handleBuffer(bytes), decodeOptions),
 };
 
-export const sha256SyncHasher: SyncMultihashHasher<typeof mh_sha256.code> = {
-  ...mh_sha256,
-  digest: (input: Uint8Array): MultihashDigest<typeof mh_sha256.code> =>
+export const hasher: SyncMultihashHasher<18> = {
+  name: mh_sha256.name,
+  code: mh_sha256.code,
+  digest: (input: Uint8Array): MultihashDigest<18> =>
     createMultihashDigest(mh_sha256.code, sha256(input)),
 };
 
-export function encodeNode<Code extends number>(
+export function encodeNode(
   timestamp: number,
   hash: Uint8Array,
   message: Uint8Array,
-  codec: TreeCodec<Code>,
 ): ByteView<EncodedNode> {
-  return codec.encode([timestamp, hash, message]);
+  return encoder.encode([timestamp, hash, message]);
 }
 
 export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
@@ -89,12 +85,9 @@ export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
   return [timestamp, hash, message];
 };
 
-export function decodeNodeFirst<Code extends number>(
-  bytes: Uint8Array,
-  codec: TreeCodec<Code>,
-): [Node, Uint8Array] {
+export function decodeNodeFirst(bytes: Uint8Array): [Node, Uint8Array] {
   const [encodedNode, remainder]: [unknown, Uint8Array] =
-    codec.decodeFirst(bytes);
+    encoder.decodeFirst(bytes);
 
   return [new DefaultNode(...getValidatedEncodedNode(encodedNode)), remainder];
 }
@@ -107,13 +100,9 @@ export type EncodedBucket<Code extends number, Alg extends number> = [
 export function encodeBucket<Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code>,
 ): ByteView<EncodedBucket<Code, Alg>> {
   // prefix must be dag-cbor encoded
-  const encodedPrefix: ByteView<Prefix<Code, Alg>> = cborg.encode(
-    prefix,
-    encodeOptions,
-  );
+  const encodedPrefix: ByteView<Prefix<Code, Alg>> = encoder.encode(prefix);
   const bytedNodes: Uint8Array[] = [];
 
   let len = 0;
@@ -122,7 +111,6 @@ export function encodeBucket<Code extends number, Alg extends number>(
       node.timestamp,
       node.hash,
       node.message,
-      codec,
     );
     bytedNodes.push(bytes);
     len += bytes.length;
@@ -144,8 +132,6 @@ export function encodeBucket<Code extends number, Alg extends number>(
 
 export const getValidatedPrefix = <Code extends number, Alg extends number>(
   prefix: unknown,
-  codec: TreeCodec<Code>,
-  hasher: SyncMultihashHasher<Alg>,
 ): Prefix<Code, Alg> => {
   if (typeof prefix !== "object") {
     throw new CodecError("Expected bucket prefix to be an object.");
@@ -164,9 +150,9 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
   if (typeof mc !== "number") {
     throw new CodecError("Expected prefix mc field to be a number.");
   }
-  if (codec.code !== mc) {
+  if (encoder.code !== mc) {
     throw new CodecError(
-      `Expected multicodec code to be ${codec.code}. Received ${mc}.`,
+      `Expected multicodec code to be ${encoder.code}. Received ${mc}.`,
     );
   }
 
@@ -184,7 +170,6 @@ export const getValidatedPrefix = <Code extends number, Alg extends number>(
 
 export function decodeBucket<Code extends number, Alg extends number>(
   bytes: Uint8Array,
-  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg> {
   // prefix is always dag-cbor
@@ -193,15 +178,11 @@ export function decodeBucket<Code extends number, Alg extends number>(
     decodeOptions,
   );
 
-  const prefix: Prefix<Code, Alg> = getValidatedPrefix(
-    decoded[0],
-    codec,
-    hasher,
-  );
+  const prefix: Prefix<Code, Alg> = getValidatedPrefix(decoded[0]);
 
   const nodes: Node[] = [];
   while (decoded[1].length > 0) {
-    [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1], codec);
+    [nodes[nodes.length], decoded[1]] = decodeNodeFirst(decoded[1]);
   }
 
   return new DefaultBucket<Code, Alg>(

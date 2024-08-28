@@ -5,15 +5,14 @@ import { NodeDiff, diff } from "../../src/diff.js";
 import { Bucket, Node, ProllyTree } from "../../src/interface.js";
 import { Mc, Mh, blockstore, prefix, treeNodesMax } from "./constants.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
-import { cborTreeCodec, sha256SyncHasher } from "../../src/codec.js";
+import { hasher } from "../../src/codec.js";
 
 export const emptyTreeNodes: Node[] = [];
 export const [emptyTree, emptyTreeState] = createProllyTree(
   blockstore,
   prefix,
   emptyTreeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 const emptyTreeBuckets: Bucket<Mc, Mh>[] = [emptyTree.root];
 
@@ -21,14 +20,13 @@ export const superTreeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
     .fill(0)
     .map((_, i) => i),
-  sha256SyncHasher,
+  hasher,
 );
 export const [superTree, superTreeState] = createProllyTree(
   blockstore,
   prefix,
   superTreeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 const superTreeBuckets = superTreeState.flat().sort(compareBucketHashes);
 
@@ -36,14 +34,13 @@ export const subTreeNodes = createProllyTreeNodes(
   Array(Math.floor(treeNodesMax / 2))
     .fill(0)
     .map((_, i) => i),
-  sha256SyncHasher,
+  hasher,
 );
 export const [subTree, subTreeState] = createProllyTree(
   blockstore,
   prefix,
   subTreeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 const subTreeBuckets = subTreeState.flat().sort(compareBucketHashes);
 
@@ -51,14 +48,13 @@ export const higherTreeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
     .fill(0)
     .map((_, i) => i + treeNodesMax),
-  sha256SyncHasher,
+  hasher,
 );
 export const [higherTree, higherTreeState] = createProllyTree(
   blockstore,
   prefix,
   higherTreeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 const higherTreeBuckets = higherTreeState.flat().sort(compareBucketHashes);
 
@@ -67,14 +63,13 @@ export const randomTreeNodes = createProllyTreeNodes(
     .fill(0)
     .map((_, i) => i)
     .filter(() => Math.random() >= 0.5),
-  sha256SyncHasher,
+  hasher,
 );
 export const [randomTree, randomTreeState] = createProllyTree(
   blockstore,
   prefix,
   randomTreeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 const randomTreeBuckets = randomTreeState.flat().sort(compareBucketHashes);
 

@@ -15,7 +15,7 @@ import {
   nodeOf,
   rootLevelOf,
 } from "../src/cursor.js";
-import { cborTreeCodec, sha256SyncHasher } from "../src/codec.js";
+import {  hasher } from "../src/codec.js";
 import { Bucket } from "../src/interface.js";
 import { findFailureOrLastIndex } from "../src/internal.js";
 import { blockstore, prefix } from "./helpers/constants.js";
@@ -28,14 +28,13 @@ const nodes = createProllyTreeNodes(
   Array(1000)
     .fill(0)
     .map((_, i) => i),
-  sha256SyncHasher,
+  hasher,
 );
 const [tree, treeState] = createProllyTree(
   blockstore,
   { ...prefix, average: 10 },
   nodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );
 
 const moveToExtremityOnLevel = <Code extends number, Alg extends number>(

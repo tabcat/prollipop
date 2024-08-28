@@ -1,6 +1,6 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
-import { cborTreeCodec, sha256SyncHasher } from "../src/index.js";
+import { hasher } from "../src/codec.js";
 import {
   bucketCidToDigest,
   bucketDigestToCid,
@@ -70,9 +70,9 @@ describe("utils", () => {
 
   describe("createBucket", () => {
     it("returns a bucket", () => {
-      expect(
-        createBucket(prefix, [node], cborTreeCodec, sha256SyncHasher),
-      ).to.deep.equal(bucket);
+      expect(createBucket(prefix, [node], hasher)).to.deep.equal(
+        bucket,
+      );
     });
   });
 
@@ -82,26 +82,14 @@ describe("utils", () => {
 
     it("returns a bucket from a blockstore for the given hash", async () => {
       expect(
-        await loadBucket(
-          blockstore,
-          bucketHash,
-          prefix,
-          cborTreeCodec,
-          sha256SyncHasher,
-        ),
+        await loadBucket(blockstore, bucketHash, prefix,  hasher),
       ).to.deep.equal(bucket);
     });
 
     it("throws if bucket is not found in blockstore", () => {
       const blockstore = new MemoryBlockstore();
       expect(() =>
-        loadBucket(
-          blockstore,
-          bucketHash,
-          prefix,
-          cborTreeCodec,
-          sha256SyncHasher,
-        ),
+        loadBucket(blockstore, bucketHash, prefix,  hasher),
       ).rejects.toSatisfy((e) => e instanceof Error);
     });
 
@@ -111,8 +99,7 @@ describe("utils", () => {
           blockstore,
           bucketHash,
           { ...prefix, level: 1 },
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         ),
       ).rejects.toSatisfy((e) => e instanceof TypeError);
     });
@@ -125,8 +112,7 @@ describe("utils", () => {
           blockstore,
           emptyBucket.getHash(),
           prefix,
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         ),
       ).rejects.toSatisfy((e) => e instanceof Error);
     });

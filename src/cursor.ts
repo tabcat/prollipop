@@ -2,7 +2,6 @@ import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { CID, SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
-import { TreeCodec } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import {
@@ -20,7 +19,6 @@ const failedToAquireLockErr = () =>
 
 export interface CursorState<Code extends number, Alg extends number> {
   blockstore: Blockstore;
-  codec: TreeCodec<Code>;
   hasher: SyncMultihashHasher<Alg>;
   currentBuckets: Bucket<Code, Alg>[];
   currentIndex: number;
@@ -58,7 +56,6 @@ export const createCursorState = <Code extends number, Alg extends number>(
 
   return {
     blockstore,
-    codec: tree.getCodec(),
     hasher: tree.getHasher(),
     currentBuckets,
     currentIndex,
@@ -306,7 +303,6 @@ export const moveToLevel = async <Code extends number, Alg extends number>(
         state.blockstore,
         digest,
         prefixWithLevel(bucketOf(state).prefix, levelOf(state) - 1),
-        state.codec,
         state.hasher,
       );
 

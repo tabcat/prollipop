@@ -1,6 +1,5 @@
 import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
-import { TreeCodec } from "./codec.js";
 
 export interface Tuple {
   readonly timestamp: number;
@@ -27,7 +26,6 @@ export interface Bucket<Code extends number, Alg extends number> {
 }
 
 export interface ProllyTree<Code extends number, Alg extends number> {
-  getCodec(): TreeCodec<Code>;
   getHasher(): SyncMultihashHasher<Alg>;
   root: Bucket<Code, Alg>;
 }

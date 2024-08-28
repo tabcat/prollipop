@@ -2,7 +2,7 @@ import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats/interface";
 import { Update, mutateTree } from "./builder.js";
-import { cborTreeCodec, sha256SyncHasher, TreeCodec } from "./codec.js";
+import { encoder, hasher } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
@@ -11,14 +11,13 @@ import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
 export interface InitOptions<Code extends number, Alg extends number> {
-  codec: TreeCodec<Code>;
   hasher: SyncMultihashHasher<Alg>;
   averageBucketSize: number;
 }
 
 export function createEmptyTree(): ProllyTree<
-  typeof cborTreeCodec.code,
-  typeof sha256SyncHasher.code
+  typeof encoder.code,
+  typeof hasher.code
 >;
 export function createEmptyTree<Code extends number, Alg extends number>(
   options: InitOptions<Code, Alg>,
@@ -26,8 +25,6 @@ export function createEmptyTree<Code extends number, Alg extends number>(
 export function createEmptyTree<Code extends number, Alg extends number>(
   options?: InitOptions<Code, Alg>,
 ) {
-  const codec = options?.codec ?? cborTreeCodec;
-  const hasher = options?.hasher ?? sha256SyncHasher;
   const average = options?.averageBucketSize ?? 30;
 
   /**
@@ -35,14 +32,13 @@ export function createEmptyTree<Code extends number, Alg extends number>(
    */
   const prefix = {
     average,
-    mc: codec.code,
+    mc: encoder.code,
     mh: hasher.code,
     level: 0,
   };
 
   return new DefaultProllyTree(
-    createBucket(prefix, [], codec, hasher),
-    codec,
+    createBucket(prefix, [], hasher),
     hasher,
   );
 }
@@ -51,7 +47,7 @@ export function cloneTree<Code extends number, Alg extends number>(
   tree: ProllyTree<Code, Alg>,
 ): ProllyTree<Code, Alg> {
   // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
-  return new DefaultProllyTree(tree.root, tree.getCodec(), tree.getHasher());
+  return new DefaultProllyTree(tree.root, tree.getHasher());
 }
 
 /**

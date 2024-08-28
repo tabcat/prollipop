@@ -2,7 +2,7 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
 import { isBoundaryNode } from "../../src/boundaries.js";
-import { TreeCodec, encodeBucket } from "../../src/codec.js";
+import {  encodeBucket } from "../../src/codec.js";
 import {
   DefaultBucket,
   DefaultNode,
@@ -41,7 +41,6 @@ const levelOfNodes = <Code extends number, Alg extends number>(
 const levelOfBuckets = <Code extends number, Alg extends number>(
   prefix: Prefix<Code, Alg>,
   nodeLevel: Node[][],
-  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): Bucket<Code, Alg>[] => {
   if (nodeLevel.length === 0) {
@@ -49,7 +48,7 @@ const levelOfBuckets = <Code extends number, Alg extends number>(
   }
 
   return nodeLevel.map((nodes) => {
-    const bytes = encodeBucket(prefix, nodes, codec);
+    const bytes = encodeBucket(prefix, nodes);
     return new DefaultBucket(prefix, nodes, bytes, hasher.digest(bytes).digest);
   });
 };
@@ -68,7 +67,6 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   blockstore: Blockstore,
   prefix: Prefix<Code, Alg>,
   nodes: Node[],
-  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
 ): [ProllyTree<Code, Alg>, Bucket<Code, Alg>[][]] => {
   let level: number = 0;
@@ -76,7 +74,6 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   let bucketLevel = levelOfBuckets(
     prefixWithLevel(prefix, level),
     nodeLevel,
-    codec,
     hasher,
   );
   bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
@@ -96,7 +93,6 @@ export const createProllyTree = <Code extends number, Alg extends number>(
     bucketLevel = levelOfBuckets(
       prefixWithLevel(prefix, level),
       nodeLevel,
-      codec,
       hasher,
     );
     bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
@@ -104,7 +100,7 @@ export const createProllyTree = <Code extends number, Alg extends number>(
   }
 
   return [
-    new DefaultProllyTree(firstElement(bucketLevel), codec, hasher),
+    new DefaultProllyTree(firstElement(bucketLevel), hasher),
     treeState.reverse(),
   ];
 };

@@ -1,7 +1,6 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { SyncMultihashHasher } from "multiformats/interface";
-import { TreeCodec } from "./codec.js";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./internal.js";
 
@@ -71,20 +70,13 @@ export class DefaultBucket<Code extends number, Alg extends number>
 export class DefaultProllyTree<Code extends number, Alg extends number>
   implements ProllyTree<Code, Alg>
 {
-  #codec: TreeCodec<Code>;
   #hasher: SyncMultihashHasher<Alg>;
 
   constructor(
     public root: Bucket<Code, Alg>,
-    codec: TreeCodec<Code>,
     hasher: SyncMultihashHasher<Alg>,
   ) {
-    this.#codec = codec;
     this.#hasher = hasher;
-  }
-
-  getCodec(): TreeCodec<Code> {
-    return this.#codec;
   }
 
   getHasher(): SyncMultihashHasher<Alg> {

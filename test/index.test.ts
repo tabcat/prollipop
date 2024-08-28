@@ -1,17 +1,11 @@
 import { difference } from "@tabcat/ordered-sets/difference";
 import { intersection } from "@tabcat/ordered-sets/intersection";
 import { describe, expect, it } from "vitest";
+import { hasher } from "../src/codec.js";
 import { compareBucketHashes, compareTuples } from "../src/compare.js";
 import { NodeDiff, diff } from "../src/diff.js";
 import { DefaultProllyTree } from "../src/impls.js";
-import {
-  cborTreeCodec,
-  cloneTree,
-  createEmptyTree,
-  mutate,
-  search,
-  sha256SyncHasher,
-} from "../src/index.js";
+import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
 import { Bucket, Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
 import {
@@ -28,9 +22,8 @@ describe("index", () => {
     it("returns an empty tree", () => {
       expect(createEmptyTree()).to.deep.equal(
         new DefaultProllyTree(
-          createBucket(prefix, [], cborTreeCodec, sha256SyncHasher),
-          cborTreeCodec,
-          sha256SyncHasher,
+          createBucket(prefix, [], hasher),
+          hasher,
         ),
       );
     });

@@ -4,7 +4,6 @@ import { Blockstore } from "interface-blockstore";
 import { SyncMultihashHasher } from "multiformats";
 import { compare } from "uint8arrays";
 import { isBoundaryNode } from "./boundaries.js";
-import { TreeCodec } from "./codec.js";
 import { compareTuples, compareUpdates } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import {
@@ -91,7 +90,6 @@ export const updateBucket = <Code extends number, Alg extends number>(
   bucket: Bucket<Code, Alg>,
   leftovers: Node[],
   updates: LeveledUpdate[],
-  codec: TreeCodec<Code>,
   hasher: SyncMultihashHasher<Alg>,
   isHead: boolean,
 ): [Bucket<Code, Alg>[], Node[], NodeDiff[]] => {
@@ -120,7 +118,7 @@ export const updateBucket = <Code extends number, Alg extends number>(
     if (addedNode) {
       afterbound.push(addedNode);
       if (isBoundary(addedNode)) {
-        buckets.push(createBucket(bucket.prefix, afterbound, codec, hasher));
+        buckets.push(createBucket(bucket.prefix, afterbound, hasher));
         afterbound = [];
       }
     }
@@ -128,7 +126,7 @@ export const updateBucket = <Code extends number, Alg extends number>(
 
   // handle empty bucket
   if (isHead && (afterbound.length > 0 || buckets.length === 0)) {
-    buckets.push(createBucket(bucket.prefix, afterbound, codec, hasher));
+    buckets.push(createBucket(bucket.prefix, afterbound, hasher));
     afterbound = [];
   }
 
@@ -208,7 +206,6 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       updatee = createBucket(
         prefixWithLevel(tree.root.prefix, level),
         [],
-        tree.getCodec(),
         tree.getHasher(),
       );
       visitedLevelTail = true;
@@ -231,7 +228,6 @@ export async function* mutateTree<Code extends number, Alg extends number>(
       updatee,
       leftovers,
       updtBatch,
-      tree.getCodec(),
       tree.getHasher(),
       visitedLevelHead,
     );

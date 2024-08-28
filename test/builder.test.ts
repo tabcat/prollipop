@@ -1,20 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { AddUpdate, RmUpdate, mutateTree } from "../src/builder.js";
 import {
-  cborTreeCodec,
   createEmptyTree,
-  sha256SyncHasher,
 } from "../src/index.js";
 import { blockstore, prefix } from "./helpers/constants.js";
 import {
   createProllyTree,
   createProllyTreeNodes,
 } from "./helpers/create-tree.js";
+import { hasher } from "../src/codec.js";
 
 describe("builder", () => {
   describe("mutateTree", () => {
     it("adds and removes nodes to/from an empty tree", async () => {
-      const nodes = createProllyTreeNodes([1], sha256SyncHasher);
+      const nodes = createProllyTreeNodes([1], hasher);
       const tree = createEmptyTree();
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
@@ -30,8 +29,7 @@ describe("builder", () => {
           blockstore,
           prefix,
           nodes,
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         )[0],
       );
 
@@ -47,20 +45,18 @@ describe("builder", () => {
           blockstore,
           prefix,
           [],
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         )[0],
       );
     });
 
     it("removes and adds nodes from/to a tree", async () => {
-      const nodes = createProllyTreeNodes([1], sha256SyncHasher);
+      const nodes = createProllyTreeNodes([1], hasher);
       const tree = createProllyTree(
         blockstore,
         prefix,
         nodes,
-        cborTreeCodec,
-        sha256SyncHasher,
+        hasher,
       )[0];
       await blockstore.put(tree.root.getCID(), tree.root.getBytes());
 
@@ -76,8 +72,7 @@ describe("builder", () => {
           blockstore,
           prefix,
           [],
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         )[0],
       );
 
@@ -93,8 +88,7 @@ describe("builder", () => {
           blockstore,
           prefix,
           nodes,
-          cborTreeCodec,
-          sha256SyncHasher,
+          hasher,
         )[0],
       );
     });

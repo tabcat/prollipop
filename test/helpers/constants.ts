@@ -3,11 +3,10 @@ import { MemoryBlockstore } from "blockstore-core";
 import * as cbor from "cborg";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { EncodedNode } from "../../src/codec.js";
+import { EncodedNode, encoder } from "../../src/codec.js";
 import { DefaultBucket, DefaultNode } from "../../src/impls.js";
 import {
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 } from "../../src/codec.js";
 import { Bucket, Prefix, Tuple } from "../../src/interface.js";
 import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
@@ -22,20 +21,20 @@ export const nodeBytes = cbor.encode(encodedNode, encodeOptions);
 export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 
 // buckets
-export type Mc = typeof cborTreeCodec.code;
-export type Mh = typeof sha256SyncHasher.code;
+export type Mc = typeof encoder.code;
+export type Mh = typeof hasher.code;
 export const prefix: Prefix<Mc, Mh> = {
   average: 30,
-  mc: cborTreeCodec.code,
-  mh: sha256SyncHasher.code,
+  mc: encoder.code,
+  mh: hasher.code,
   level: 0,
 };
 export const prefixBytes = cbor.encode(prefix, encodeOptions);
 export const bucketBytes = new Uint8Array([...prefixBytes, ...nodeBytes]);
-export const bucketHash = sha256SyncHasher.digest(bucketBytes).digest;
+export const bucketHash = hasher.digest(bucketBytes).digest;
 export const bucketCid = CID.createV1(
-  cborTreeCodec.code,
-  createMultihashDigest(sha256SyncHasher.code, bucketHash),
+  encoder.code,
+  createMultihashDigest(hasher.code, bucketHash),
 );
 export const bucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
@@ -47,7 +46,7 @@ export const emptyBucket: Bucket<Mc, Mh> = new DefaultBucket(
   prefix,
   [],
   prefixBytes,
-  sha256SyncHasher.digest(prefixBytes).digest,
+  hasher.digest(prefixBytes).digest,
 );
 
 export const blockstore = new MemoryBlockstore();
@@ -58,13 +57,12 @@ export const treeNodes = createProllyTreeNodes(
   Array(treeNodesMax)
     .fill(0)
     .map((_, i) => i),
-  sha256SyncHasher,
+  hasher,
 );
 export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({ timestamp, hash }))
 export const [tree, treeState] = createProllyTree(
   blockstore,
   prefix,
   treeNodes,
-  cborTreeCodec,
-  sha256SyncHasher,
+  hasher,
 );

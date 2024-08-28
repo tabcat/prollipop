@@ -310,7 +310,8 @@ export async function* mutateTree(
       ...cursor
         .buckets()
         .slice(0, cursor.buckets().length - 1 + level) // should always be level 0 so
-        .map((b): BucketDiff => [b, null]),
+        .map((b): BucketDiff => [b, null])
+        .reverse(),
     );
   }
 

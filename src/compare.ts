@@ -31,3 +31,31 @@ export const compareUpdates = (a: Update, b: Update): number =>
 
 export const compareBucketHashes = (a: Bucket, b: Bucket): number =>
   compareHash(a.getHash(), b.getHash());
+
+export const compareBuckets = (a: Bucket, b: Bucket): number => {
+  const aBoundary = a.getBoundary()
+  const bBoundary = b.getBoundary()
+
+  // empty buckets first
+  if (aBoundary == null && bBoundary == null) {
+    return compareHash(a.getHash(), b.getHash())
+  } else if (aBoundary == null){
+    return -1
+  } else if (bBoundary == null){
+    return 1
+  }
+
+  // compare level before boundary tuple so builder diffs can be yielded without issues
+
+  const levelComparison = a.prefix.level - b.prefix.level
+
+  if (levelComparison !== 0) return levelComparison
+
+  const tupleComparison = compareTuples(aBoundary, bBoundary)
+
+  if (tupleComparison !== 0) {
+    return tupleComparison
+  }
+
+  return compareBucketHashes(a, b)
+}

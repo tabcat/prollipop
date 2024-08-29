@@ -132,7 +132,7 @@ export const updateBucket = (
 };
 
 export const bucketToParentNode = (bucket: Bucket): Node => {
-  const { timestamp, hash } = bucket.getBoundary()!
+  const { timestamp, hash } = bucket.getBoundary()!;
   return new DefaultNode(timestamp, hash, bucket.getHash());
 };
 
@@ -155,9 +155,6 @@ export async function* mutateTree(
 
   let diff = createProllyTreeDiff();
 
-  // helper code so that created empty trees are found
-  await blockstore.put(tree.root.getCID(), tree.root.getBytes());
-
   const cursor = createCursor(blockstore, tree);
 
   const updts: LeveledUpdate[] = updates.map((u) =>
@@ -173,7 +170,8 @@ export async function* mutateTree(
   let newRoot: Bucket | null = null;
   let i = 0;
 
-  while (updts.length > 0 && i < 100) {
+  while (updts.length > 0 && i < updates.length ** 2) {
+    // pick a better escape condition
     i++;
     const updtLevel = firstElement(updts).level;
 
@@ -204,15 +202,16 @@ export async function* mutateTree(
       visitedLevelHead = true;
     }
 
+    const updateeBoundary = updatee.getBoundary();
     const updtBatch = updts.splice(
       0,
       findFailure(
         updts,
-        updatee.nodes.length > 0 && !visitedLevelHead
-          ? (u) =>
-              compareTuples(u.value, updatee.getBoundary()!) <= 0 &&
-              u.level <= level
-          : (u) => u.level <= level,
+        (u) =>
+          u.level === level &&
+          (updateeBoundary == null ||
+            visitedLevelHead ||
+            compareTuples(u.value, updateeBoundary) <= 0),
       ),
     );
 
@@ -225,42 +224,46 @@ export async function* mutateTree(
     bucketsOnLevel += buckets.length;
     leftovers = afterbound;
 
-    // there were changes
+    // handle changes
     if (nodeDiffs.length > 0) {
       // track leaf node changes
-      if (level === 0) {
-        diff.nodes.push(...nodeDiffs);
-      }
+      if (level === 0) diff.nodes.push(...nodeDiffs);
+
+      // always add any new buckets to diff
+      diff.buckets.push(...buckets.map((b): BucketDiff => [null, b]));
 
       // only add updatee to removed if it existed
       if (!pastRootLevel) {
         diff.buckets.push([updatee, null]);
       }
-      // always add any new buckets to diff
-      diff.buckets.push(...buckets.map((b): BucketDiff => [null, b]));
-    }
 
-    // only yield a diff if there are new buckets
-    if (diff.buckets.length > 0 && buckets.length > 0) {
-      // needs to be cleaned up later, empty buckets will be common. too many conditionals
-      const boundary: Node | null = lastElement(buckets).getBoundary()
+      // todo: sort diff buckets by boundary
 
-      yield {
-        // node diffs up to last bucket diff boundary
-        // afterbound updates have been applied but not commited to a bucket
-        nodes: diff.nodes.splice(
-          0,
-          findFailure(
-            diff.nodes,
-            boundary != null && !visitedLevelHead
-              ? (d) => compareTuples(d[0] ?? d[1], boundary) <= 0
-              : () => true,
-          ),
-        ),
-        // all bucket diffs
-        buckets: diff.buckets,
-      };
-      diff.buckets = [];
+      // only yield a diff if there are new buckets
+      if (buckets.length > 0) {
+        // needs to be cleaned up later, empty buckets will be common. too many conditionals
+        const boundary: Node | null = lastElement(buckets).getBoundary();
+
+        const d = createProllyTreeDiff();
+
+        if (boundary == null || visitedLevelHead) {
+          d.nodes = diff.nodes;
+          diff.nodes = [];
+        } else {
+          // yield nodes up to boundary of last bucket
+          d.nodes = diff.nodes.splice(
+            0,
+            findFailure(
+              diff.nodes,
+              (d) => compareTuples(d[0] ?? d[1], boundary) <= 0,
+            ),
+          );
+        }
+        d.buckets = diff.buckets;
+        diff.buckets = [];
+
+        yield d;
+      }
     }
 
     const newRootFound =
@@ -272,31 +275,36 @@ export async function* mutateTree(
     if (newRootFound) {
       newRoot = firstElement(buckets);
       updts.length = 0;
-      // if (updts.length > 0) {
-      //   throw new Error("whoa, why are there still updates?");
-      // }
     } else {
-      // add bucket update for next level
-      updts.push(
-        ...buckets.map(
-          (b: Bucket): LeveledUpdate => ({
-            op: "add",
-            level: level + 1,
-            value: bucketToParentNode(b),
-          }),
-        ),
-      );
+      const parentUpdates: LeveledUpdate[] = [];
 
-      // rm old bucket from parent
-      if (nodeDiffs.length > 0 && updatee.nodes.length > 0) {
-        updts.push({
+      const oldParentNode = updatee.getParentNode();
+
+      // only remove old parent node if there were changes
+      if (oldParentNode != null && nodeDiffs.length > 0) {
+        parentUpdates.push({
           op: "rm",
           level: level + 1,
-          value: updatee.getBoundary()!,
+          value: oldParentNode,
         });
       }
 
-      updts.sort(compareLeveledUpdates);
+      // add new parent nodes for each bucket to next level
+      // could be same bucket as before if there were no changes
+      for (const bucket of buckets) {
+        const parentNode = bucket.getParentNode();
+
+        if (parentNode != null) {
+          parentUpdates.push({
+            op: "add",
+            level: level + 1,
+            value: parentNode,
+          });
+        }
+      }
+
+      parentUpdates.sort(compareLeveledUpdates);
+      updts.push(...parentUpdates);
     }
   }
 
@@ -304,7 +312,7 @@ export async function* mutateTree(
     throw new Error("no new root found");
   }
 
-  // add all higher level buckets in path to removed
+  // add all higher level buckets in old path to removed
   if (level < cursor.rootLevel()) {
     diff.buckets.push(
       ...cursor

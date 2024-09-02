@@ -70,7 +70,7 @@ export async function loadBucket(
     );
   }
 
-  if (compareBytes(hash, bucket.getHash()) !== 0) {
+  if (compareBytes(hash, bucket.getDigest()) !== 0) {
     throw new Error("Unexpected bucket hash.");
   }
 

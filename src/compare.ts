@@ -29,8 +29,8 @@ export const compareUpdates = (a: Update, b: Update): number =>
     ? compareNodes(a.value, b.value)
     : compareTuples(a.value, b.value);
 
-export const compareBucketHashes = (a: Bucket, b: Bucket): number =>
-  compareHash(a.getHash(), b.getHash());
+export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
+  compareHash(a.getDigest(), b.getDigest());
 
 export const compareBuckets = (a: Bucket, b: Bucket): number => {
   const aBoundary = a.getBoundary()
@@ -38,7 +38,7 @@ export const compareBuckets = (a: Bucket, b: Bucket): number => {
 
   // empty buckets first
   if (aBoundary == null && bBoundary == null) {
-    return compareHash(a.getHash(), b.getHash())
+    return compareHash(a.getDigest(), b.getDigest())
   } else if (aBoundary == null){
     return -1
   } else if (bBoundary == null){
@@ -57,5 +57,5 @@ export const compareBuckets = (a: Bucket, b: Bucket): number => {
     return tupleComparison
   }
 
-  return compareBucketHashes(a, b)
+  return compareBucketDigests(a, b)
 }

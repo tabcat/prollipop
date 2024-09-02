@@ -208,7 +208,7 @@ export const getIsExtremity = (
     const child = ithElement(state.currentBuckets, i + 1);
 
     // check if the extreme node of the parent matches the current child all the way down from root
-    if (compare(findExtemity(parent.nodes).message, child.getHash()) !== 0) {
+    if (compare(findExtemity(parent.nodes).message, child.getDigest()) !== 0) {
       return false;
     }
 

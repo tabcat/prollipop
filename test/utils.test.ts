@@ -100,7 +100,7 @@ describe("utils", () => {
       const blockstore = new MemoryBlockstore();
       blockstore.put(emptyBucket.getCID(), bucketBytes);
       expect(() =>
-        loadBucket(blockstore, emptyBucket.getHash(), prefix),
+        loadBucket(blockstore, emptyBucket.getDigest(), prefix),
       ).rejects.toSatisfy((e) => e instanceof Error);
     });
   });

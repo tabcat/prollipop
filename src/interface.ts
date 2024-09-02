@@ -19,7 +19,7 @@ export interface Bucket {
   readonly nodes: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;
-  getHash(): Uint8Array;
+  getDigest(): Uint8Array;
   getBoundary(): Node | null; // null if bucket is empty
   getParentNode(): Node | null;
 }

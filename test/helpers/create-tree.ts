@@ -44,7 +44,7 @@ const nextLevelNodes = (buckets: Bucket[]): Node[] => {
   const nodes: Node[] = [];
   for (const bucket of buckets) {
     // should never get empty bucket here as there would not be another level
-    nodes.push({ ...bucket.getBoundary()!, message: bucket.getHash() });
+    nodes.push({ ...bucket.getBoundary()!, message: bucket.getDigest() });
   }
   return nodes;
 };

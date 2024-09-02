@@ -27,28 +27,28 @@ export class DefaultNode implements Node {
 
 export class DefaultBucket implements Bucket {
   #bytes: Uint8Array;
-  #hash: Uint8Array;
+  #digest: Uint8Array;
 
   constructor(
     readonly prefix: Prefix,
     readonly nodes: Node[],
     bytes: Uint8Array,
-    hash: Uint8Array,
+    digest: Uint8Array,
   ) {
     this.#bytes = bytes;
-    this.#hash = hash;
+    this.#digest = digest;
   }
 
   getBytes(): Uint8Array {
     return this.#bytes;
   }
 
-  getHash(): Uint8Array {
-    return this.#hash;
+  getDigest(): Uint8Array {
+    return this.#digest;
   }
 
   getCID(): CID {
-    return bucketDigestToCid(this.getHash());
+    return bucketDigestToCid(this.getDigest());
   }
 
   getBoundary(): Node | null {
@@ -58,7 +58,7 @@ export class DefaultBucket implements Bucket {
   getParentNode(): Node | null {
     const { timestamp, hash } = this.getBoundary() ?? {};
     return timestamp != null && hash != null
-      ? new DefaultNode(timestamp, hash, this.getHash())
+      ? new DefaultNode(timestamp, hash, this.getDigest())
       : null;
   }
 
@@ -66,7 +66,7 @@ export class DefaultBucket implements Bucket {
     return {
       prefix: this.prefix,
       nodes: this.nodes,
-      hash: base32.encode(this.#hash),
+      hash: base32.encode(this.#digest),
     };
   }
 

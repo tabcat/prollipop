@@ -1,7 +1,7 @@
 import { difference } from "@tabcat/ordered-sets/difference";
 import { intersection } from "@tabcat/ordered-sets/intersection";
 import { describe, expect, it } from "vitest";
-import { compareBucketHashes, compareTuples } from "../src/compare.js";
+import { compareBuckets, compareTuples } from "../src/compare.js";
 import { NodeDiff, diff } from "../src/diff.js";
 import { DefaultProllyTree } from "../src/impls.js";
 import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
@@ -94,8 +94,8 @@ describe("index", () => {
         );
       }
 
-      actualRemovals.sort(compareBucketHashes);
-      actualAdditions.sort(compareBucketHashes);
+      actualRemovals.sort(compareBuckets);
+      actualAdditions.sort(compareBuckets);
 
       expect(clone1).to.deep.equal(tree2);
 
@@ -109,8 +109,8 @@ describe("index", () => {
         );
       }
 
-      expectedRemovals.sort(compareBucketHashes);
-      expectedAdditions.sort(compareBucketHashes);
+      expectedRemovals.sort(compareBuckets);
+      expectedAdditions.sort(compareBuckets);
 
       expect(actualNodes).to.deep.equal(expectedNodes);
       expect(actualRemovals).to.deep.equal(expectedRemovals);

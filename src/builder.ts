@@ -133,7 +133,7 @@ export const updateBucket = (
 
 export const bucketToParentNode = (bucket: Bucket): Node => {
   const { timestamp, hash } = bucket.getBoundary()!;
-  return new DefaultNode(timestamp, hash, bucket.getHash());
+  return new DefaultNode(timestamp, hash, bucket.getDigest());
 };
 
 /**

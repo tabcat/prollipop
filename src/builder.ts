@@ -150,11 +150,6 @@ export async function* rebuild(
     bucketsOnLevel += bounds.length;
     bounds = [];
 
-    if (buckets.length > 0) {
-      diff.nodes.push(...nodeDiffs);
-      nodeDiffs = [];
-    }
-
     const newRootFound =
       bucketsOnLevel === 1 &&
       nodes.length === 0 &&
@@ -216,6 +211,9 @@ export async function* rebuild(
     removedBuckets.splice(0, removesProcessed);
 
     if (diff.buckets.length > 0 && buckets.length > 0) {
+      diff.nodes.push(...nodeDiffs);
+      nodeDiffs = [];
+
       yield diff;
       diff = createProllyTreeDiff();
     }

@@ -32,11 +32,17 @@ export const compareUpdates = (a: Update, b: Update): number =>
 export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
   compareHash(a.getDigest(), b.getDigest());
 
-export const compareBuckets = (a: Bucket, b: Bucket): number => {
+export const compareBoundaries = (a: Bucket, b: Bucket): number => {
+  // compare level before boundary tuple so builder diffs can be yielded without issues
+  const levelComparison = a.prefix.level - b.prefix.level
+
+  if (levelComparison !== 0) return levelComparison
+
   const aBoundary = a.getBoundary()
   const bBoundary = b.getBoundary()
 
   // empty buckets first
+  // wondering if empty bucket should be last
   if (aBoundary == null && bBoundary == null) {
     return compareHash(a.getDigest(), b.getDigest())
   } else if (aBoundary == null){
@@ -45,16 +51,14 @@ export const compareBuckets = (a: Bucket, b: Bucket): number => {
     return 1
   }
 
-  // compare level before boundary tuple so builder diffs can be yielded without issues
+  return compareTuples(aBoundary, bBoundary)
+}
 
-  const levelComparison = a.prefix.level - b.prefix.level
+export const compareBuckets = (a: Bucket, b: Bucket): number => {
+  const boundaryComparison = compareBoundaries(a, b)
 
-  if (levelComparison !== 0) return levelComparison
-
-  const tupleComparison = compareTuples(aBoundary, bBoundary)
-
-  if (tupleComparison !== 0) {
-    return tupleComparison
+  if (boundaryComparison !== 0) {
+    return boundaryComparison
   }
 
   return compareBucketDigests(a, b)

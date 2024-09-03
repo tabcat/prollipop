@@ -1,6 +1,6 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
-import { Update, mutateTree } from "./builder.js";
+import { rebuild, Update } from "./builder.js";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
@@ -90,7 +90,7 @@ export async function* mutate(
 
   // should think about further checking user input for duplicate tuples
 
-  const mutation = mutateTree(blockstore, tree, updates);
+  const mutation = rebuild(blockstore, tree, updates);
 
   const promises: Promise<unknown>[] = [];
   for await (const diff of mutation) {

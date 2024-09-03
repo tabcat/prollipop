@@ -27,9 +27,6 @@ export interface RmUpdate {
 export type Update = AddUpdate | RmUpdate;
 export type LeveledUpdate = Update & { level: number };
 
-const compareTupleToUpdate = (a: Node, b: LeveledUpdate): number =>
-  compareTuples(a, b.value);
-
 /**
  * Takes a node and update of equal tuples and returns whether a change must be made.
  * The node may be null but the update will always be defined.
@@ -111,7 +108,7 @@ export async function* rebuild(
     for (const [node, updt, nodesDone] of pairwiseTraversal(
       updatee.nodes,
       updts,
-      compareTupleToUpdate,
+      (a, b) => compareTuples(a, b.value),
     )) {
       let n: Node | null = null;
       let d: NodeDiff | null = null;

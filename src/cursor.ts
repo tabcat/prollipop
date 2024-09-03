@@ -413,24 +413,13 @@ const ffwToTupleOnLevel = async (
   const stateCopy = cloneCursorState(state);
   state.isLocked = true;
 
-  // move up until finding a node greater than tuple
-  while (
-    compareTuples(tuple, bucketOf(stateCopy).getBoundary()!) > 0 &&
-    stateCopy.currentBuckets.length > 1
-  ) {
-    await moveToLevel(stateCopy, levelOf(stateCopy) + 1, guideByTuple(tuple));
-  }
-
-  // move to level targeting tuple
-  if (level !== levelOf(stateCopy)) {
-    await moveToLevel(stateCopy, level, guideByTuple(tuple));
-  }
-
+  // set to root at index matching tuple
+  stateCopy.currentBuckets = [firstElement(stateCopy.currentBuckets)];
   stateCopy.currentIndex = guideByTuple(tuple)(bucketOf(stateCopy).nodes);
 
-  // could not find a node greater than or equal to tuple
-  if (compareTuples(tuple, nodeOf(state)) > 0) {
-    stateCopy.isDone;
+  // move to level if needed
+  if (level < levelOf(stateCopy)) {
+    await moveToLevel(stateCopy, level, guideByTuple(tuple));
   }
 
   Object.assign(state, stateCopy);

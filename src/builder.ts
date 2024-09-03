@@ -172,10 +172,6 @@ export async function* rebuild(
       );
     }
 
-    if (level === 1) {
-      console.log("");
-    }
-
     let removesProcessed = 0;
     for (const [bucket, removed, bucketsDone] of pairwiseTraversal(
       buckets,

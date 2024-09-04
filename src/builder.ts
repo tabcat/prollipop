@@ -35,7 +35,7 @@ export type LeveledUpdate = Update & { level: number };
  * @param update
  * @returns
  */
-export const handleUpdate = (
+const handleUpdate = (
   node: Node | null,
   update: LeveledUpdate,
 ): [Node | null, NodeDiff | null] => {
@@ -63,6 +63,14 @@ export const handleUpdate = (
   throw new Error("unrecognized op");
 };
 
+/**
+ * Rebuilds the tree according to updates given and yields the different nodes and buckets.
+ *
+ * @param blockstore
+ * @param tree
+ * @param updates
+ * @returns
+ */
 export async function* rebuild(
   blockstore: Blockstore,
   tree: ProllyTree,
@@ -265,10 +273,9 @@ export async function* rebuild(
     throw new Error("no new root found");
   }
 
-  diff.buckets.push(...removedBuckets.map<BucketDiff>((b) => [b, null]));
-
-  if (diff.buckets.length > 0) {
-    yield diff;
+  if (removedBuckets.length > 0) {
+    diff.buckets.push(...removedBuckets.map<BucketDiff>((b) => [b, null]));
+    yield diff
   }
 
   tree.root = newRoot;

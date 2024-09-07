@@ -44,7 +44,7 @@ export const emptyBucket: Bucket = new DefaultBucket(
 
 export const blockstore = new MemoryBlockstore();
 
-export const treeNodesMax = 64;
+export const treeNodesMax = 3000;
 
 export const treeNodes = createProllyTreeNodes(
   Array(treeNodesMax)

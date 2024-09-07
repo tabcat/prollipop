@@ -18,6 +18,8 @@ mods:
 
 ## Learning Resources:
 
+As you can see from the list below, a lot of ideas have been stolen from the [Dolt](https://www.dolthub.com/) project's blog so be sure to check them out!
+
 - [Prolly Trees](https://www.dolthub.com/blog/2024-03-03-prolly-trees/)
   - author: [Tim Sehn](https://github.com/timsehn)
   - implementation: [dolt](https://github.com/dolthub/dolt)
@@ -37,6 +39,11 @@ mods:
   - author: [Aaron Son](https://github.com/reltuk)
   - implementation: [dolt](https://github.com/dolthub/dolt)
   - relevance: excellent visual examples for prolly-tree diffs
+
+- [Controlling Chunk Size + Only Consider Keys](https://docs.dolthub.com/architecture/storage-engine/prolly-tree#controlling-chunk-size)
+  - author: [Tim Sehn](https://github.com/timsehn)
+  - implementation: [dolt](https://github.com/dolthub/dolt)
+  - relevance: normalizes the chunk size distribution + only consider keys for chunk boundary, not keys and values
 
 - [Range-Based Set Reconciliation](https://logperiodic.com/rbsr.html)
   - author: [Doug Hoyte](https://hoytech.com/about)

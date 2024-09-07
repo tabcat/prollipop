@@ -25,7 +25,7 @@ export interface RmUpdate {
   value: Tuple;
 }
 export type Update = AddUpdate | RmUpdate;
-export type LeveledUpdate = Update & { level: number };
+type LeveledUpdate = Update & { level: number };
 
 /**
  * Takes a node and update of equal tuples and returns whether a change must be made.
@@ -278,7 +278,7 @@ export async function* rebuild(
 
   if (removedBuckets.length > 0) {
     diff.buckets.push(...removedBuckets.map<BucketDiff>((b) => [b, null]));
-    yield diff
+    yield diff;
   }
 
   tree.root = newRoot;

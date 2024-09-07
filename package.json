@@ -13,10 +13,6 @@
       "types": "./dist/src/public/builder.d.ts",
       "import": "./dist/src/public/builder.js"
     },
-    "./codec": {
-      "types": "./dist/src/public/codec.d.ts",
-      "import": "./dist/src/public/codec.js"
-    },
     "./compare": {
       "types": "./dist/src/compare.d.ts",
       "import": "./dist/src/compare.js"

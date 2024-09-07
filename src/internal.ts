@@ -60,17 +60,3 @@ export const bucketBytesToDigest = <Alg extends number>(
   bytes: Uint8Array,
   hasher: SyncMultihashHasher<Alg>,
 ): Uint8Array => hasher.digest(bytes).digest;
-
-/**
- * Creates a new NamedError class that uses the name parameter as the name property of the Error instance.
- *
- * @param name - Specifies the string to set as the .name property.
- * @returns
- */
-export const createNamedErrorClass = (name: string) =>
-  class NamedError extends Error {
-    constructor(message?: string, options?: ErrorOptions) {
-      super(message, options);
-      this.name = name;
-    }
-  };

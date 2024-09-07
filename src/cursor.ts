@@ -5,17 +5,13 @@ import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import {
-  createNamedErrorClass,
   findFailureOrLastIndex,
   prefixWithLevel,
 } from "./internal.js";
 import { loadBucket } from "./utils.js";
 
-export const CursorError = createNamedErrorClass("CursorError");
-export const CursorLockError = createNamedErrorClass("CursorLockError");
-
 const failedToAquireLockErr = () =>
-  new CursorLockError("Failed to aquire cursor lock.");
+  new Error("Failed to aquire cursor lock.");
 
 interface CursorState {
   blockstore: Blockstore;
@@ -38,19 +34,19 @@ const createCursorState = (
     currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1);
 
   if (currentBuckets.length === 0) {
-    throw new CursorError(
+    throw new Error(
       `${FailedToCreateCursorState}currentBuckets.length === 0`,
     );
   }
 
   if (currentIndex >= lastElement(currentBuckets).nodes.length) {
-    throw new CursorError(
+    throw new Error(
       `${FailedToCreateCursorState}currentIndex >= bucket.nodes.length`,
     );
   }
 
   if (currentIndex < -1) {
-    throw new CursorError(`${FailedToCreateCursorState}currentIndex > -1`);
+    throw new Error(`${FailedToCreateCursorState}currentIndex > -1`);
   }
 
   return {
@@ -254,15 +250,15 @@ const moveToLevel = async (
   _guide?: (nodes: Node[]) => number,
 ): Promise<void> => {
   if (level === levelOf(state)) {
-    throw new CursorError("Level to move to cannot be same as current level.");
+    throw new Error("Level to move to cannot be same as current level.");
   }
 
   if (level < 0) {
-    throw new CursorError("Level to move to cannot be less than 0.");
+    throw new Error("Level to move to cannot be less than 0.");
   }
 
   if (level > rootLevelOf(state)) {
-    throw new CursorError(
+    throw new Error(
       "Level to move to cannot exceed height of root level.",
     );
   }
@@ -289,7 +285,7 @@ const moveToLevel = async (
       );
 
       if (bucket.nodes.length === 0) {
-        throw new CursorError(
+        throw new Error(
           "Malformed tree: fetched a child bucket with empty node set.",
         );
       }

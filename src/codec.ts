@@ -16,9 +16,6 @@ import { sha256 as mh_sha256 } from "multiformats/hashes/sha2";
 import { MultihashDigest } from "multiformats/interface";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
-import { createNamedErrorClass } from "./internal.js";
-
-const CodecError = createNamedErrorClass("CodecError");
 
 export type Bytes<T> = ByteView<T> | ArrayBufferView<T>;
 
@@ -65,21 +62,21 @@ export function encodeNode(
 
 export const getValidatedEncodedNode = (encodedNode: unknown): EncodedNode => {
   if (!Array.isArray(encodedNode)) {
-    throw new CodecError("Expected encoded node to be an array.");
+    throw new TypeError("Expected encoded node to be an array.");
   }
 
   const [timestamp, hash, message] = encodedNode as Partial<EncodedNode>;
 
   if (typeof timestamp !== "number") {
-    throw new CodecError("Expected node timestamp field to be a number.");
+    throw new TypeError("Expected node timestamp field to be a number.");
   }
 
   if (!(hash instanceof Uint8Array)) {
-    throw new CodecError("Expected node hash field to be a byte array.");
+    throw new TypeError("Expected node hash field to be a byte array.");
   }
 
   if (!(message instanceof Uint8Array)) {
-    throw new CodecError("Expected node message field to be a byte array.");
+    throw new TypeError("Expected node message field to be a byte array.");
   }
 
   return [timestamp, hash, message];
@@ -129,17 +126,17 @@ export function encodeBucket(
 
 export const getValidatedPrefix = (prefix: unknown): Prefix => {
   if (typeof prefix !== "object") {
-    throw new CodecError("Expected bucket prefix to be an object.");
+    throw new TypeError("Expected bucket prefix to be an object.");
   }
 
   const { average, level } = prefix as Partial<Prefix>;
 
   if (typeof average !== "number") {
-    throw new CodecError("Expected prefix average field to be a number.");
+    throw new TypeError("Expected prefix average field to be a number.");
   }
 
   if (typeof level !== "number") {
-    throw new CodecError("Expected prefix level field to be a number.");
+    throw new TypeError("Expected prefix level field to be a number.");
   }
 
   return { average, level };

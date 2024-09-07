@@ -15,10 +15,14 @@
  *   This feature required diverging from the article's implementation.
  */
 
-import { ithElement } from "@tabcat/ith-element";
+import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
+import { union } from "@tabcat/ordered-sets/union";
+import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import {
+  compareBucketDiffs,
   compareBucketDigests,
+  compareBuckets,
   compareNodes,
   compareTuples,
 } from "./compare.js";
@@ -47,69 +51,6 @@ export const createProllyTreeDiff = (): ProllyTreeDiff => ({
   buckets: [],
 });
 
-const getBucketDiff = function* (
-  firstCursor: Cursor,
-  secondCursor: Cursor,
-  last: { value: Bucket[] },
-  differ: typeof leftDiffer | typeof rightDiffer,
-): Iterable<BucketDiff> {
-  let minuend: Bucket[];
-  let subtrahend: Bucket[];
-  if (!firstCursor.done()) {
-    // compare last buckets with current buckets
-    minuend = last.value;
-    subtrahend = firstCursor.buckets();
-  } else {
-    // compare current buckets with second tree buckets
-    minuend = firstCursor.buckets();
-    subtrahend = secondCursor.buckets();
-  }
-
-  // low level buckets first
-  minuend.slice().reverse();
-  subtrahend.slice().reverse();
-
-  let i = 0;
-
-  const b: Diff<Bucket>[] = [];
-  while (i < minuend.length) {
-    // yield minued[i] if i out of subtrahend bounds or comparison is unequal
-    if (
-      // out of bounds will only occur when comparing buckets from first and second cursors, not last
-      i >= subtrahend.length ||
-      compareBucketDigests(
-        ithElement(minuend, i),
-        ithElement(subtrahend, i),
-      ) !== 0
-    ) {
-      b.push(differ(ithElement(minuend, i)));
-    }
-
-    i++;
-  }
-
-  yield* b.reverse();
-};
-
-const getMatchingBucketsLength = (a: Bucket[], b: Bucket[]): number => {
-  // low level buckets first
-  a = a.slice().reverse();
-  b = b.slice().reverse();
-
-  let i = 0;
-
-  // increment i for every matching bucket from level 0
-  while (i < a.length && i < b.length) {
-    if (compareBucketDigests(ithElement(a, i), ithElement(b, i)) !== 0) {
-      break;
-    }
-
-    i++;
-  }
-
-  return i;
-};
-
 async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
   if (lc.level() !== rc.level()) {
     throw new Error("expected cursors to be same level");
@@ -120,11 +61,21 @@ async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
   while (!lc.done() && !rc.done()) {
     if (compareNodes(lc.current(), rc.current()) === 0) {
       // move to comparison that is non-equal or one or more cursors done
-      const matchingBucketsLength = getMatchingBucketsLength(
-        lc.buckets(),
-        rc.buckets(),
-      );
+      let matchingBucketsLength = 0;
+      for (const [lb, rb] of pairwiseTraversal(
+        lc.buckets().reverse(),
+        rc.buckets().reverse(),
+        compareBucketDigests,
+      )) {
+        if (lb == null || rb == null) {
+          break;
+        }
+
+        matchingBucketsLength++;
+      }
+
       const level = lc.level();
+
       // could be sped up by checking when the bucket will end
       // skip the matchingBucketsLength for every .nextAtLevel call
       await Promise.all([
@@ -165,18 +116,42 @@ export async function* diff(
   // moves cursors to level 0 or one or more cursors to done
   await ffwUnequalLevel0(lc, rc);
 
-  let lastLeftBuckets = { value: lc.buckets() };
-  let lastRightBuckets = { value: rc.buckets() };
+  let bucketDiffs: BucketDiff[] = Array.from(
+    orderedDiff(lc.buckets(), rc.buckets(), compareBuckets),
+  );
 
-  const getLeftBucketDiff = () =>
-    getBucketDiff(lc, rc, lastLeftBuckets, leftDiffer);
-  const getRightBucketDiff = () =>
-    getBucketDiff(rc, lc, lastRightBuckets, rightDiffer);
+  const updateBucketDiffs = (lbs: Bucket[], rbs: Bucket[]) => {
+    bucketDiffs = Array.from(
+      union(
+        bucketDiffs,
+        orderedDiff(lbs, rbs, compareBuckets),
+        compareBucketDiffs,
+      ),
+    );
 
-  // handle empty buckets
-  // can probably be generalized later
-  d.buckets.push(...getLeftBucketDiff());
-  d.buckets.push(...getRightBucketDiff());
+    let i = 0;
+    for (const diff of bucketDiffs) {
+      if (
+        diff[0] != null &&
+        lbs[0] != null &&
+        compareBuckets(lbs[0], diff[0]) >= 0
+      ) {
+        break;
+      }
+
+      if (
+        diff[1] != null &&
+        rbs[0] != null &&
+        compareBuckets(rbs[0], diff[1]) >= 0
+      ) {
+        break;
+      }
+
+      d.buckets.push(diff);
+      i++;
+    }
+    bucketDiffs.splice(0, i);
+  };
 
   while (!lc.done() && !rc.done()) {
     const [lv, rv] = [lc.current(), rc.current()];
@@ -189,17 +164,11 @@ export async function* diff(
       d.nodes.push(rightDiffer(rv));
       await rc.nextAtLevel(0);
     } else {
-      throw new Error("should never be unequal due to ffwUnequalLevel0 call");
+      // may cause both cursor buckets to change so bucket diffs must be done after ffw
+      await ffwUnequalLevel0(lc, rc);
     }
 
-    // may cause both cursor buckets to change so bucket diffs must be done after ffw
-    await ffwUnequalLevel0(lc, rc);
-
-    // would like to have these ordered in diff based on range start/end
-    d.buckets.push(...getLeftBucketDiff(), ...getRightBucketDiff());
-
-    lastLeftBuckets.value = lc.buckets();
-    lastRightBuckets.value = rc.buckets();
+    updateBucketDiffs(lc.buckets(), rc.buckets());
 
     if (d.buckets.length > 0) {
       yield d;
@@ -211,8 +180,7 @@ export async function* diff(
     d.nodes.push(leftDiffer(lc.current()));
     await lc.nextAtLevel(0);
 
-    d.buckets.push(...getLeftBucketDiff());
-    lastLeftBuckets.value = lc.buckets();
+    updateBucketDiffs(lc.buckets(), []);
 
     if (d.buckets.length > 0) {
       yield d;
@@ -224,12 +192,16 @@ export async function* diff(
     d.nodes.push(rightDiffer(rc.current()));
     await rc.nextAtLevel(0);
 
-    d.buckets.push(...getRightBucketDiff());
-    lastRightBuckets.value = rc.buckets();
+    updateBucketDiffs([], rc.buckets());
 
     if (d.buckets.length > 0) {
       yield d;
       d = createProllyTreeDiff();
     }
+  }
+
+  if (bucketDiffs.length) {
+    d.buckets.push(...bucketDiffs);
+    yield d;
   }
 }

@@ -17,7 +17,7 @@ export const CursorLockError = createNamedErrorClass("CursorLockError");
 const failedToAquireLockErr = () =>
   new CursorLockError("Failed to aquire cursor lock.");
 
-export interface CursorState {
+interface CursorState {
   blockstore: Blockstore;
   currentBuckets: Bucket[];
   currentIndex: number;
@@ -27,7 +27,7 @@ export interface CursorState {
 
 const FailedToCreateCursorState = "Failed to create cursor state: ";
 
-export const createCursorState = (
+const createCursorState = (
   blockstore: Blockstore,
   tree: ProllyTree,
   currentBuckets?: Bucket[],
@@ -146,7 +146,7 @@ export interface Cursor {
   clone(): Cursor;
 }
 
-export function createCursorFromState(state: CursorState): Cursor {
+function createCursorFromState(state: CursorState): Cursor {
   return {
     level: () => levelOf(state),
     rootLevel: () => rootLevelOf(state),
@@ -179,24 +179,24 @@ export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
   return createCursorFromState(state);
 }
 
-export const cloneCursorState = (state: CursorState): CursorState => ({
+const cloneCursorState = (state: CursorState): CursorState => ({
   ...state,
   currentBuckets: Array.from(state.currentBuckets),
 });
 
-export const bucketOf = (state: CursorState): Bucket =>
+const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);
 
-export const nodeOf = (state: CursorState): Node =>
+const nodeOf = (state: CursorState): Node =>
   ithElement(bucketOf(state).nodes, state.currentIndex);
 
-export const levelOf = (state: CursorState): number =>
+const levelOf = (state: CursorState): number =>
   bucketOf(state).prefix.level;
 
-export const rootLevelOf = (state: CursorState): number =>
+const rootLevelOf = (state: CursorState): number =>
   firstElement(state.currentBuckets).prefix.level;
 
-export const getIsExtremity = (
+const getIsExtremity = (
   state: CursorState,
   findExtemity: (nodes: Node[]) => Node,
 ): boolean => {
@@ -218,9 +218,9 @@ export const getIsExtremity = (
   return true;
 };
 
-export const getIsAtTail = (state: CursorState): boolean =>
+const getIsAtTail = (state: CursorState): boolean =>
   getIsExtremity(state, firstElement);
-export const getIsAtHead = (state: CursorState): boolean =>
+const getIsAtHead = (state: CursorState): boolean =>
   getIsExtremity(state, lastElement);
 
 /**
@@ -248,7 +248,7 @@ export const guideByLowestIndex = () => 0;
  * @param level
  * @param _guide
  */
-export const moveToLevel = async (
+const moveToLevel = async (
   state: CursorState,
   level: number,
   _guide?: (nodes: Node[]) => number,
@@ -308,7 +308,7 @@ export const moveToLevel = async (
  * @param state
  * @returns
  */
-export const moveSideways = async (state: CursorState): Promise<void> => {
+const moveSideways = async (state: CursorState): Promise<void> => {
   const stateCopy = cloneCursorState(state);
 
   // find a higher level which allows increasing currentIndex
@@ -332,7 +332,7 @@ export const moveSideways = async (state: CursorState): Promise<void> => {
   Object.assign(state, stateCopy);
 };
 
-export const nextAtLevel = async (
+const nextAtLevel = async (
   state: CursorState,
   level: number,
 ): Promise<void> => {

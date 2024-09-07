@@ -14,7 +14,7 @@ mods:
 
 - (number, uint8array) tuples for keys
 - right-side backbone
-- content-defined boundaries instead of rolling-hash
+- key-defined, normalized boundaries instead of rolling-hash
 
 ## Learning Resources:
 

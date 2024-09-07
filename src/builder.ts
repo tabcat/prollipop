@@ -60,7 +60,7 @@ const handleUpdate = (
     }
   }
 
-  throw new Error("unrecognized op");
+  throw new TypeError(`Unrecognized Prollipop update operation: ${update['op']}`);
 };
 
 /**
@@ -236,7 +236,7 @@ export async function* rebuild(
 
     if (nextUpdt == null) {
       if (mutated) {
-        throw new Error("you found a bug!");
+        break;
       }
 
       return tree;
@@ -270,7 +270,10 @@ export async function* rebuild(
   }
 
   if (newRoot == null) {
-    throw new Error("no new root found");
+    throw new Error(
+      `Processed all updates without finding a new root.
+      This is a bug, please create an issue at https://github.com/tabcat/prollipop/issues`,
+    );
   }
 
   if (removedBuckets.length > 0) {

@@ -10,20 +10,20 @@
       "import": "./dist/src/index.js"
     },
     "./builder": {
-      "types": "./dist/src/public/builder.d.ts",
-      "import": "./dist/src/public/builder.js"
+      "types": "./dist/src/builder.d.ts",
+      "import": "./dist/src/builder.js"
     },
     "./compare": {
       "types": "./dist/src/compare.d.ts",
       "import": "./dist/src/compare.js"
     },
     "./cursor": {
-      "types": "./dist/src/public/cursor.d.ts",
-      "import": "./dist/src/public/cursor.js"
+      "types": "./dist/src/cursor.d.ts",
+      "import": "./dist/src/cursor.js"
     },
     "./diff": {
-      "types": "./dist/src/public/diff.d.ts",
-      "import": "./dist/src/public/diff.js"
+      "types": "./dist/src/diff.d.ts",
+      "import": "./dist/src/diff.js"
     },
     "./interface": {
       "types": "./dist/src/interface.d.ts",

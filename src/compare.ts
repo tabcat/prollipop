@@ -1,6 +1,7 @@
 import { compare as compareHash } from "uint8arrays";
 import { Update } from "./builder.js";
 import { Bucket, Node, Tuple } from "./interface.js";
+import { BucketDiff } from "./diff.js";
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
 
@@ -63,3 +64,5 @@ export const compareBuckets = (a: Bucket, b: Bucket): number => {
 
   return compareBucketDigests(a, b)
 }
+
+export const compareBucketDiffs = (a: BucketDiff, b: BucketDiff): number => compareBuckets(a[0] ?? a[1], b[0] ?? b[1])

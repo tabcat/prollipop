@@ -179,10 +179,10 @@ const bucketOf = (state: CursorState): Bucket =>
 const nodeOf = (state: CursorState): Node =>
   ithElement(bucketOf(state).nodes, state.currentIndex);
 
-const levelOf = (state: CursorState): number => bucketOf(state).prefix.level;
+const levelOf = (state: CursorState): number => bucketOf(state).level;
 
 const rootLevelOf = (state: CursorState): number =>
-  firstElement(state.currentBuckets).prefix.level;
+  firstElement(state.currentBuckets).level;
 
 const getIsExtremity = (
   state: CursorState,
@@ -274,7 +274,7 @@ const moveToLevel = async (
       const bucket = await loadBucket(
         state.blockstore,
         digest,
-        prefixWithLevel(bucketOf(state).prefix, levelOf(state) - 1),
+        prefixWithLevel(bucketOf(state), levelOf(state) - 1),
       );
 
       if (bucket.nodes.length === 0) {

@@ -35,7 +35,7 @@ export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
 
 export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   // compare level before boundary tuple so builder diffs can be yielded without issues
-  const levelComparison = a.prefix.level - b.prefix.level
+  const levelComparison = a.level - b.level
 
   if (levelComparison !== 0) return levelComparison
 

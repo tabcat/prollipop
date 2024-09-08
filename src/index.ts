@@ -5,7 +5,7 @@ import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Node, Prefix, ProllyTree, Tuple } from "./interface.js";
+import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
 export interface InitOptions {
@@ -16,15 +16,7 @@ export function createEmptyTree(options?: InitOptions): ProllyTree;
 export function createEmptyTree(options?: InitOptions) {
   const average = options?.averageBucketSize ?? 30;
 
-  /**
-   * data which is prefixed to each bucket, only the level ever changes
-   */
-  const prefix: Prefix = {
-    average,
-    level: 0,
-  };
-
-  return new DefaultProllyTree(createBucket(prefix, []));
+  return new DefaultProllyTree(createBucket(average, 0, []));
 }
 
 export function cloneTree(tree: ProllyTree): ProllyTree {

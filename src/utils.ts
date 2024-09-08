@@ -13,8 +13,11 @@ import { Bucket, Node, Prefix, Tuple } from "./interface.js";
  * @param level
  * @returns
  */
-export const prefixWithLevel = (prefix: Prefix, level: number): Prefix => ({
-  ...prefix,
+export const prefixWithLevel = (
+  { average }: Prefix,
+  level: number,
+): Prefix => ({
+  average,
   level,
 });
 
@@ -42,9 +45,13 @@ export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
  * @param hasher
  * @returns
  */
-export const createBucket = (prefix: Prefix, nodes: Node[]): Bucket => {
-  const bytes = encodeBucket(prefix, nodes);
-  return new DefaultBucket(prefix, nodes, bytes, hasher.digest(bytes).digest);
+export const createBucket = (
+  average: number,
+  level: number,
+  nodes: Node[],
+): Bucket => {
+  const bytes = encodeBucket(average, level, nodes);
+  return new DefaultBucket(average, level, nodes, bytes, hasher(bytes));
 };
 
 /**
@@ -75,9 +82,15 @@ export async function loadBucket(
 
   const bucket: Bucket = decodeBucket(bytes);
 
-  if (bucket.prefix.level !== expectedPrefix.level) {
+  if (bucket.average !== expectedPrefix.average) {
     throw new TypeError(
-      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${bucket.prefix.level}`,
+      `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${bucket.average}`,
+    );
+  }
+
+  if (bucket.level !== expectedPrefix.level) {
+    throw new TypeError(
+      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${bucket.level}`,
     );
   }
 

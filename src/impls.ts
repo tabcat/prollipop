@@ -1,6 +1,6 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
-import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
+import { Bucket, Node, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
 
 const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
@@ -30,7 +30,8 @@ export class DefaultBucket implements Bucket {
   #digest: Uint8Array;
 
   constructor(
-    readonly prefix: Prefix,
+    readonly average: number,
+    readonly level: number,
     readonly nodes: Node[],
     bytes: Uint8Array,
     digest: Uint8Array,
@@ -64,7 +65,8 @@ export class DefaultBucket implements Bucket {
 
   [nodeInspectSymbol]() {
     return {
-      prefix: this.prefix,
+      average: this.average,
+      level: this.level,
       nodes: this.nodes,
       hash: base32.encode(this.#digest),
     };

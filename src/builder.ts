@@ -13,7 +13,7 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { createBucket, prefixWithLevel } from "./utils.js";
+import { createBucket } from "./utils.js";
 
 export interface AddUpdate {
   op: "add";
@@ -109,7 +109,7 @@ export async function* rebuild(
   let i: number = 0;
   while (updts.length > 0 && i < 10000) {
     i++;
-    const { average, level } = updatee.prefix;
+    const { average, level } = updatee;
     const buckets: Bucket[] = [];
     const isBoundary = isBoundaryNode(average, level);
 
@@ -154,7 +154,7 @@ export async function* rebuild(
     }
 
     for (const bound of bounds) {
-      buckets.push(createBucket(updatee.prefix, bound));
+      buckets.push(createBucket(average, level, bound));
     }
     bucketsOnLevel += bounds.length;
     bounds = [];
@@ -264,7 +264,7 @@ export async function* rebuild(
         visitedLevelTail || (firstBucketOfLevel && cursor.isAtTail());
       visitedLevelHead = cursor.isAtHead();
     } else {
-      updatee = createBucket(prefixWithLevel(tree.root.prefix, level + 1), []);
+      updatee = createBucket(average, level + 1, []);
       visitedLevelTail = true;
       visitedLevelHead = true;
     }

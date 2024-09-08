@@ -15,7 +15,8 @@ export interface Prefix {
 }
 
 export interface Bucket {
-  readonly prefix: Prefix;
+  readonly average: number;
+  readonly level: number;
   readonly nodes: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;

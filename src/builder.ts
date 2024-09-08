@@ -13,8 +13,7 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { prefixWithLevel } from "./internal.js";
-import { createBucket } from "./utils.js";
+import { createBucket, prefixWithLevel } from "./utils.js";
 
 export interface AddUpdate {
   op: "add";
@@ -60,7 +59,9 @@ const handleUpdate = (
     }
   }
 
-  throw new TypeError(`Unrecognized Prollipop update operation: ${update['op']}`);
+  throw new TypeError(
+    `Unrecognized Prollipop update operation: ${update["op"]}`,
+  );
 };
 
 /**

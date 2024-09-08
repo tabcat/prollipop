@@ -1,7 +1,7 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { Bucket, Node, Prefix, ProllyTree } from "./interface.js";
-import { bucketDigestToCid } from "./internal.js";
+import { bucketDigestToCid } from "./utils.js";
 
 const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
 

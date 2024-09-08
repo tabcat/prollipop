@@ -4,14 +4,9 @@ import { CID } from "multiformats";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import {
-  findFailureOrLastIndex,
-  prefixWithLevel,
-} from "./internal.js";
-import { loadBucket } from "./utils.js";
+import { loadBucket, prefixWithLevel } from "./utils.js";
 
-const failedToAquireLockErr = () =>
-  new Error("Failed to aquire cursor lock.");
+const failedToAquireLockErr = () => new Error("Failed to aquire cursor lock.");
 
 interface CursorState {
   blockstore: Blockstore;
@@ -34,9 +29,7 @@ const createCursorState = (
     currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1);
 
   if (currentBuckets.length === 0) {
-    throw new Error(
-      `${FailedToCreateCursorState}currentBuckets.length === 0`,
-    );
+    throw new Error(`${FailedToCreateCursorState}currentBuckets.length === 0`);
   }
 
   if (currentIndex >= lastElement(currentBuckets).nodes.length) {
@@ -186,8 +179,7 @@ const bucketOf = (state: CursorState): Bucket =>
 const nodeOf = (state: CursorState): Node =>
   ithElement(bucketOf(state).nodes, state.currentIndex);
 
-const levelOf = (state: CursorState): number =>
-  bucketOf(state).prefix.level;
+const levelOf = (state: CursorState): number => bucketOf(state).prefix.level;
 
 const rootLevelOf = (state: CursorState): number =>
   firstElement(state.currentBuckets).prefix.level;
@@ -230,8 +222,11 @@ const overflows = (state: CursorState): boolean =>
 
 export const guideByTuple =
   (target: Tuple) =>
-  (nodes: Node[]): number =>
-    findFailureOrLastIndex(nodes, (n) => compareTuples(target, n) > 0);
+  (nodes: Node[]): number => {
+    const index = nodes.findIndex((n) => compareTuples(target, n) > 0);
+
+    return index === -1 ? nodes.length - 1 : index;
+  };
 
 // when descending it is important to keep to the left side
 // otherwise nodes are skipped
@@ -258,9 +253,7 @@ const moveToLevel = async (
   }
 
   if (level > rootLevelOf(state)) {
-    throw new Error(
-      "Level to move to cannot exceed height of root level.",
-    );
+    throw new Error("Level to move to cannot exceed height of root level.");
   }
 
   // guides currentIndex during traversal

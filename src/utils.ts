@@ -1,9 +1,25 @@
 import { Blockstore } from "interface-blockstore";
+import { CID } from "multiformats/cid";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { compare as compareBytes } from "uint8arrays";
 import { decodeBucket, encodeBucket, hasher } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
-import { bucketBytesToDigest, bucketDigestToCid } from "./internal.js";
+
+/**
+ * Returns a new prefix object set to a specific level.
+ *
+ * @param prefix
+ * @param level
+ * @returns
+ */
+export const prefixWithLevel = (prefix: Prefix, level: number): Prefix => ({
+  ...prefix,
+  level,
+});
+
+export const bucketDigestToCid = (digest: Uint8Array): CID =>
+  CID.createV1(113, createMultihashDigest(18, digest));
 
 /**
  * Returns a new tuple for the provided node or tuple.
@@ -28,12 +44,7 @@ export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
  */
 export const createBucket = (prefix: Prefix, nodes: Node[]): Bucket => {
   const bytes = encodeBucket(prefix, nodes);
-  return new DefaultBucket(
-    prefix,
-    nodes,
-    bytes,
-    bucketBytesToDigest(bytes, hasher),
-  );
+  return new DefaultBucket(prefix, nodes, bytes, hasher.digest(bytes).digest);
 };
 
 /**

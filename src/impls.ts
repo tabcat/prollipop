@@ -20,8 +20,8 @@ export class DefaultNode implements Node {
     };
   }
 
-  get [Symbol.toStringTag]() {
-    return JSON.stringify(this[nodeInspectSymbol]());
+  toString() {
+    return `N:t:${this.timestamp}:h:${base32.encode(this.hash)}:m:${base32.encode(this.message)}`;
   }
 }
 
@@ -70,8 +70,8 @@ export class DefaultBucket implements Bucket {
     };
   }
 
-  get [Symbol.toStringTag]() {
-    return JSON.stringify(this[nodeInspectSymbol]());
+  toString() {
+    return `B:h:${base32.encode(this.#digest)}:l:${this.prefix.level}`;
   }
 }
 

@@ -78,7 +78,7 @@ export async function* mutate(
 ): AsyncIterable<ProllyTreeDiff> {
   const updates: Update[] = [];
 
-  // it is vital that add and rm do not have duplicate tuples within themselves
+  // it is critical that add and rm are ordered and do not have duplicate tuples within themselves
   for (const [a, r] of pairwiseTraversal(add, rm, compareTuples)) {
     // prioritizes adds over removes
     if (a != null) {

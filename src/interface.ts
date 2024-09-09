@@ -14,9 +14,7 @@ export interface Prefix {
   readonly level: number; // changes based on level of the bucket in the tree, leaves are always level 0
 }
 
-export interface Bucket {
-  readonly average: number;
-  readonly level: number;
+export interface Bucket extends Prefix {
   readonly nodes: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;

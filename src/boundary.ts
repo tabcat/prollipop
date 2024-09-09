@@ -1,6 +1,5 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-
 import type { Node, Tuple } from "./interface.js";
 
 /**

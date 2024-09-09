@@ -40,10 +40,10 @@ As you can see from the list below, a lot of ideas have been stolen from the [Do
   - implementation: [dolt](https://github.com/dolthub/dolt)
   - relevance: excellent visual examples for prolly-tree diffs
 
-- [Controlling Chunk Size + Only Consider Keys](https://docs.dolthub.com/architecture/storage-engine/prolly-tree#controlling-chunk-size)
+- [Only Consider Keys](https://docs.dolthub.com/architecture/storage-engine/prolly-tree#only-consider-keys)
   - author: [Tim Sehn](https://github.com/timsehn)
   - implementation: [dolt](https://github.com/dolthub/dolt)
-  - relevance: normalizes the chunk size distribution + only consider keys for chunk boundary, not keys and values
+  - relevance: only consider keys for chunk boundary, not keys + values
 
 - [Range-Based Set Reconciliation](https://logperiodic.com/rbsr.html)
   - author: [Doug Hoyte](https://hoytech.com/about)

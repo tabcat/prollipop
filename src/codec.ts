@@ -85,10 +85,22 @@ export function encodeBucket(
   });
 }
 
-export function decodeBucket(bytes: Uint8Array): Bucket {
+export function decodeBucket(bytes: Uint8Array, expectedPrefix: Prefix): Bucket {
   const decoded = decode(bytes);
 
-  const { level, average, nodes: encodedNodes } = getValidatedBucket(decoded);
+  const { average, level, nodes: encodedNodes } = getValidatedBucket(decoded);
+
+  if (average !== expectedPrefix.average) {
+    throw new TypeError(
+      `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${average}`,
+    );
+  }
+
+  if (level !== expectedPrefix.level) {
+    throw new TypeError(
+      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${level}`,
+    );
+  }
 
   // could validate boundaries and tuple order here
   let i = 0;

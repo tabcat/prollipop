@@ -73,19 +73,7 @@ export async function loadBucket(
     }
   }
 
-  const bucket: Bucket = decodeBucket(bytes);
-
-  if (bucket.average !== expectedPrefix.average) {
-    throw new TypeError(
-      `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${bucket.average}`,
-    );
-  }
-
-  if (bucket.level !== expectedPrefix.level) {
-    throw new TypeError(
-      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${bucket.level}`,
-    );
-  }
+  const bucket: Bucket = decodeBucket(bytes, expectedPrefix);
 
   if (compareBytes(hash, bucket.getDigest()) !== 0) {
     throw new Error("Unexpected bucket hash.");

@@ -110,5 +110,5 @@ export function decodeBucket(bytes: Uint8Array, expectedPrefix: Prefix): Bucket 
     i++;
   }
 
-  return new DefaultBucket(level, average, nodes, bytes, sha256(bytes));
+  return new DefaultBucket(average, level, nodes, bytes, sha256(bytes));
 }

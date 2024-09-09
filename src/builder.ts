@@ -3,7 +3,7 @@ import { union } from "@tabcat/ordered-sets/union";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
-import { isBoundaryNode } from "./boundaries.js";
+import { createIsBoundary } from "./boundary.js";
 import { compareBoundaries, compareBuckets, compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import {
@@ -111,7 +111,7 @@ export async function* rebuild(
     i++;
     const { average, level } = updatee;
     const buckets: Bucket[] = [];
-    const isBoundary = isBoundaryNode(average, level);
+    const isBoundary = createIsBoundary(average, level);
 
     let updatesProcessed = 0;
     for (const [node, updt, nodesDone] of pairwiseTraversal(

@@ -1,5 +1,5 @@
 import { encode } from "@ipld/dag-cbor";
-import { hasher } from "./codec.js";
+import { sha256 } from "@noble/hashes/sha256";
 
 import type { Node, Tuple } from "./interface.js";
 
@@ -52,5 +52,5 @@ export const createIsBoundary = (
 
   return ({ timestamp, hash }: Tuple) =>
     // value does not determine boundary
-    isBoundaryHash(hasher(encode([level, timestamp, hash])), limit);
+    isBoundaryHash(sha256(encode([level, timestamp, hash])), limit);
 };

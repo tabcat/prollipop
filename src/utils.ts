@@ -2,9 +2,10 @@ import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import { compare as compareBytes } from "uint8arrays";
-import { decodeBucket, encodeBucket, hasher } from "./codec.js";
+import { decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
+import { sha256 } from "@noble/hashes/sha256";
 
 /**
  * Returns a new prefix object set to a specific level.
@@ -51,7 +52,7 @@ export const createBucket = (
   nodes: Node[],
 ): Bucket => {
   const bytes = encodeBucket(average, level, nodes);
-  return new DefaultBucket(average, level, nodes, bytes, hasher(bytes));
+  return new DefaultBucket(average, level, nodes, bytes, sha256(bytes));
 };
 
 /**

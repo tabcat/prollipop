@@ -1,10 +1,8 @@
 import { decode, encode } from "@ipld/dag-cbor";
-import { sha256 as hasher } from "@noble/hashes/sha256";
 import type { ByteView } from "multiformats";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix } from "./interface.js";
-
-export { hasher }
+import { sha256 } from "@noble/hashes/sha256";
 
 type EncodedNode = [Node["timestamp"], Node["hash"], Node["message"]];
 
@@ -100,5 +98,5 @@ export function decodeBucket(bytes: Uint8Array): Bucket {
     i++;
   }
 
-  return new DefaultBucket(level, average, nodes, bytes, hasher(bytes));
+  return new DefaultBucket(level, average, nodes, bytes, sha256(bytes));
 }

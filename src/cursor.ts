@@ -3,8 +3,8 @@ import type { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
-import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { loadBucket, prefixWithLevel } from "./utils.js";
+import { Bucket, Node, Prefix, ProllyTree, Tuple } from "./interface.js";
+import { loadBucket } from "./utils.js";
 
 const failedToAquireLockErr = () => new Error("Failed to aquire cursor lock.");
 
@@ -176,6 +176,12 @@ const cloneCursorState = (state: CursorState): CursorState => ({
 const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);
 
+const prefixOf = (state: CursorState): Prefix => {
+  const { average, level } = bucketOf(state)
+
+  return { average, level }
+}
+
 const nodeOf = (state: CursorState): Node =>
   ithElement(bucketOf(state).nodes, state.currentIndex);
 
@@ -274,7 +280,7 @@ const moveToLevel = async (
       const bucket = await loadBucket(
         state.blockstore,
         digest,
-        prefixWithLevel(bucketOf(state), levelOf(state) - 1),
+        { ...prefixOf(state), level: levelOf(state) - 1}
       );
 
       if (bucket.nodes.length === 0) {

@@ -7,21 +7,6 @@ import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 import { sha256 } from "@noble/hashes/sha256";
 
-/**
- * Returns a new prefix object set to a specific level.
- *
- * @param prefix
- * @param level
- * @returns
- */
-export const prefixWithLevel = (
-  { average }: Prefix,
-  level: number,
-): Prefix => ({
-  average,
-  level,
-});
-
 export const bucketDigestToCid = (digest: Uint8Array): CID =>
   CID.createV1(113, createMultihashDigest(18, digest));
 

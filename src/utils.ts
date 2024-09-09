@@ -1,14 +1,16 @@
+import { code as cborCode } from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import * as sha2 from "multiformats/hashes/sha2";
 import { compare as compareBytes } from "uint8arrays";
 import { decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
-import { sha256 } from "@noble/hashes/sha256";
 
 export const bucketDigestToCid = (digest: Uint8Array): CID =>
-  CID.createV1(113, createMultihashDigest(18, digest));
+  CID.createV1(cborCode, createMultihashDigest(sha2.sha256.code, digest));
 
 /**
  * Returns a new tuple for the provided node or tuple.
@@ -19,6 +21,11 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
 export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
   timestamp,
   hash,
+});
+
+export const bucketToPrefix = ({ average, level }: Bucket): Prefix => ({
+  average,
+  level,
 });
 
 /**

@@ -1,29 +1,32 @@
-import type { Node } from "./interface.js";
+import { encode } from "@ipld/dag-cbor";
+import { hasher } from "./codec.js";
+
+import type { Node, Tuple } from "./interface.js";
 
 /**
- * Returns true if hash meets 1/average threshold, false otherwise
- * Checks first 2 bytes of hash
+ * Returns true if digest falls below limit, false otherwise
+ * Checks first 2 bytes of digest
  *
- * implements same boundary resolution as okra-js
+ * implements similar boundary resolution as okra-js but only considering keys
  * https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114
  *
- * @param average - average number of nodes in each bucket
- * @param hash - hash from key (leaf) or value of node (branch)
+ * @param digest
+ * @param limit
  * @returns
  */
-export function isBoundaryHash(hash: Uint8Array, limit: number): boolean {
-  if (hash.length < 4) {
+function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
+  if (digest.length < 4) {
     throw new TypeError(
-      `Hash parameter must have a byte length greater than or equal to 4. Received hash byte length: ${hash.length}`,
+      `Hash parameter must have a byte length greater than or equal to 4. Received hash byte length: ${digest.length}`,
     );
   }
 
-  return new DataView(hash.buffer, hash.byteOffset, 4).getUint32(0) < limit;
+  return new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit;
 }
 
-export const MAX_UINT32 = 2 ** 32 - 1;
+const MAX_UINT32 = 1n << 32n;
 
-export const isBoundaryNode = (
+export const createIsBoundary = (
   average: number,
   level: number,
 ): ((node: Node) => boolean) => {
@@ -45,9 +48,9 @@ export const isBoundaryNode = (
     );
   }
 
-  return (node) =>
-    isBoundaryHash(
-      level === 0 ? node.hash : node.message,
-      MAX_UINT32 / Math.max(average, 1),
-    );
+  const limit = Number(MAX_UINT32 / BigInt(average));
+
+  return ({ timestamp, hash }: Tuple) =>
+    // value does not determine boundary
+    isBoundaryHash(hasher(encode([level, timestamp, hash])), limit);
 };

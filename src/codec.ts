@@ -90,7 +90,7 @@ export function decodeBucket(bytes: Uint8Array): Bucket {
 
   const { level, average, nodes: encodedNodes } = getValidatedBucket(decoded);
 
-  // could validate boundaries here as well
+  // could validate boundaries and tuple order here
   let i = 0;
   const nodes: Node[] = new Array(encodedNodes.length);
   for (const node of encodedNodes) {

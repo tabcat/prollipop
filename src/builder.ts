@@ -72,7 +72,7 @@ const handleUpdate = (
  * @param updates
  * @returns
  */
-export async function* rebuild(
+export async function* builder(
   blockstore: Blockstore,
   tree: ProllyTree,
   updates: Update[],

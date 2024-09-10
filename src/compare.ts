@@ -1,7 +1,9 @@
-import { compare as compareHash } from "uint8arrays";
+import { compare as compareBytes } from "uint8arrays";
 import { Update } from "./builder.js";
 import { BucketDiff } from "./diff.js";
 import { Bucket, Node, Tuple } from "./interface.js";
+
+export { compareBytes }
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
 
@@ -10,7 +12,7 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 
   if (difference !== 0) return difference;
 
-  const comparison = compareHash(a.hash, b.hash);
+  const comparison = compareBytes(a.hash, b.hash);
 
   return comparison;
 };
@@ -22,7 +24,7 @@ export const compareNodes = (a: Node, b: Node): number => {
     return tuples;
   }
 
-  return compareHash(a.message, b.message);
+  return compareBytes(a.message, b.message);
 };
 
 export const compareUpdates = (a: Update, b: Update): number =>
@@ -31,7 +33,7 @@ export const compareUpdates = (a: Update, b: Update): number =>
     : compareTuples(a.value, b.value);
 
 export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
-  compareHash(a.getDigest(), b.getDigest());
+  compareBytes(a.getDigest(), b.getDigest());
 
 export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   // compare level before boundary tuple so builder diffs can be yielded without issues
@@ -45,7 +47,7 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   // empty buckets first
   // wondering if empty bucket should be last
   if (aBoundary == null && bBoundary == null) {
-    return compareHash(a.getDigest(), b.getDigest());
+    return compareBytes(a.getDigest(), b.getDigest());
   } else if (aBoundary == null) {
     return -1;
   } else if (bBoundary == null) {

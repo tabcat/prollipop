@@ -23,6 +23,7 @@ import {
   compareBucketDiffs,
   compareBucketDigests,
   compareBuckets,
+  compareBytes,
   compareNodes,
   compareTuples,
 } from "./compare.js";
@@ -164,6 +165,10 @@ export async function* diff(
       d.nodes.push(rightDiffer(rv));
       await rc.nextAtLevel(0);
     } else {
+      if (compareBytes(lv.message, rv.message) !== 0) {
+        d.nodes.push([lv, rv])
+      }
+
       // may cause both cursor buckets to change so bucket diffs must be done after ffw
       await ffwUnequalLevel0(lc, rc);
     }

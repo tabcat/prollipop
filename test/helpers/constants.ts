@@ -1,62 +1,86 @@
-import { encodeOptions } from "@ipld/dag-cbor";
-import { MemoryBlockstore } from "blockstore-core";
-import * as cbor from "cborg";
-import { CID } from "multiformats/cid";
-import { create as createMultihashDigest } from "multiformats/hashes/digest";
-import { EncodedNode, encoder, hasher } from "../../src/codec.js";
-import { DefaultBucket, DefaultNode } from "../../src/impls.js";
-import { Bucket, Prefix, Tuple } from "../../src/interface.js";
-import { createProllyTree, createProllyTreeNodes } from "./create-tree.js";
+import { sha256 } from "@noble/hashes/sha256";
+import { firstElement } from "@tabcat/ith-element";
+import { MemoryBlockstore } from "blockstore-core/memory";
+import { encodeBucket } from "../../src/codec.js";
+import { compareBucketDigests } from "../../src/compare.js";
+import {
+  DefaultBucket,
+  DefaultNode,
+  DefaultProllyTree,
+} from "../../src/impls.js";
+import { Bucket, Node, ProllyTree } from "../../src/interface.js";
+import { buildProllyTreeState, createProllyTreeNodes } from "./build-tree.js";
 
-// nodes
 export const timestamp = 0;
 export const hash = new Uint8Array(4); // isBoundaryHash expects Uint8Array with length >= 4
 export const message = new Uint8Array(0);
 export const node = new DefaultNode(timestamp, hash, message);
-export const encodedNode: EncodedNode = [timestamp, hash, message];
-export const nodeBytes = cbor.encode(encodedNode, encodeOptions);
-export const nodeBytes2 = new Uint8Array([...nodeBytes, ...nodeBytes]);
 
-// buckets
-export const prefix: Prefix = {
-  average: 30,
-  level: 0,
-};
-export const prefixBytes = cbor.encode(prefix, encodeOptions);
-export const bucketBytes = new Uint8Array([...prefixBytes, ...nodeBytes]);
-export const bucketHash = hasher.digest(bucketBytes).digest;
-export const bucketCid = CID.createV1(
-  encoder.code,
-  createMultihashDigest(hasher.code, bucketHash),
+export const average = 32;
+export const level = 0;
+export const prefix = { average, level };
+export const nodes = [node];
+export const encodedBucket = encodeBucket(average, level, nodes);
+export const bucketDigest = sha256(encodedBucket);
+export const bucket = new DefaultBucket(
+  average,
+  level,
+  nodes,
+  encodeBucket(average, level, nodes),
+  bucketDigest,
 );
-export const bucket: Bucket = new DefaultBucket(
-  prefix,
-  [node],
-  bucketBytes,
-  bucketHash,
-);
-export const emptyBucket: Bucket = new DefaultBucket(
-  prefix,
+export const encodedEmptyBucket = encodeBucket(average, level, []);
+export const emptyBucket = new DefaultBucket(
+  average,
+  level,
   [],
-  prefixBytes,
-  hasher.digest(prefixBytes).digest,
+  encodedEmptyBucket,
+  sha256(encodedEmptyBucket),
 );
 
 export const blockstore = new MemoryBlockstore();
 
 export const treeNodesMax = 3000;
 
-export const treeNodes = createProllyTreeNodes(
-  Array(treeNodesMax)
-    .fill(0)
-    .map((_, i) => i),
-);
-export const treeTuples: Tuple[] = treeNodes.map(({ timestamp, hash }) => ({
-  timestamp,
-  hash,
-}));
-export const [tree, treeState] = createProllyTree(
-  blockstore,
-  prefix,
-  treeNodes,
-);
+export const emptyTreeIds: number[] = [];
+export const superTreeIds = Array(treeNodesMax)
+  .fill(0)
+  .map((_, i) => i);
+export const subTreeIds = Array(treeNodesMax / 3)
+  .fill(0)
+  .map((_, i) => i + treeNodesMax / 3);
+export const lowerTreeIds = Array(Math.floor(treeNodesMax / 2))
+  .fill(0)
+  .map((_, i) => i);
+export const upperTreeIds = Array(Math.floor(treeNodesMax / 2))
+  .fill(0)
+  .map((_, i) => i + treeNodesMax / 2);
+export const randomTreeIds = Array(treeNodesMax)
+  .fill(0)
+  .map((_, i) => i)
+  .filter(() => Math.random() >= 0.5);
+
+const idsOfTrees = [
+  emptyTreeIds,
+  superTreeIds,
+  subTreeIds,
+  lowerTreeIds,
+  randomTreeIds,
+];
+
+export const trees: ProllyTree[] = [];
+
+export const treesToStates: WeakMap<
+  ProllyTree,
+  { state: Bucket[][]; buckets: Bucket[]; nodes: Node[]; ids: number[] }
+> = new WeakMap();
+
+for (const ids of idsOfTrees) {
+  const nodes = createProllyTreeNodes(ids);
+  const state = buildProllyTreeState(blockstore, average, nodes);
+  const tree = new DefaultProllyTree(firstElement(firstElement(state)));
+  const buckets = state.flat().sort(compareBucketDigests);
+
+  trees.push(tree);
+  treesToStates.set(tree, { state, buckets, nodes, ids });
+}

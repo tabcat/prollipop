@@ -6,7 +6,7 @@ import { sha256 } from "@noble/hashes/sha256";
 
 type EncodedNode = [Node["timestamp"], Node["hash"], Node["message"]];
 
-interface EncodedBucket {
+export interface EncodedBucket {
   level: number;
   average: number;
   nodes: EncodedNode[];

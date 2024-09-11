@@ -109,7 +109,7 @@ export interface Cursor {
    * @param tuple
    * @param level
    */
-  ffw(tuple: Tuple, level: number): Promise<void>;
+  jumpTo(tuple: Tuple, level: number): Promise<void>;
 
   /**
    * Returns true or false depending on whether the cursor is at the tail bucket for the level.
@@ -151,7 +151,7 @@ function createCursorFromState(state: CursorState): Cursor {
     nextAtLevel: (level) => nextAtLevel(state, level),
     nextBucket: () => nextBucketAtLevel(state, levelOf(state)),
     nextBucketAtLevel: (level) => nextBucketAtLevel(state, level),
-    ffw: (tuple, level) => ffwToTupleOnLevel(state, tuple, level),
+    jumpTo: (tuple, level) => jumpToTupleOnLevel(state, tuple, level),
 
     isAtTail: () => getIsAtTail(state),
     isAtHead: () => getIsAtHead(state),
@@ -381,7 +381,7 @@ const nextBucketAtLevel = async (
   Object.assign(state, stateCopy);
 };
 
-const ffwToTupleOnLevel = async (
+const jumpToTupleOnLevel = async (
   state: CursorState,
   tuple: Tuple,
   level: number,

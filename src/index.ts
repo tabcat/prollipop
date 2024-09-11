@@ -50,7 +50,7 @@ export async function* search(
       continue;
     }
 
-    await cursor.ffw(tuple, 0);
+    await cursor.jumpTo(tuple, 0);
 
     const node: Node = cursor.current();
 

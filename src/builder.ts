@@ -91,7 +91,7 @@ export async function* builder(
   let newRoot: Bucket | null = null;
 
   const cursor = createCursor(blockstore, tree);
-  await cursor.ffw(ithElement(updts, 0).value, 0);
+  await cursor.jumpTo(ithElement(updts, 0).value, 0);
 
   let updatee: Bucket = cursor.currentBucket();
 
@@ -254,7 +254,7 @@ export async function* builder(
     // reassign updatee
     if (!pastRootLevel) {
       if (bounds.length === 0) {
-        await cursor.ffw(nextUpdt.value, nextUpdt.level);
+        await cursor.jumpTo(nextUpdt.value, nextUpdt.level);
       } else {
         await cursor.nextBucket();
       }

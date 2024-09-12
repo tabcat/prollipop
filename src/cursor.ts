@@ -6,7 +6,8 @@ import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { bucketToPrefix, loadBucket } from "./utils.js";
 
-const failedToAquireLockErr = () => new Error("Failed to aquire cursor lock.");
+const failedToAcquireLockErr = () =>
+  new Error("Failed to acquire cursor lock.");
 
 interface CursorState {
   blockstore: Blockstore;
@@ -333,7 +334,7 @@ const nextAtLevel = async (
   }
 
   if (state.isLocked) {
-    throw failedToAquireLockErr();
+    throw failedToAcquireLockErr();
   }
 
   const stateCopy = cloneCursorState(state);
@@ -364,7 +365,7 @@ const nextBucketAtLevel = async (
   }
 
   if (state.isLocked) {
-    throw failedToAquireLockErr();
+    throw failedToAcquireLockErr();
   }
 
   const stateCopy = cloneCursorState(state);
@@ -395,7 +396,7 @@ const jumpToTupleOnLevel = async (
   }
 
   if (state.isLocked) {
-    throw failedToAquireLockErr();
+    throw failedToAcquireLockErr();
   }
 
   const stateCopy = cloneCursorState(state);

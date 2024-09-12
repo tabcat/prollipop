@@ -65,6 +65,7 @@ const idsOfTrees = [
   superTreeIds,
   subTreeIds,
   lowerTreeIds,
+  upperTreeIds,
   randomTreeIds,
 ];
 

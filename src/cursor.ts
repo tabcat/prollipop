@@ -5,9 +5,6 @@ import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { bucketToPrefix, loadBucket } from "./utils.js";
 
-const failedToAcquireLockErr = () =>
-  new Error("Failed to acquire cursor lock.");
-
 interface CursorState {
   blockstore: Blockstore;
   currentBuckets: Bucket[];
@@ -131,6 +128,29 @@ export interface Cursor {
   clone(): Cursor;
 }
 
+const getLock = async (
+  state: CursorState,
+  level: number,
+  mover: () => Promise<void>,
+) => {
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+  }
+
+  if (state.isDone) {
+    return;
+  }
+
+  if (state.isLocked) {
+    throw new Error("Failed to acquire cursor lock.");
+  }
+  state.isLocked = true;
+
+  await mover();
+
+  state.isLocked = false;
+};
+
 function createCursorFromState(state: CursorState): Cursor {
   return {
     level: () => levelOf(state),
@@ -142,11 +162,18 @@ function createCursorFromState(state: CursorState): Cursor {
     buckets: () => Array.from(state.currentBuckets),
     currentBucket: () => bucketOf(state),
 
-    next: () => nextAtLevel(state, levelOf(state)),
-    nextAtLevel: (level) => nextAtLevel(state, level),
-    nextBucket: () => nextBucketAtLevel(state, levelOf(state)),
-    nextBucketAtLevel: (level) => nextBucketAtLevel(state, level),
-    jumpTo: (tuple, level) => jumpToTupleOnLevel(state, tuple, level),
+    next: () =>
+      getLock(state, levelOf(state), () => nextAtLevel(state, levelOf(state))),
+    nextAtLevel: (level) =>
+      getLock(state, level, () => nextAtLevel(state, level)),
+    nextBucket: () =>
+      getLock(state, levelOf(state), () =>
+        nextBucketAtLevel(state, levelOf(state)),
+      ),
+    nextBucketAtLevel: (level) =>
+      getLock(state, level, () => nextBucketAtLevel(state, level)),
+    jumpTo: (tuple, level) =>
+      getLock(state, level, () => jumpToTupleOnLevel(state, tuple, level)),
 
     isAtTail: () => getIsAtTail(state),
     isAtHead: () => getIsAtHead(state),
@@ -324,20 +351,7 @@ const nextAtLevel = async (
   state: CursorState,
   level: number,
 ): Promise<void> => {
-  if (level > rootLevelOf(state)) {
-    state.isDone = true;
-  }
-
-  if (state.isDone) {
-    return;
-  }
-
-  if (state.isLocked) {
-    throw failedToAcquireLockErr();
-  }
-
   const stateCopy = cloneCursorState(state);
-  state.isLocked = true;
 
   if (level !== levelOf(stateCopy)) {
     await moveToLevel(stateCopy, level);
@@ -355,20 +369,7 @@ const nextBucketAtLevel = async (
   state: CursorState,
   level: number,
 ): Promise<void> => {
-  if (level > rootLevelOf(state)) {
-    state.isDone = true;
-  }
-
-  if (state.isDone) {
-    return;
-  }
-
-  if (state.isLocked) {
-    throw failedToAcquireLockErr();
-  }
-
   const stateCopy = cloneCursorState(state);
-  state.isLocked = true;
 
   if (level !== levelOf(stateCopy)) {
     await moveToLevel(stateCopy, level);
@@ -389,20 +390,7 @@ const jumpToTupleOnLevel = async (
   tuple: Tuple,
   level: number,
 ): Promise<void> => {
-  if (level > rootLevelOf(state)) {
-    state.isDone = true;
-  }
-
-  if (state.isDone) {
-    return;
-  }
-
-  if (state.isLocked) {
-    throw failedToAcquireLockErr();
-  }
-
   const stateCopy = cloneCursorState(state);
-  state.isLocked = true;
 
   // set to root at index matching tuple
   stateCopy.currentBuckets = [firstElement(stateCopy.currentBuckets)];

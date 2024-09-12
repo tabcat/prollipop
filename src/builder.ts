@@ -273,7 +273,7 @@ export async function* builder(
   if (newRoot == null) {
     throw new Error(
       `Processed all updates without finding a new root.
-      This is a bug, please create an issue at https://github.com/tabcat/prollipop/issues`,
+This is a bug, please create an issue at https://github.com/tabcat/prollipop/issues`,
     );
   }
 

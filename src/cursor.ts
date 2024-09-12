@@ -171,8 +171,13 @@ const cloneCursorState = (state: CursorState): CursorState => ({
 const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);
 
-const nodeOf = (state: CursorState): Node =>
-  ithElement(bucketOf(state).nodes, state.currentIndex);
+const nodeOf = (state: CursorState): Node => {
+  if (state.currentIndex === -1) {
+    throw new Error("Failed to return current node from empty bucket.");
+  }
+
+  return ithElement(bucketOf(state).nodes, state.currentIndex);
+};
 
 const levelOf = (state: CursorState): number => bucketOf(state).level;
 

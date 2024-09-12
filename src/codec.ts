@@ -53,7 +53,7 @@ const getValidatedPrefix = (prefix: unknown): Prefix => {
 };
 
 const getValidatedBucket = (bucket: unknown): EncodedBucket => {
-  if (typeof bucket !== "object") {
+  if (typeof bucket !== "object" || bucket == null) {
     throw new TypeError("Expected bucket to be an object.");
   }
 

@@ -1,6 +1,5 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
-import { CID } from "multiformats";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
@@ -76,10 +75,6 @@ export interface Cursor {
    */
   buckets(): Bucket[];
   /**
-   * Returns an array of bucket CIDs from root to current level.
-   */
-  path(): CID[];
-  /**
    * Returns the current bucket. The last bucket in the array returned by the buckets() method.
    */
   currentBucket(): Bucket;
@@ -145,7 +140,6 @@ function createCursorFromState(state: CursorState): Cursor {
     current: () => nodeOf(state),
 
     buckets: () => Array.from(state.currentBuckets),
-    path: () => state.currentBuckets.map((b) => b.getCID()),
     currentBucket: () => bucketOf(state),
 
     next: () => nextAtLevel(state, levelOf(state)),

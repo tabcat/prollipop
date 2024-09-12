@@ -223,7 +223,7 @@ const overflows = (state: CursorState): boolean =>
 export const guideByTuple =
   (target: Tuple) =>
   (nodes: Node[]): number => {
-    const index = nodes.findIndex((n) => compareTuples(target, n) > 0);
+    const index = nodes.findIndex((n) => compareTuples(target, n) <= 0);
 
     return index === -1 ? nodes.length - 1 : index;
   };

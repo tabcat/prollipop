@@ -190,10 +190,8 @@ export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
   return createCursorFromState(state);
 }
 
-const cloneCursorState = (state: CursorState): CursorState => ({
-  ...state,
-  currentBuckets: Array.from(state.currentBuckets),
-});
+const cloneCursorState = (state: CursorState): CursorState =>
+  Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
 
 const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);

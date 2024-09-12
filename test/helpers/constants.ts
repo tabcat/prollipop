@@ -1,7 +1,7 @@
+import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { firstElement } from "@tabcat/ith-element";
 import { MemoryBlockstore } from "blockstore-core/memory";
-import { encodeBucket } from "../../src/codec.js";
 import { compareBucketDigests } from "../../src/compare.js";
 import {
   DefaultBucket,
@@ -20,16 +20,20 @@ export const average = 32;
 export const level = 0;
 export const prefix = { average, level };
 export const nodes = [node];
-export const encodedBucket = encodeBucket(average, level, nodes);
+export const encodedBucket = encode({
+  average,
+  level,
+  nodes: [timestamp, hash, message],
+});
 export const bucketDigest = sha256(encodedBucket);
 export const bucket = new DefaultBucket(
   average,
   level,
   nodes,
-  encodeBucket(average, level, nodes),
+  encodedBucket,
   bucketDigest,
 );
-export const encodedEmptyBucket = encodeBucket(average, level, []);
+export const encodedEmptyBucket = encode({ average, level, nodes: [] });
 export const emptyBucket = new DefaultBucket(
   average,
   level,

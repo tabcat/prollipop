@@ -370,13 +370,16 @@ const nextBucketAtLevel = async (
   const stateCopy = cloneCursorState(state);
   state.isLocked = true;
 
-  if (level !== levelOf(state)) {
+  if (level !== levelOf(stateCopy)) {
     await moveToLevel(stateCopy, level);
   }
 
-  stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
+  // only increment if level was higher or equal to original level
+  if (level >= levelOf(state)) {
+    stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
 
-  await moveSideways(stateCopy);
+    await moveSideways(stateCopy);
+  }
 
   Object.assign(state, stateCopy);
 };

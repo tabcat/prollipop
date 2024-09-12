@@ -128,12 +128,13 @@ export interface Cursor {
   clone(): Cursor;
 }
 
-const getLock = async (
+const preWrite = async (
   state: CursorState,
   level: number,
   mover: () => Promise<void>,
+  immune: boolean = false,
 ) => {
-  if (level > rootLevelOf(state)) {
+  if (level > rootLevelOf(state) && !immune) {
     state.isDone = true;
   }
 
@@ -163,17 +164,22 @@ function createCursorFromState(state: CursorState): Cursor {
     currentBucket: () => bucketOf(state),
 
     next: () =>
-      getLock(state, levelOf(state), () => nextAtLevel(state, levelOf(state))),
+      preWrite(state, levelOf(state), () => nextAtLevel(state, levelOf(state))),
     nextAtLevel: (level) =>
-      getLock(state, level, () => nextAtLevel(state, level)),
+      preWrite(state, level, () => nextAtLevel(state, level)),
     nextBucket: () =>
-      getLock(state, levelOf(state), () =>
+      preWrite(state, levelOf(state), () =>
         nextBucketAtLevel(state, levelOf(state)),
       ),
     nextBucketAtLevel: (level) =>
-      getLock(state, level, () => nextBucketAtLevel(state, level)),
+      preWrite(state, level, () => nextBucketAtLevel(state, level)),
     jumpTo: (tuple, level) =>
-      getLock(state, level, () => jumpToTupleOnLevel(state, tuple, level)),
+      preWrite(
+        state,
+        level,
+        () => jumpToTupleOnLevel(state, tuple, level),
+        true,
+      ),
 
     isAtTail: () => getIsAtTail(state),
     isAtHead: () => getIsAtHead(state),
@@ -388,6 +394,10 @@ const jumpToTupleOnLevel = async (
   tuple: Tuple,
   level: number,
 ): Promise<void> => {
+  if (level > rootLevelOf(state)) {
+    throw new Error("Cannot jump to level higher than root");
+  }
+
   const stateCopy = cloneCursorState(state);
 
   // set to root at index matching tuple

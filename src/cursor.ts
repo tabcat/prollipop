@@ -128,16 +128,7 @@ export interface Cursor {
   clone(): Cursor;
 }
 
-const preWrite = async (
-  state: CursorState,
-  level: number,
-  mover: () => Promise<void>,
-  immune: boolean = false,
-) => {
-  if (level > rootLevelOf(state) && !immune) {
-    state.isDone = true;
-  }
-
+const pw = async (state: CursorState, mover: () => Promise<void>) => {
   if (state.isDone) {
     return;
   }
@@ -152,6 +143,15 @@ const preWrite = async (
   state.isLocked = false;
 };
 
+const pm = (state: CursorState, level: number, mover: () => Promise<void>) => {
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+    return Promise.resolve();
+  }
+
+  return pw(state, mover);
+};
+
 function createCursorFromState(state: CursorState): Cursor {
   return {
     level: () => levelOf(state),
@@ -163,23 +163,25 @@ function createCursorFromState(state: CursorState): Cursor {
     buckets: () => Array.from(state.currentBuckets),
     currentBucket: () => bucketOf(state),
 
-    next: () =>
-      preWrite(state, levelOf(state), () => nextAtLevel(state, levelOf(state))),
-    nextAtLevel: (level) =>
-      preWrite(state, level, () => nextAtLevel(state, level)),
-    nextBucket: () =>
-      preWrite(state, levelOf(state), () =>
-        nextBucketAtLevel(state, levelOf(state)),
-      ),
-    nextBucketAtLevel: (level) =>
-      preWrite(state, level, () => nextBucketAtLevel(state, level)),
-    jumpTo: (tuple, level) =>
-      preWrite(
-        state,
-        level,
-        () => jumpToTupleOnLevel(state, tuple, level),
-        true,
-      ),
+    nextAtLevel(level: number) {
+      return pm(state, level, nextAtLevel.bind(null, state, level));
+    },
+
+    next() {
+      return this.nextAtLevel(levelOf(state));
+    },
+
+    nextBucketAtLevel(level: number) {
+      return pm(state, level, nextBucketAtLevel.bind(null, state, level));
+    },
+
+    nextBucket() {
+      return this.nextBucketAtLevel(levelOf(state));
+    },
+
+    jumpTo(tuple: Tuple, level: number) {
+      return pw(state, jumpToTupleOnLevel.bind(null, state, tuple, level));
+    },
 
     isAtTail: () => getIsAtTail(state),
     isAtHead: () => getIsAtHead(state),

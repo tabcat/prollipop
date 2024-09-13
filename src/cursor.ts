@@ -79,27 +79,14 @@ export interface Cursor {
   /**
    * Increments the cursor to the next tuple on the current level.
    */
-  next(): Promise<void>;
-  /**
-   * Increments the cursor to the next tuple on a specified level.
-   *
-   * @param level - The level to increment the cursor at.
-   */
-  nextAtLevel(level: number): Promise<void>;
+  next(level?: number): Promise<void>;
+
   /**
    * Increments the cursor to the beginning of the next bucket on the current level.
    */
-  nextBucket(): Promise<void>;
-  /**
-   * Increments the cursor to the beginning of the next bucket on the specified level.
+  nextBucket(level?: number): Promise<void>;
 
-   * @param level - The level to increment the cursor at.
-   */
-  nextBucketAtLevel(level: number): Promise<void>;
-
-  nextTuple(tuple: Tuple): Promise<void>;
-
-  nextTupleAtLevel(tuple: Tuple, level: number): Promise<void>;
+  nextTuple(tuple: Tuple, level?: number): Promise<void>;
 
   /**
    * Fast forwards the cursor to
@@ -107,7 +94,7 @@ export interface Cursor {
    * @param tuple
    * @param level
    */
-  jumpTo(tuple: Tuple, level: number): Promise<void>;
+  jumpTo(tuple: Tuple, level?: number): Promise<void>;
 
   /**
    * Returns true or false depending on whether the cursor is at the tail bucket for the level.
@@ -178,32 +165,20 @@ function createCursorFromState(state: CursorState): Cursor {
     buckets: () => Array.from(state.currentBuckets),
     currentBucket: () => bucketOf(state),
 
-    nextAtLevel(level: number) {
-      return pm(level, state, nextAtLevel.bind(null, false));
+    next(level?: number) {
+      return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, false));
     },
 
-    next() {
-      return this.nextAtLevel(levelOf(state));
+    nextBucket(level?: number) {
+      return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, true));
     },
 
-    nextBucketAtLevel(level: number) {
-      return pm(level, state, nextAtLevel.bind(null, true));
+    nextTuple(tuple: Tuple, level?: number) {
+      return pm(level ?? levelOf(state), state, nextTupleAtLevel.bind(null, tuple));
     },
 
-    nextBucket() {
-      return this.nextBucketAtLevel(levelOf(state));
-    },
-
-    nextTupleAtLevel(tuple: Tuple, level: number) {
-      return pm(level, state, nextTupleAtLevel.bind(null, tuple));
-    },
-
-    nextTuple(tuple: Tuple) {
-      return this.nextTupleAtLevel(tuple, levelOf(state));
-    },
-
-    jumpTo(tuple: Tuple, level: number) {
-      return pw(level, state, jumpToTupleOnLevel.bind(null, tuple));
+    jumpTo(tuple: Tuple, level?: number) {
+      return pw(level ?? levelOf(state), state, jumpToTupleOnLevel.bind(null, tuple));
     },
 
     isAtTail: () => getIsAtTail(state),

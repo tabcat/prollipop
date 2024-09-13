@@ -128,7 +128,11 @@ export interface Cursor {
   clone(): Cursor;
 }
 
-const pw = async (state: CursorState, mover: () => Promise<void>) => {
+const pw = async (
+  level: number,
+  state: CursorState,
+  writer: (level: number, state: CursorState) => Promise<void>,
+) => {
   if (state.isDone) {
     return;
   }
@@ -136,20 +140,26 @@ const pw = async (state: CursorState, mover: () => Promise<void>) => {
   if (state.isLocked) {
     throw new Error("Failed to acquire cursor lock.");
   }
+
+  const stateClone = cloneCursorState(state);
   state.isLocked = true;
 
-  await mover();
+  await writer(level, stateClone);
 
-  state.isLocked = false;
+  Object.assign(state, stateClone);
 };
 
-const pm = (state: CursorState, level: number, mover: () => Promise<void>) => {
+const pm = (
+  level: number,
+  state: CursorState,
+  mover: (level: number, state: CursorState) => Promise<void>,
+) => {
   if (level > rootLevelOf(state)) {
     state.isDone = true;
     return Promise.resolve();
   }
 
-  return pw(state, mover);
+  return pw(level, state, mover);
 };
 
 function createCursorFromState(state: CursorState): Cursor {
@@ -164,7 +174,7 @@ function createCursorFromState(state: CursorState): Cursor {
     currentBucket: () => bucketOf(state),
 
     nextAtLevel(level: number) {
-      return pm(state, level, nextAtLevel.bind(null, state, level));
+      return pm(level, state, nextAtLevel);
     },
 
     next() {
@@ -172,7 +182,7 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     nextBucketAtLevel(level: number) {
-      return pm(state, level, nextBucketAtLevel.bind(null, state, level));
+      return pm(level, state, nextBucketAtLevel);
     },
 
     nextBucket() {
@@ -180,7 +190,7 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     jumpTo(tuple: Tuple, level: number) {
-      return pw(state, jumpToTupleOnLevel.bind(null, state, tuple, level));
+      return pw(level, state, jumpToTupleOnLevel.bind(null, tuple));
     },
 
     isAtTail: () => getIsAtTail(state),
@@ -330,86 +340,74 @@ const moveToLevel = async (
  * @returns
  */
 const moveSideways = async (state: CursorState): Promise<void> => {
-  const stateCopy = cloneCursorState(state);
+  const startingLevel = levelOf(state)
 
   // find a higher level which allows increasing currentIndex
-  while (overflows(stateCopy)) {
+  while (overflows(state)) {
     // cannot increase currentIndex anymore, so done
-    if (stateCopy.currentBuckets.length === 1) {
+    if (state.currentBuckets.length === 1) {
       state.isDone = true;
       return;
     }
 
-    await moveToLevel(stateCopy, levelOf(stateCopy) + 1);
+    await moveToLevel(state, levelOf(state) + 1);
   }
 
-  stateCopy.currentIndex += 1;
+  state.currentIndex += 1;
 
-  // get back down to same level
-  while (levelOf(stateCopy) !== levelOf(state)) {
-    await moveToLevel(stateCopy, levelOf(state));
+  if (levelOf(state) !== startingLevel) {
+    await moveToLevel(state, startingLevel);
   }
-
-  Object.assign(state, stateCopy);
 };
 
 const nextAtLevel = async (
-  state: CursorState,
   level: number,
+  state: CursorState,
 ): Promise<void> => {
-  const stateCopy = cloneCursorState(state);
+  const movingDown = level < levelOf(state)
 
-  if (level !== levelOf(stateCopy)) {
-    await moveToLevel(stateCopy, level);
+  if (level !== levelOf(state)) {
+    await moveToLevel(state, level);
   }
 
   // only increment if level was higher or equal to original level
-  if (level >= levelOf(state)) {
-    await moveSideways(stateCopy);
+  if (!movingDown) {
+    await moveSideways(state);
   }
-
-  Object.assign(state, stateCopy);
 };
 
 const nextBucketAtLevel = async (
-  state: CursorState,
   level: number,
+  state: CursorState,
 ): Promise<void> => {
-  const stateCopy = cloneCursorState(state);
+  const movingDown = level < levelOf(state)
 
-  if (level !== levelOf(stateCopy)) {
-    await moveToLevel(stateCopy, level);
+  if (level !== levelOf(state)) {
+    await moveToLevel(state, level);
   }
 
   // only increment if level was higher or equal to original level
-  if (level >= levelOf(state)) {
-    stateCopy.currentIndex = bucketOf(state).nodes.length - 1;
-
-    await moveSideways(stateCopy);
+  if (!movingDown) {
+    state.currentIndex = bucketOf(state).nodes.length - 1;
+    await moveSideways(state);
   }
-
-  Object.assign(state, stateCopy);
 };
 
 const jumpToTupleOnLevel = async (
-  state: CursorState,
   tuple: Tuple,
   level: number,
+  state: CursorState,
 ): Promise<void> => {
   if (level > rootLevelOf(state)) {
-    throw new Error("Cannot jump to level higher than root");
+    throw new Error("Cannot jump to level higher than root.");
   }
-
-  const stateCopy = cloneCursorState(state);
 
   // set to root at index matching tuple
-  stateCopy.currentBuckets = [firstElement(stateCopy.currentBuckets)];
-  stateCopy.currentIndex = guideByTuple(tuple)(bucketOf(stateCopy).nodes);
+  state.currentBuckets = [firstElement(state.currentBuckets)];
+  state.currentIndex = guideByTuple(tuple)(bucketOf(state).nodes);
 
   // move to level if needed
-  if (level < levelOf(stateCopy)) {
-    await moveToLevel(stateCopy, level, guideByTuple(tuple));
+  if (level < levelOf(state)) {
+    await moveToLevel(state, level, guideByTuple(tuple));
   }
-
-  Object.assign(state, stateCopy);
 };

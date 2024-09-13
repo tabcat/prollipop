@@ -18,7 +18,7 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
  * @param node
  * @returns
  */
-export const nodeToTuple = ({ timestamp, hash }: Node | Tuple): Tuple => ({
+export const nodeToTuple = ({ timestamp, hash }: Tuple): Tuple => ({
   timestamp,
   hash,
 });

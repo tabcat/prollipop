@@ -179,7 +179,7 @@ function createCursorFromState(state: CursorState): Cursor {
     currentBucket: () => bucketOf(state),
 
     nextAtLevel(level: number) {
-      return pm(level, state, nextAtLevel);
+      return pm(level, state, nextAtLevel.bind(null, false));
     },
 
     next() {
@@ -187,7 +187,7 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     nextBucketAtLevel(level: number) {
-      return pm(level, state, nextBucketAtLevel);
+      return pm(level, state, nextAtLevel.bind(null, true));
     },
 
     nextBucket() {
@@ -374,6 +374,7 @@ const moveSideways = async (state: CursorState): Promise<void> => {
 };
 
 const nextAtLevel = async (
+  bucket: boolean,
   level: number,
   state: CursorState,
 ): Promise<void> => {
@@ -385,23 +386,9 @@ const nextAtLevel = async (
 
   // only increment if level was higher or equal to original level
   if (!movingDown) {
-    await moveSideways(state);
-  }
-};
-
-const nextBucketAtLevel = async (
-  level: number,
-  state: CursorState,
-): Promise<void> => {
-  const movingDown = level < levelOf(state);
-
-  if (level !== levelOf(state)) {
-    await moveToLevel(state, level);
-  }
-
-  // only increment if level was higher or equal to original level
-  if (!movingDown) {
-    state.currentIndex = bucketOf(state).nodes.length - 1;
+    if (bucket) {
+      state.currentIndex = bucketOf(state).nodes.length - 1;
+    }
     await moveSideways(state);
   }
 };

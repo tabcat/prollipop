@@ -96,6 +96,11 @@ export interface Cursor {
    * @param level - The level to increment the cursor at.
    */
   nextBucketAtLevel(level: number): Promise<void>;
+
+  nextTuple(tuple: Tuple): Promise<void>;
+
+  nextTupleAtLevel(tuple: Tuple, level: number): Promise<void>;
+
   /**
    * Fast forwards the cursor to
    *
@@ -187,6 +192,14 @@ function createCursorFromState(state: CursorState): Cursor {
 
     nextBucket() {
       return this.nextBucketAtLevel(levelOf(state));
+    },
+
+    nextTupleAtLevel(tuple: Tuple, level: number) {
+      return pm(level, state, nextTupleAtLevel.bind(null, tuple));
+    },
+
+    nextTuple(tuple: Tuple) {
+      return this.nextTupleAtLevel(tuple, levelOf(state));
     },
 
     jumpTo(tuple: Tuple, level: number) {
@@ -340,7 +353,7 @@ const moveToLevel = async (
  * @returns
  */
 const moveSideways = async (state: CursorState): Promise<void> => {
-  const startingLevel = levelOf(state)
+  const startingLevel = levelOf(state);
 
   // find a higher level which allows increasing currentIndex
   while (overflows(state)) {
@@ -364,7 +377,7 @@ const nextAtLevel = async (
   level: number,
   state: CursorState,
 ): Promise<void> => {
-  const movingDown = level < levelOf(state)
+  const movingDown = level < levelOf(state);
 
   if (level !== levelOf(state)) {
     await moveToLevel(state, level);
@@ -380,7 +393,7 @@ const nextBucketAtLevel = async (
   level: number,
   state: CursorState,
 ): Promise<void> => {
-  const movingDown = level < levelOf(state)
+  const movingDown = level < levelOf(state);
 
   if (level !== levelOf(state)) {
     await moveToLevel(state, level);
@@ -390,6 +403,30 @@ const nextBucketAtLevel = async (
   if (!movingDown) {
     state.currentIndex = bucketOf(state).nodes.length - 1;
     await moveSideways(state);
+  }
+};
+
+const nextTupleAtLevel = async (
+  tuple: Tuple,
+  level: number,
+  state: CursorState,
+): Promise<void> => {
+  while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) < 0) {
+    if (levelOf(state) < rootLevelOf(state)) {
+      await moveToLevel(state, levelOf(state) + 1);
+    } else {
+      break;
+    }
+  }
+
+  const guide = guideByTuple(tuple);
+  state.currentIndex = Math.max(
+    state.currentIndex,
+    guide(bucketOf(state).nodes),
+  );
+
+  if (level < levelOf(state)) {
+    await moveToLevel(state, level, guide);
   }
 };
 

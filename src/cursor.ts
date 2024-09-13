@@ -134,7 +134,7 @@ const pw = async (
   writer: (level: number, state: CursorState) => Promise<void>,
 ) => {
   if (state.isDone) {
-    return;
+    throw new Error("Cursor is done. Unable to write to cursor.")
   }
 
   if (state.isLocked) {

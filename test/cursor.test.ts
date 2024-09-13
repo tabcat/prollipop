@@ -103,9 +103,10 @@ describe("cursor", () => {
         const cursor = createCursor(blockstore, { root: emptyBucket });
 
         expect(cursor.done()).to.equal(true);
-        expect(cursor.nextAtLevel(0)).rejects.toThrow(
-          "Cursor is done. Unable to write to cursor.",
-        );
+
+        await cursor.nextAtLevel(0);
+
+        expect(cursor.done()).to.equal(true);
       });
 
       it("wraps cursor moves with check if mogged", async () => {

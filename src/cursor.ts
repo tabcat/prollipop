@@ -342,7 +342,7 @@ const moveSideways = async (state: CursorState): Promise<void> => {
 
   state.currentIndex += 1;
 
-  if (levelOf(state) !== startingLevel) {
+  if (levelOf(state) > startingLevel) {
     await moveToLevel(state, startingLevel);
   }
 };

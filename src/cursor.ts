@@ -328,16 +328,15 @@ const moveToLevel = async (
  * @returns
  */
 const moveSideways = async (state: CursorState): Promise<void> => {
+  if (overflows(state) && getIsAtHead(state)) {
+    state.isDone = true;
+    return;
+  }
+
   const startingLevel = levelOf(state);
 
   // find a higher level which allows increasing currentIndex
   while (overflows(state)) {
-    // cannot increase currentIndex anymore, so done
-    if (state.currentBuckets.length === 1) {
-      state.isDone = true;
-      return;
-    }
-
     await moveToLevel(state, levelOf(state) + 1);
   }
 

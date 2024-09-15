@@ -178,7 +178,7 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     jumpTo(tuple: Tuple, level?: number) {
-      return pw(level ?? levelOf(state), state, jumpToTupleOnLevel.bind(null, tuple));
+      return pw(level ?? levelOf(state), state, jumpToTupleAtLevel.bind(null, tuple));
     },
 
     isAtTail: () => getIsAtTail(state),
@@ -392,7 +392,7 @@ const nextTupleAtLevel = async (
   }
 };
 
-const jumpToTupleOnLevel = async (
+const jumpToTupleAtLevel = async (
   tuple: Tuple,
   level: number,
   state: CursorState,

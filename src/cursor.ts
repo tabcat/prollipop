@@ -372,19 +372,22 @@ const nextTupleAtLevel = async (
   level: number,
   state: CursorState,
 ): Promise<void> => {
-  while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) < 0) {
-    if (levelOf(state) < rootLevelOf(state)) {
-      await moveToLevel(state, levelOf(state) + 1);
-    } else {
+  if (compareTuples(tuple, nodeOf(state)) <= 0 && level >= levelOf(state)) {
+    throw new Error(
+      "Provided tuple is lesser than or equal to current node. Unable to traverse horizontally or to a higher level.",
+    );
+  }
+
+  while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0) {
+    if (state.currentBuckets.length === 1) {
+      state.isDone = true;
       break;
     }
+    await moveToLevel(state, levelOf(state) + 1);
   }
 
   const guide = guideByTuple(tuple);
-  state.currentIndex = Math.max(
-    state.currentIndex,
-    guide(bucketOf(state).nodes),
-  );
+  state.currentIndex = guide(bucketOf(state).nodes);
 
   if (level < levelOf(state)) {
     await moveToLevel(state, level, guide);

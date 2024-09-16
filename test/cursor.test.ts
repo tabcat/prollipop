@@ -344,7 +344,7 @@ describe("cursor", () => {
           }
         });
 
-        it("rejects if tuple is lower than or equal to current nodes and moving sideways or up", async () => {
+        it("does not move cursor if tuple is lower than or equal to current nodes and moving sideways or up", async () => {
           for (const tree of trees) {
             if (tree.root.level === 0) {
               continue;
@@ -361,8 +361,12 @@ describe("cursor", () => {
               firstElement(lastElement(state)),
             );
 
-            expect(() => cursor.nextTuple(lowTuple)).rejects.toThrow(
-              "Provided tuple is lesser than or equal to current node. Unable to traverse horizontally or to a higher level.",
+            await cursor.nextTuple(lowTuple, 0);
+
+            expect(cursor.index()).to.equal(0);
+            expect(cursor.level()).to.equal(0);
+            expect(cursor.currentBucket()).to.deep.equal(
+              firstElement(lastElement(state)),
             );
           }
         });

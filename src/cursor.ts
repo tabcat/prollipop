@@ -373,9 +373,7 @@ const nextTupleAtLevel = async (
   state: CursorState,
 ): Promise<void> => {
   if (compareTuples(tuple, nodeOf(state)) <= 0 && level >= levelOf(state)) {
-    throw new Error(
-      "Provided tuple is lesser than or equal to current node. Unable to traverse horizontally or to a higher level.",
-    );
+    tuple = nodeOf(state)
   }
 
   while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0) {

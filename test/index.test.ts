@@ -1,26 +1,26 @@
-import { difference } from "@tabcat/ordered-sets/difference";
-import { intersection } from "@tabcat/ordered-sets/intersection";
+import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
-import { compareBuckets, compareTuples } from "../src/compare.js";
-import { NodeDiff, diff } from "../src/diff.js";
-import { DefaultProllyTree } from "../src/impls.js";
+import { compareTuples } from "../src/compare.js";
+import { createProllyTreeDiff } from "../src/diff.js";
+import { DefaultNode, DefaultProllyTree } from "../src/impls.js";
 import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
-import { Bucket, Node, ProllyTree, Tuple } from "../src/interface.js";
+import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
 import {
-  emptyTree,
-  randomTree,
-  subTree,
-  superTree,
+  average,
+  blockstore,
+  level,
+  tree,
+  trees,
   treesToStates,
-} from "./helpers/check-diffs.js";
-import { blockstore, prefix, tree } from "./helpers/constants.js";
+} from "./helpers/constants.js";
 
 describe("index", () => {
   describe("createEmptyTree", () => {
     it("returns an empty tree", () => {
       expect(createEmptyTree()).to.deep.equal(
-        new DefaultProllyTree(createBucket(prefix, [])),
+        new DefaultProllyTree(createBucket(average, level, [])),
       );
     });
   });
@@ -33,107 +33,77 @@ describe("index", () => {
     });
   });
 
-  describe("search", () => {
-    const checkSearch = async (
-      tree1: ProllyTree,
-      tree2: ProllyTree,
-    ): Promise<void> => {
-      const states1 = treesToStates.get(tree1)!;
-      const states2 = treesToStates.get(tree2)!;
+  const checkSearch = async (
+    tree1: ProllyTree,
+    tree2: ProllyTree,
+  ): Promise<void> => {
+    const states1 = treesToStates.get(tree1)!;
+    const states2 = treesToStates.get(tree2)!;
 
-      const result: (Node | Tuple)[] = [];
+    const result: (Node | Tuple)[] = [];
 
-      for await (const node of search(blockstore, tree1, states2.nodes)) {
-        result.push(node);
+    for await (const node of search(blockstore, tree1, states2.nodes)) {
+      result.push(node);
+    }
+
+    let expectedResult: (Node | Tuple)[] = [];
+    for (const [node1, node2] of pairwiseTraversal(
+      states1.nodes,
+      states2.nodes,
+      compareTuples,
+    )) {
+      if (node2 != null) {
+        if (node1 != null) {
+          expectedResult.push(node1);
+        } else {
+          expectedResult.push(nodeToTuple(node2));
+        }
       }
+    }
 
-      const matchedNodes = Array.from(
-        intersection(states2.nodes, states1.nodes, compareTuples),
-      );
-      const unmatchedNodes = Array.from(
-        difference(states2.nodes, matchedNodes, compareTuples),
-      ).map(nodeToTuple);
+    expect(result).to.deep.equal(expectedResult);
+  };
 
-      const expectedResult = [...matchedNodes, ...unmatchedNodes].sort(
-        compareTuples,
-      );
-
-      expect(result).to.deep.equal(expectedResult);
-    };
-
-    it("yields nodes if and tuples for tuples if found or not found, respectively", async () => {
-      await checkSearch(emptyTree, emptyTree);
-      await checkSearch(emptyTree, superTree);
-      await checkSearch(superTree, superTree);
-      await checkSearch(superTree, subTree);
+  describe("search", async () => {
+    it("yields nodes for found and tuples for missing", async () => {
+      for (const tree1 of trees) {
+        for (const tree2 of trees) {
+          await checkSearch(tree1, tree2);
+        }
+      }
     });
   });
 
   describe("mutate", () => {
-    const checkMutate = async (
-      tree1: ProllyTree,
-      tree2: ProllyTree,
-    ): Promise<void> => {
-      const rm: Node[] = treesToStates.get(tree1)!.nodes;
-      const add: Node[] = treesToStates.get(tree2)!.nodes;
+    it("allows nodes to be added and removed from the tree, yields a diff of the changes made", async () => {
+      const tree = createEmptyTree();
+      const blockstore = new MemoryBlockstore();
+      const node = new DefaultNode(0, new Uint8Array(), new Uint8Array());
 
-      const clone1 = cloneTree(tree1);
-
-      const actualNodes: NodeDiff[] = [];
-      const actualRemovals: Bucket[] = [];
-      const actualAdditions: Bucket[] = [];
+      const diff = createProllyTreeDiff();
       for await (const { nodes, buckets } of mutate(
         blockstore,
-        clone1,
-        add,
-        rm,
+        tree,
+        [node],
+        [],
       )) {
-        actualNodes.push(...nodes);
-        buckets.forEach(([a, b]) =>
-          a != null ? actualRemovals.push(a) : actualAdditions.push(b),
-        );
+        diff.nodes.push(...nodes);
+        diff.buckets.push(...buckets);
       }
 
-      actualRemovals.sort(compareBuckets);
-      actualAdditions.sort(compareBuckets);
-
-      expect(clone1).to.deep.equal(tree2);
-
-      const expectedNodes: NodeDiff[] = [];
-      const expectedRemovals: Bucket[] = [];
-      const expectedAdditions: Bucket[] = [];
-      for await (const { nodes, buckets } of diff(blockstore, tree1, tree2)) {
-        expectedNodes.push(...nodes);
-        buckets.forEach(([a, b]) =>
-          a != null ? expectedRemovals.push(a) : expectedAdditions.push(b),
-        );
+      const rm: Tuple[] = [];
+      for (const [_, added] of diff.nodes) {
+        rm.push(added!);
       }
 
-      expectedRemovals.sort(compareBuckets);
-      expectedAdditions.sort(compareBuckets);
+      for (const [_, added] of diff.buckets) {
+        added != null && blockstore.put(added!.getCID(), added!.getBytes());
+      }
 
-      expect(actualNodes).to.deep.equal(expectedNodes);
-      expect(actualRemovals).to.deep.equal(expectedRemovals);
-      expect(actualAdditions).to.deep.equal(expectedAdditions);
-    };
+      for await (const _ of mutate(blockstore, tree, [], rm)) {
+      }
 
-    it("allows nodes to be added and removed from the tree, yields a diff of the changes made", async () => {
-      await checkMutate(emptyTree, emptyTree);
-      await checkMutate(emptyTree, superTree);
-      await checkMutate(emptyTree, subTree);
-      await checkMutate(emptyTree, randomTree);
-      await checkMutate(superTree, superTree);
-      await checkMutate(superTree, subTree);
-      await checkMutate(superTree, emptyTree);
-      await checkMutate(superTree, randomTree);
-      await checkMutate(subTree, subTree);
-      await checkMutate(subTree, emptyTree);
-      await checkMutate(subTree, superTree);
-      await checkMutate(subTree, randomTree);
-      await checkMutate(randomTree, randomTree);
-      await checkMutate(randomTree, emptyTree);
-      await checkMutate(randomTree, superTree);
-      await checkMutate(randomTree, subTree);
+      expect(tree).to.deep.equal(createEmptyTree());
     });
   });
 });

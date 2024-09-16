@@ -242,15 +242,6 @@ const getIsAtTail = (state: CursorState): boolean =>
 const getIsAtHead = (state: CursorState): boolean =>
   getIsExtremity(state, lastElement);
 
-/**
- * Returns whether increasing the currentIndex will overflow the bucket.
- *
- * @param state - the state of the cursor
- * @returns
- */
-const overflows = (state: CursorState): boolean =>
-  state.currentIndex === lastElement(state.currentBuckets).nodes.length - 1;
-
 export const guideByTuple =
   (target: Tuple) =>
   (nodes: Node[]): number => {
@@ -320,6 +311,15 @@ const moveToLevel = async (
     state.currentIndex = guide(bucketOf(state).nodes);
   }
 };
+
+/**
+ * Returns whether increasing the currentIndex will overflow the bucket.
+ *
+ * @param state - the state of the cursor
+ * @returns
+ */
+const overflows = (state: CursorState): boolean =>
+  state.currentIndex === lastElement(state.currentBuckets).nodes.length - 1;
 
 /**
  * Increments the cursor by one on the same level. Handles traversing buckets if necessary.

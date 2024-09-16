@@ -42,6 +42,8 @@ export const emptyBucket = new DefaultBucket(
   sha256(encodedEmptyBucket),
 );
 
+export const tree = new DefaultProllyTree(bucket)
+
 export const blockstore = new MemoryBlockstore();
 
 export const treeNodesMax = 3000;

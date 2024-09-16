@@ -14,6 +14,7 @@ import { buildProllyTreeState, createProllyTreeNodes } from "./build-tree.js";
 export const timestamp = 0;
 export const hash = new Uint8Array(4); // isBoundaryHash expects Uint8Array with length >= 4
 export const message = new Uint8Array(0);
+export const tuple = { timestamp, hash }
 export const node = new DefaultNode(timestamp, hash, message);
 
 export const average = 32;

@@ -20,9 +20,6 @@ importers:
       '@tabcat/ordered-sets':
         specifier: ^4.0.2
         version: 4.0.2
-      cborg:
-        specifier: ^4.1.0
-        version: 4.2.0
       interface-blockstore:
         specifier: ^5.2.10
         version: 5.2.10

@@ -8,13 +8,8 @@ import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
-export interface InitOptions {
-  averageBucketSize: number;
-}
-
-export function createEmptyTree(options?: InitOptions): ProllyTree;
-export function createEmptyTree(options?: InitOptions) {
-  const average = options?.averageBucketSize ?? 30;
+export function createEmptyTree(options?: { average: number }) {
+  const average = options?.average ?? 32;
 
   return new DefaultProllyTree(createBucket(average, 0, []));
 }

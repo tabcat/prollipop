@@ -76,19 +76,25 @@ const idsOfTrees = [
   randomTreeIds,
 ];
 
-const idsToNames: WeakMap<number[], string> = new WeakMap()
-idsToNames.set(emptyTreeIds, 'empty')
-idsToNames.set(superTreeIds, 'super')
-idsToNames.set(subTreeIds, 'sub')
-idsToNames.set(lowerTreeIds, 'lower')
-idsToNames.set(upperTreeIds, 'upper')
-idsToNames.set(randomTreeIds, 'random')
+const idsToNames: WeakMap<number[], string> = new WeakMap();
+idsToNames.set(emptyTreeIds, "empty");
+idsToNames.set(superTreeIds, "super");
+idsToNames.set(subTreeIds, "sub");
+idsToNames.set(lowerTreeIds, "lower");
+idsToNames.set(upperTreeIds, "upper");
+idsToNames.set(randomTreeIds, "random");
 
 export const trees: ProllyTree[] = [];
 
 export const treesToStates: WeakMap<
   ProllyTree,
-  { state: Bucket[][]; buckets: Bucket[]; nodes: Node[]; ids: number[], name: string }
+  {
+    state: Bucket[][];
+    buckets: Bucket[];
+    nodes: Node[];
+    ids: number[];
+    name: string;
+  }
 > = new WeakMap();
 
 for (const ids of idsOfTrees) {
@@ -98,5 +104,11 @@ for (const ids of idsOfTrees) {
   const buckets = state.flat().sort(compareBucketDigests);
 
   trees.push(tree);
-  treesToStates.set(tree, { state, buckets, nodes, ids, name: idsToNames.get(ids)! });
+  treesToStates.set(tree, {
+    state,
+    buckets,
+    nodes,
+    ids,
+    name: idsToNames.get(ids)!,
+  });
 }

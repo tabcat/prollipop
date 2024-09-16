@@ -174,11 +174,19 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     nextTuple(tuple: Tuple, level?: number) {
-      return pm(level ?? levelOf(state), state, nextTupleAtLevel.bind(null, tuple));
+      return pm(
+        level ?? levelOf(state),
+        state,
+        nextTupleAtLevel.bind(null, tuple),
+      );
     },
 
     jumpTo(tuple: Tuple, level?: number) {
-      return pw(level ?? levelOf(state), state, jumpToTupleAtLevel.bind(null, tuple));
+      return pw(
+        level ?? levelOf(state),
+        state,
+        jumpToTupleAtLevel.bind(null, tuple),
+      );
     },
 
     isAtTail: () => getIsAtTail(state),

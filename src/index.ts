@@ -75,24 +75,7 @@ export async function* mutate(
     }
   }
 
-  // should think about further checking user input for duplicate tuples
-
-  const mutation = builder(blockstore, tree, updates);
-
-  const promises: Promise<unknown>[] = [];
-  for await (const diff of mutation) {
+  for await (const diff of builder(blockstore, tree, updates)) {
     yield diff;
-
-    // save new buckets to blockstore
-    // helper code to make easier to use for now, probably will be removed or changed
-    for (const [_, bucket] of diff.buckets) {
-      if (bucket == null) continue;
-
-      promises.push(
-        Promise.resolve(blockstore.put(bucket.getCID(), bucket.getBytes())),
-      );
-    }
   }
-
-  await Promise.all(promises);
 }

@@ -60,7 +60,6 @@
     "@tabcat/ith-element": "^1.0.1",
     "@tabcat/ordered-sets": "^4.0.2",
     "cborg": "^4.1.0",
-    "code-err": "^3.1.0",
     "interface-blockstore": "^5.2.10",
     "multiformats": "^13.1.0",
     "uint8arrays": "^5.0.2"

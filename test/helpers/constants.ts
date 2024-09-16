@@ -23,7 +23,7 @@ export const nodes = [node];
 export const encodedBucket = encode({
   average,
   level,
-  nodes: [timestamp, hash, message],
+  nodes: [[timestamp, hash, message]],
 });
 export const bucketDigest = sha256(encodedBucket);
 export const bucket = new DefaultBucket(

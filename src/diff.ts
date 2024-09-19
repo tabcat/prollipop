@@ -15,7 +15,11 @@
  *   This feature required diverging from the article's implementation.
  */
 
-import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
+import {
+  Diff,
+  ExclusiveDiff,
+  diff as orderedDiff,
+} from "@tabcat/ordered-sets/difference";
 import { union } from "@tabcat/ordered-sets/union";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
@@ -30,17 +34,8 @@ import {
 import { createCursor, type Cursor } from "./cursor.js";
 import { Bucket, Node, ProllyTree } from "./interface.js";
 
-type LeftDiff<T> = [T, null];
-type RightDiff<T> = [null, T];
-type LeftAndRightDiff<T> = [T, T];
-
-const leftDiffer = <T>(value: T): LeftDiff<T> => [value, null];
-const rightDiffer = <T>(value: T): RightDiff<T> => [null, value];
-
-type Diff<T> = LeftDiff<T> | RightDiff<T> | LeftAndRightDiff<T>;
-
 export type NodeDiff = Diff<Node>;
-export type BucketDiff = Diff<Bucket>;
+export type BucketDiff = ExclusiveDiff<Bucket>;
 
 export interface ProllyTreeDiff {
   nodes: NodeDiff[];
@@ -78,10 +73,10 @@ async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
       const level = lc.level();
 
       // could be sped up by checking when the bucket will end
-      // skip the matchingBucketsLength for every .nextAtLevel call
+      // skip the matchingBucketsLength for every .next call
       await Promise.all([
-        lc.nextAtLevel(matchingBucketsLength + level),
-        rc.nextAtLevel(matchingBucketsLength + level),
+        lc.next(matchingBucketsLength + level),
+        rc.next(matchingBucketsLength + level),
       ]);
     } else {
       if (lc.level() === 0) {
@@ -89,7 +84,7 @@ async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
         return;
       } else {
         // unequal on level > zero, increment on level 0
-        await Promise.all([lc.nextAtLevel(0), rc.nextAtLevel(0)]);
+        await Promise.all([lc.next(0), rc.next(0)]);
       }
     }
   }
@@ -108,20 +103,22 @@ export async function* diff(
 
   // move higher cursor to level of lower cursor
   if (lc.level() > rc.level()) {
-    await lc.nextAtLevel(rc.level());
+    await lc.next(rc.level());
   }
   if (rc.level() > lc.level()) {
-    await rc.nextAtLevel(lc.level());
+    await rc.next(lc.level());
   }
 
   // moves cursors to level 0 or one or more cursors to done
   await ffwUnequalLevel0(lc, rc);
 
-  let bucketDiffs: BucketDiff[] = Array.from(
-    orderedDiff(lc.buckets(), rc.buckets(), compareBuckets),
-  );
+  let bucketDiffs: BucketDiff[] = []
 
   const updateBucketDiffs = (lbs: Bucket[], rbs: Bucket[]) => {
+    // sort by level
+    lbs.reverse()
+    rbs.reverse()
+
     bucketDiffs = Array.from(
       union(
         bucketDiffs,
@@ -154,23 +151,26 @@ export async function* diff(
     bucketDiffs.splice(0, i);
   };
 
+  updateBucketDiffs(lc.buckets(), rc.buckets())
+
   while (!lc.done() && !rc.done()) {
     const [lv, rv] = [lc.current(), rc.current()];
     const comparison = compareTuples(lv, rv);
 
     if (comparison < 0) {
-      d.nodes.push(leftDiffer(lv));
-      await lc.nextAtLevel(0);
+      d.nodes.push([lv, null]);
+      await lc.next(0);
     } else if (comparison > 0) {
-      d.nodes.push(rightDiffer(rv));
-      await rc.nextAtLevel(0);
+      d.nodes.push([null, rv]);
+      await rc.next(0);
     } else {
       if (compareBytes(lv.message, rv.message) !== 0) {
-        d.nodes.push([lv, rv])
+        d.nodes.push([lv, rv]);
+        await Promise.all([lc.next(0), rc.next(0)]);
+      } else {
+        // may cause both cursor buckets to change so bucket diffs must be done after ffw
+        await ffwUnequalLevel0(lc, rc);
       }
-
-      // may cause both cursor buckets to change so bucket diffs must be done after ffw
-      await ffwUnequalLevel0(lc, rc);
     }
 
     updateBucketDiffs(lc.buckets(), rc.buckets());
@@ -182,8 +182,8 @@ export async function* diff(
   }
 
   while (!lc.done()) {
-    d.nodes.push(leftDiffer(lc.current()));
-    await lc.nextAtLevel(0);
+    d.nodes.push([lc.current(), null]);
+    await lc.next(0);
 
     updateBucketDiffs(lc.buckets(), []);
 
@@ -194,8 +194,8 @@ export async function* diff(
   }
 
   while (!rc.done()) {
-    d.nodes.push(rightDiffer(rc.current()));
-    await rc.nextAtLevel(0);
+    d.nodes.push([null, rc.current()]);
+    await rc.next(0);
 
     updateBucketDiffs([], rc.buckets());
 

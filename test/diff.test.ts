@@ -1,52 +1,87 @@
+import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
+import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
-import { diff } from "../src/diff.js";
+import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
+import { BucketDiff, NodeDiff, diff } from "../src/diff.js";
+import { Node, ProllyTree } from "../src/interface.js";
 import {
-  checkDiffs,
-  emptyTree,
-  higherTree,
-  randomTree,
-  subTree,
-  superTree,
-} from "./helpers/check-diffs.js";
-import { blockstore } from "./helpers/constants.js";
+  blockstore,
+  emptyBucket,
+  trees,
+  treesToStates,
+} from "./helpers/constants.js";
+
+export async function checkDiffs(
+  tree1: ProllyTree,
+  tree2: ProllyTree,
+): Promise<void> {
+  const actualNodeDiffs: NodeDiff[] = [];
+  const actualBucketDiffs: BucketDiff[] = [];
+
+  for await (const { nodes, buckets } of diff(blockstore, tree1, tree2)) {
+    for (const diff of nodes) {
+      actualNodeDiffs.push(diff);
+    }
+
+    for (const diff of buckets) {
+      actualBucketDiffs.push(diff);
+    }
+  }
+
+  const expectedNodeDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree1)!.nodes,
+      treesToStates.get(tree2)!.nodes,
+      compareTuples,
+      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+    ),
+  );
+  const expectedBucketDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree1)!.buckets,
+      treesToStates.get(tree2)!.buckets,
+      compareBuckets,
+    ),
+  );
+
+  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualNodeDiffs,
+    expectedNodeDiffs,
+    () => 0,
+  )) {
+    expect(actualDiff).to.deep.equal(expectedDiff);
+  }
+
+  expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualBucketDiffs,
+    expectedBucketDiffs,
+    () => 0,
+  )) {
+    expect(actualDiff).to.deep.equal(expectedDiff);
+  }
+}
 
 describe("diff", () => {
-  describe("diff", () => {
-    it("yields the diff of two trees", async () => {
-      // both trees empty
-      for await (const _ of diff(blockstore, emptyTree, emptyTree)) {
-        // this line is never reached
-        expect.assertions(0);
-      }
-      await checkDiffs(emptyTree, emptyTree);
-
-      // first tree empty
-      await checkDiffs(emptyTree, superTree);
-
-      // second tree empty
-      await checkDiffs(superTree, emptyTree);
-
-      // same tree
-      await checkDiffs(superTree, superTree);
-
-      // first tree superset of second
-      await checkDiffs(subTree, superTree);
-
-      // first tree subset of second
-      await checkDiffs(superTree, subTree);
-
-      // no overlap
-      await checkDiffs(higherTree, subTree);
-      await checkDiffs(subTree, higherTree);
-
-      // randomTree
-      await checkDiffs(randomTree, randomTree);
-      await checkDiffs(randomTree, emptyTree);
-      await checkDiffs(emptyTree, randomTree);
-      await checkDiffs(randomTree, subTree);
-      await checkDiffs(subTree, randomTree);
-      await checkDiffs(randomTree, superTree);
-      await checkDiffs(superTree, randomTree);
-    });
+  it("yields nothing for two empty trees", async () => {
+    // both trees empty
+    for await (const _ of diff(
+      blockstore,
+      { root: emptyBucket },
+      { root: emptyBucket },
+    )) {
+      // this line is never reached
+      expect.assertions(0);
+    }
   });
+
+  for (const tree1 of trees) {
+    const tree1Name = treesToStates.get(tree1)!.name;
+    for (const tree2 of trees) {
+      const tree2Name = treesToStates.get(tree2)!.name;
+      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () =>
+        checkDiffs(tree1, tree2));
+    }
+  }
 });

@@ -2,7 +2,7 @@ import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { firstElement } from "@tabcat/ith-element";
 import { MemoryBlockstore } from "blockstore-core/memory";
-import { compareBucketDigests } from "../../src/compare.js";
+import { compareBuckets } from "../../src/compare.js";
 import {
   DefaultBucket,
   DefaultNode,
@@ -14,7 +14,7 @@ import { buildProllyTreeState, createProllyTreeNodes } from "./build-tree.js";
 export const timestamp = 0;
 export const hash = new Uint8Array(4); // isBoundaryHash expects Uint8Array with length >= 4
 export const message = new Uint8Array(0);
-export const tuple = { timestamp, hash }
+export const tuple = { timestamp, hash };
 export const node = new DefaultNode(timestamp, hash, message);
 
 export const average = 32;
@@ -43,7 +43,7 @@ export const emptyBucket = new DefaultBucket(
   sha256(encodedEmptyBucket),
 );
 
-export const tree = new DefaultProllyTree(bucket)
+export const tree = new DefaultProllyTree(bucket);
 
 export const blockstore = new MemoryBlockstore();
 
@@ -101,7 +101,7 @@ for (const ids of idsOfTrees) {
   const nodes = createProllyTreeNodes(ids);
   const state = buildProllyTreeState(blockstore, average, nodes);
   const tree = new DefaultProllyTree(firstElement(firstElement(state)));
-  const buckets = state.flat().sort(compareBucketDigests);
+  const buckets = state.flat().sort(compareBuckets);
 
   trees.push(tree);
   treesToStates.set(tree, {

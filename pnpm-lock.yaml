@@ -18,8 +18,8 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1
       '@tabcat/ordered-sets':
-        specifier: ^4.0.2
-        version: 4.0.2
+        specifier: ^4.1.2
+        version: 4.1.2
       interface-blockstore:
         specifier: ^5.2.10
         version: 5.2.10
@@ -308,8 +308,8 @@ packages:
   '@tabcat/ith-element@1.0.1':
     resolution: {integrity: sha512-nJnHRcU/k+hsl4AI4xGBsHqjrJTJaSUwN2qHV0r+68Vq7wbYOslfel8Vrl5suY3ui5YnHlXcVIoK+TriOBJM8g==}
 
-  '@tabcat/ordered-sets@4.0.2':
-    resolution: {integrity: sha512-O2ONI8+BFbRjZ+b+rK7y2HsVeXjXJDrjnHisKVkS3vnhm8tSgq1GvHN5E4vsI0nZPPo2a6T8aoHhq6nFLTyZ+Q==}
+  '@tabcat/ordered-sets@4.1.2':
+    resolution: {integrity: sha512-NyvkSMDjkEVbKJJT8csvSjE2XJAkSrcrUn4Q7lLZv6/mzlaHRrrEHw2CyQDJ+Y6pyBcQ89Z6YdiO53BKE85jJQ==}
     engines: {node: '>=20'}
 
   '@types/dns-packet@5.6.5':
@@ -922,7 +922,7 @@ snapshots:
     dependencies:
       code-err: 3.1.0
 
-  '@tabcat/ordered-sets@4.0.2': {}
+  '@tabcat/ordered-sets@4.1.2': {}
 
   '@types/dns-packet@5.6.5':
     dependencies:

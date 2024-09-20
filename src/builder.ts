@@ -161,7 +161,7 @@ export async function* builder(
     for (const bound of bounds) {
       buckets.push(createBucket(average, level, bound));
     }
-    bucketsOnLevel += bounds.length;
+    bucketsOnLevel += buckets.length;
     bounds = [];
 
     const newRootFound =

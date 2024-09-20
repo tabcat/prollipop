@@ -1,16 +1,12 @@
+import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
 import { Update, builder } from "../src/builder.js";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
-import { NodeDiff } from "../src/diff.js";
+import { BucketDiff, NodeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
-import { Bucket, ProllyTree } from "../src/interface.js";
-import {
-  blockstore,
-  randomTreeIds,
-  trees,
-  treesToStates,
-} from "./helpers/constants.js";
+import { Node, ProllyTree } from "../src/interface.js";
+import { blockstore, trees, treesToStates } from "./helpers/constants.js";
 
 const checkBuilder = async (
   tree1: ProllyTree,
@@ -35,71 +31,51 @@ const checkBuilder = async (
   const clone1 = cloneTree(tree1);
 
   let actualNodeDiffs: NodeDiff[] = [];
-  let actualRemovals: Bucket[] = [];
-  let actualAdditions: Bucket[] = [];
+  let actualBucketDiffs: BucketDiff[] = [];
   for await (const { nodes, buckets } of builder(blockstore, clone1, updates)) {
-    actualNodeDiffs.push(...nodes);
-    buckets.forEach(([a, b]) =>
-      a != null ? actualRemovals.push(a) : actualAdditions.push(b),
-    );
+    for (const diff of nodes) {
+      actualNodeDiffs.push(diff);
+    }
+
+    for (const diff of buckets) {
+      actualBucketDiffs.push(diff);
+    }
   }
 
-  const expectedNodeDiffs: NodeDiff[] = [];
-  for (const [node1, node2] of pairwiseTraversal(
-    nodes1,
-    nodes2,
-    compareTuples,
+  let expectedNodeDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree1)!.nodes,
+      treesToStates.get(tree2)!.nodes,
+      compareTuples,
+      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+    ),
+  );
+  let expectedBucketDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree1)!.buckets,
+      treesToStates.get(tree2)!.buckets,
+      compareBuckets,
+    ),
+  );
+
+  expect(clone1).to.deep.equal(tree2);
+
+  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualNodeDiffs,
+    expectedNodeDiffs,
+    () => 0,
   )) {
-    if (node1 == null) {
-      expectedNodeDiffs.push([null, node2]);
-    } else if (node2 == null) {
-      expectedNodeDiffs.push([node1, null]);
-    } else {
-      if (compareBytes(node1.message, node2.message) !== 0) {
-        expectedNodeDiffs.push([node1, node2]);
-      }
-    }
+    expect(actualDiff).to.deep.equal(expectedDiff);
   }
 
-  const buckets1 = tree1States.buckets;
-  const buckets2 = tree2States.buckets;
-
-  const expectedRemovals: Bucket[] = [];
-  const expectedAdditions: Bucket[] = [];
-  for (const [bucket1, bucket2] of pairwiseTraversal(
-    buckets1,
-    buckets2,
-    compareBuckets,
+  expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualBucketDiffs,
+    expectedBucketDiffs,
+    () => 0,
   )) {
-    if (bucket2 == null) {
-      expectedRemovals.push(bucket1);
-    }
-
-    if (bucket1 == null) {
-      expectedAdditions.push(bucket2);
-    }
-  }
-
-  actualRemovals.sort(compareBuckets);
-  actualAdditions.sort(compareBuckets);
-  expectedRemovals.sort(compareBuckets);
-  expectedAdditions.sort(compareBuckets);
-
-  try {
-    expect(clone1).to.deep.equal(tree2);
-    expect(actualNodeDiffs).to.deep.equal(expectedNodeDiffs);
-    expect(actualRemovals).to.deep.equal(expectedRemovals);
-    expect(actualAdditions).to.deep.equal(expectedAdditions);
-  } catch (e) {
-    if (
-      tree1States.ids === randomTreeIds ||
-      tree2States.ids === randomTreeIds
-    ) {
-      console.log(randomTreeIds.toString());
-      console.error("failed on randomTreeIds");
-    }
-
-    throw e;
+    expect(actualDiff).to.deep.equal(expectedDiff);
   }
 
   updates = [];
@@ -113,36 +89,55 @@ const checkBuilder = async (
   }
 
   actualNodeDiffs = [];
-  actualRemovals = [];
-  actualAdditions = [];
+  actualBucketDiffs = [];
   for await (const { nodes, buckets } of builder(blockstore, clone1, updates)) {
-    actualNodeDiffs.push(...nodes);
-    buckets.forEach(([a, b]) =>
-      a != null ? actualRemovals.push(a) : actualAdditions.push(b),
-    );
-  }
-
-  actualRemovals.sort(compareBuckets);
-  actualAdditions.sort(compareBuckets);
-
-  try {
-    // reversed all changes
-    expect(clone1).to.deep.equal(tree1);
-    expect(actualNodeDiffs).to.deep.equal(
-      expectedNodeDiffs.map((diff) => [diff[1], diff[0]]),
-    );
-    expect(actualRemovals).to.deep.equal(expectedAdditions);
-    expect(actualAdditions).to.deep.equal(expectedRemovals);
-  } catch (e) {
-    if (
-      tree1States.ids === randomTreeIds ||
-      tree2States.ids === randomTreeIds
-    ) {
-      console.log(randomTreeIds.toString());
-      console.error("failed on randomTreeIds (reversal)");
+    for (const diff of nodes) {
+      actualNodeDiffs.push(diff);
     }
 
-    throw e;
+    for (const diff of buckets) {
+      actualBucketDiffs.push(diff);
+    }
+  }
+
+  expectedNodeDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree2)!.nodes,
+      treesToStates.get(tree1)!.nodes,
+      compareTuples,
+      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+    ),
+  );
+  expectedBucketDiffs = Array.from(
+    orderedDiff(
+      treesToStates.get(tree2)!.buckets,
+      treesToStates.get(tree1)!.buckets,
+      compareBuckets,
+    ),
+  );
+
+  expect(clone1).to.deep.equal(tree1);
+
+  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualNodeDiffs,
+    expectedNodeDiffs,
+    () => 0,
+  )) {
+    expect(actualDiff).to.deep.equal(expectedDiff);
+  }
+
+  expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
+  for (const [actualDiff, expectedDiff] of pairwiseTraversal(
+    actualBucketDiffs,
+    expectedBucketDiffs,
+    () => 0,
+  )) {
+    try {
+      expect(actualDiff).to.deep.equal(expectedDiff);
+    } catch (e) {
+      throw e;
+    }
   }
 };
 

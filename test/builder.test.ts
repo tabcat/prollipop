@@ -20,7 +20,6 @@ const checkBuilder = async (
 
   let updates: Update[] = [];
   for (const [a, r] of pairwiseTraversal(nodes2, nodes1, compareTuples)) {
-    // prioritizes adds over removes
     if (a != null) {
       updates.push({ op: "add", value: a });
     } else {
@@ -79,12 +78,11 @@ const checkBuilder = async (
   }
 
   updates = [];
-  // reverse all changes by using diff
-  for (const [node1, node2] of actualNodeDiffs) {
-    if (node1 != null) {
-      updates.push({ op: "add", value: node1 });
+  for (const [a, r] of pairwiseTraversal(nodes1, nodes2, compareTuples)) {
+    if (a != null) {
+      updates.push({ op: "add", value: a });
     } else {
-      updates.push({ op: "rm", value: node2 });
+      updates.push({ op: "rm", value: r });
     }
   }
 
@@ -151,16 +149,16 @@ describe("builder", () => {
         try {
           await checkBuilder(tree1, tree2);
         } catch (e) {
-          if (tree1Name === 'random') {
-            console.log(treesToStates.get(tree1)!.ids.toString())
+          if (tree1Name === "random") {
+            console.log(treesToStates.get(tree1)!.ids.toString());
           }
-          if (tree2Name === 'random') {
-            console.log(treesToStates.get(tree2)!.ids.toString())
+          if (tree2Name === "random") {
+            console.log(treesToStates.get(tree2)!.ids.toString());
           }
 
-          throw e
+          throw e;
         }
-      })
+      });
     }
   }
 });

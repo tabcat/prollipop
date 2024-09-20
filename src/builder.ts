@@ -4,7 +4,12 @@ import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { createIsBoundary } from "./boundary.js";
-import { compareBoundaries, compareBuckets, compareTuples } from "./compare.js";
+import {
+  compareBoundaries,
+  compareBucketDiffs,
+  compareBuckets,
+  compareTuples,
+} from "./compare.js";
 import { createCursor } from "./cursor.js";
 import {
   BucketDiff,
@@ -183,7 +188,6 @@ export async function* builder(
       compareBoundaries,
     )) {
       let u: LeveledUpdate | null = null;
-      const bucketDiffs: BucketDiff[] = [];
 
       if (removed != null) {
         if (
@@ -193,7 +197,7 @@ export async function* builder(
           break;
         }
 
-        bucketDiffs.push([removed, null]);
+        diff.buckets.push([removed, null]);
 
         const parentNode = removed.getParentNode();
         if (parentNode != null && level < cursor.rootLevel()) {
@@ -204,7 +208,7 @@ export async function* builder(
       }
 
       if (bucket != null && updated) {
-        bucketDiffs.push([null, bucket]);
+        diff.buckets.push([null, bucket]);
 
         const parentNode = bucket.getParentNode();
         if (parentNode != null) {
@@ -213,13 +217,11 @@ export async function* builder(
       }
 
       u != null && updts.push(u);
-
-      bucketDiffs.sort((a, b) => compareBuckets(a[0] ?? a[1], b[0] ?? b[1]));
-      diff.buckets.push(...bucketDiffs);
     }
     removedBuckets.splice(0, removesProcessed);
 
-    if (diff.buckets.length > 0 && buckets.length > 0) {
+    if (diff.buckets.length > 0 && buckets.length > 0 && nodes.length === 0) {
+      diff.buckets.sort(compareBucketDiffs)
       diff.nodes.push(...nodeDiffs);
       nodeDiffs = [];
 

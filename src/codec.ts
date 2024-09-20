@@ -1,8 +1,8 @@
 import { decode, encode } from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
 import type { ByteView } from "multiformats";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix } from "./interface.js";
-import { sha256 } from "@noble/hashes/sha256";
 
 type EncodedNode = [Node["timestamp"], Node["hash"], Node["message"]];
 
@@ -17,7 +17,7 @@ const getValidatedNode = (encodedNode: unknown): EncodedNode => {
     throw new TypeError("Expected encoded node to be an array.");
   }
 
-  const [timestamp, hash, message]= encodedNode as Partial<EncodedNode>;
+  const [timestamp, hash, message] = encodedNode as Partial<EncodedNode>;
 
   if (typeof timestamp !== "number") {
     throw new TypeError("Expected node timestamp field to be a number.");
@@ -31,7 +31,7 @@ const getValidatedNode = (encodedNode: unknown): EncodedNode => {
     throw new TypeError("Expected node message field to be a byte array.");
   }
 
-  return [timestamp, hash, message]
+  return [timestamp, hash, message];
 };
 
 const getValidatedPrefix = (prefix: unknown): Prefix => {
@@ -65,7 +65,6 @@ const getValidatedBucket = (bucket: unknown): EncodedBucket => {
     throw new TypeError("Expected bucket nodes field to be a number.");
   }
 
-
   return { average, level, nodes };
 };
 
@@ -85,7 +84,10 @@ export function encodeBucket(
   });
 }
 
-export function decodeBucket(bytes: Uint8Array, expectedPrefix: Prefix): Bucket {
+export function decodeBucket(
+  bytes: Uint8Array,
+  expectedPrefix: Prefix,
+): Bucket {
   const decoded = decode(bytes);
 
   const { average, level, nodes: encodedNodes } = getValidatedBucket(decoded);

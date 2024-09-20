@@ -381,7 +381,7 @@ const nextTupleAtLevel = async (
   state: CursorState,
 ): Promise<void> => {
   if (compareTuples(tuple, nodeOf(state)) <= 0 && level >= levelOf(state)) {
-    tuple = nodeOf(state)
+    tuple = nodeOf(state);
   }
 
   while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0) {

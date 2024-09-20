@@ -112,12 +112,12 @@ export async function* diff(
   // moves cursors to level 0 or one or more cursors to done
   await ffwUnequalLevel0(lc, rc);
 
-  let bucketDiffs: BucketDiff[] = []
+  let bucketDiffs: BucketDiff[] = [];
 
   const updateBucketDiffs = (lbs: Bucket[], rbs: Bucket[]) => {
     // sort by level
-    lbs.reverse()
-    rbs.reverse()
+    lbs.reverse();
+    rbs.reverse();
 
     bucketDiffs = Array.from(
       union(
@@ -151,7 +151,7 @@ export async function* diff(
     bucketDiffs.splice(0, i);
   };
 
-  updateBucketDiffs(lc.buckets(), rc.buckets())
+  updateBucketDiffs(lc.buckets(), rc.buckets());
 
   while (!lc.done() && !rc.done()) {
     const [lv, rv] = [lc.current(), rc.current()];

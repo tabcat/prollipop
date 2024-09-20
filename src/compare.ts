@@ -3,7 +3,7 @@ import { Update } from "./builder.js";
 import { BucketDiff } from "./diff.js";
 import { Bucket, Node, Tuple } from "./interface.js";
 
-export { compareBytes }
+export { compareBytes };
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
 

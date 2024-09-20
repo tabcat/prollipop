@@ -1,6 +1,12 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
-import { bucketDigestToCid, bucketToPrefix, createBucket, loadBucket, nodeToTuple } from "../src/utils.js";
+import {
+  bucketDigestToCid,
+  bucketToPrefix,
+  createBucket,
+  loadBucket,
+  nodeToTuple,
+} from "../src/utils.js";
 import {
   average,
   bucket,
@@ -14,16 +20,18 @@ import {
 describe("utils", () => {
   describe("bucketDigestToCid", () => {
     it("returns the cid for a given bucket hash", () => {
-      expect(bucketDigestToCid(bucket.getDigest())).to.deep.equal(bucket.getCID());
+      expect(bucketDigestToCid(bucket.getDigest())).to.deep.equal(
+        bucket.getCID(),
+      );
     });
   });
 
   describe("nodeToTuple", () => {
-    expect(nodeToTuple(node)).to.deep.equal(tuple)
+    expect(nodeToTuple(node)).to.deep.equal(tuple);
   });
 
   describe("bucketToPrefix", () => {
-    expect(bucketToPrefix(bucket)).to.deep.equal(prefix)
+    expect(bucketToPrefix(bucket)).to.deep.equal(prefix);
   });
 
   describe("createBucket", () => {
@@ -37,9 +45,9 @@ describe("utils", () => {
     blockstore.put(bucket.getCID(), bucket.getBytes());
 
     it("returns a bucket from a blockstore for the given hash", async () => {
-      expect(await loadBucket(blockstore, bucket.getDigest(), prefix)).to.deep.equal(
-        bucket,
-      );
+      expect(
+        await loadBucket(blockstore, bucket.getDigest(), prefix),
+      ).to.deep.equal(bucket);
     });
 
     it("throws if bucket is not found in blockstore", () => {

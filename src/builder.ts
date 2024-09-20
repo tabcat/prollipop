@@ -221,7 +221,7 @@ export async function* builder(
     removedBuckets.splice(0, removesProcessed);
 
     if (diff.buckets.length > 0 && buckets.length > 0 && nodes.length === 0) {
-      diff.buckets.sort(compareBucketDiffs)
+      diff.buckets.sort(compareBucketDiffs);
       diff.nodes.push(...nodeDiffs);
       nodeDiffs = [];
 

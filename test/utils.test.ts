@@ -27,11 +27,15 @@ describe("utils", () => {
   });
 
   describe("nodeToTuple", () => {
-    expect(nodeToTuple(node)).to.deep.equal(tuple);
+    it("returns a new tuple from a node", () => {
+      expect(nodeToTuple(node)).to.deep.equal(tuple);
+    });
   });
 
   describe("bucketToPrefix", () => {
-    expect(bucketToPrefix(bucket)).to.deep.equal(prefix);
+    it("returns a new prefix from a bucket", () => {
+      expect(bucketToPrefix(bucket)).to.deep.equal(prefix);
+    });
   });
 
   describe("createBucket", () => {

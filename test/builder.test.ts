@@ -147,8 +147,20 @@ describe("builder", () => {
     for (const tree2 of trees) {
       const tree2Name = treesToStates.get(tree2)!.name;
 
-      it(`rebuilds a ${tree1Name} into a ${tree2Name} and back using output diff`, () =>
-        checkBuilder(tree1, tree2));
+      it(`rebuilds a ${tree1Name} into a ${tree2Name} and back using output diff`, async () => {
+        try {
+          await checkBuilder(tree1, tree2);
+        } catch (e) {
+          if (tree1Name === 'random') {
+            console.log(treesToStates.get(tree1)!.ids.toString())
+          }
+          if (tree2Name === 'random') {
+            console.log(treesToStates.get(tree2)!.ids.toString())
+          }
+
+          throw e
+        }
+      })
     }
   }
 });

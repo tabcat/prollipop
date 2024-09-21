@@ -17,18 +17,9 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
+import { Bucket, Node, ProllyTree, Update } from "./interface.js";
 import { createBucket } from "./utils.js";
 
-export interface AddUpdate {
-  op: "add";
-  value: Node;
-}
-export interface RmUpdate {
-  op: "rm";
-  value: Tuple;
-}
-export type Update = AddUpdate | RmUpdate;
 type LeveledUpdate = Update & { level: number };
 
 /**

@@ -1,7 +1,6 @@
 import { compare as compareBytes } from "uint8arrays";
 import { BucketDiff } from "./diff.js";
-import { Bucket, Node, Tuple } from "./interface.js";
-import { Update } from "./mutate.js";
+import { Bucket, Node, Tuple, Update } from "./interface.js";
 
 export { compareBytes };
 

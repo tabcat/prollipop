@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
 import { BucketDiff, NodeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
-import { Node, ProllyTree } from "../src/interface.js";
-import { Update, mutate } from "../src/mutate.js";
+import { Node, ProllyTree, Update } from "../src/interface.js";
+import { mutate } from "../src/mutate.js";
 import { blockstore, trees, treesToStates } from "./helpers/constants.js";
 
 const checkBuilder = async (

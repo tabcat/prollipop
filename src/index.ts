@@ -5,7 +5,7 @@ import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
-export { mutate, type Update } from "./mutate.js";
+export { mutate } from "./mutate.js";
 
 export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;

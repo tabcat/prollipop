@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "blockstore-core": "^4.4.1",
+    "husky": "^9.1.6",
     "prettier": "^3.3.1",
     "prettier-plugin-organize-imports": "^3.2.4",
     "typescript": "^5.4.5",

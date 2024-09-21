@@ -1,12 +1,11 @@
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
-import { builder, Update } from "./builder.js";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
-import { ProllyTreeDiff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
+
+export { mutate, type Update } from "./mutate.js";
 
 export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;
@@ -54,28 +53,5 @@ export async function* search(
     } else {
       yield tuple;
     }
-  }
-}
-
-export async function* mutate(
-  blockstore: Blockstore,
-  tree: ProllyTree,
-  add: Node[],
-  rm: Tuple[],
-): AsyncIterable<ProllyTreeDiff> {
-  const updates: Update[] = [];
-
-  // it is critical that add and rm are ordered and do not have duplicate tuples within themselves
-  for (const [a, r] of pairwiseTraversal(add, rm, compareTuples)) {
-    // prioritizes adds over removes
-    if (a != null) {
-      updates.push({ op: "add", value: a });
-    } else {
-      updates.push({ op: "rm", value: r });
-    }
-  }
-
-  for await (const diff of builder(blockstore, tree, updates)) {
-    yield diff;
   }
 }

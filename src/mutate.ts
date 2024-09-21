@@ -70,14 +70,14 @@ const handleUpdate = (
 };
 
 /**
- * Rebuilds the tree according to updates given and yields the different nodes and buckets.
+ * Mutates the tree according to updates given and yields the different nodes and buckets.
  *
  * @param blockstore
  * @param tree
  * @param updates
  * @returns
  */
-export async function* builder(
+export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
   updates: Update[],

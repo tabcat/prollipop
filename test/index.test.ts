@@ -1,10 +1,8 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
-import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";
-import { createProllyTreeDiff } from "../src/diff.js";
-import { DefaultNode, DefaultProllyTree } from "../src/impls.js";
-import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
+import { DefaultProllyTree } from "../src/impls.js";
+import { cloneTree, createEmptyTree, search } from "../src/index.js";
 import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
 import {
@@ -71,39 +69,6 @@ describe("index", () => {
           await checkSearch(tree1, tree2);
         }
       }
-    });
-  });
-
-  describe("mutate", () => {
-    it("allows nodes to be added and removed from the tree, yields a diff of the changes made", async () => {
-      const tree = createEmptyTree();
-      const blockstore = new MemoryBlockstore();
-      const node = new DefaultNode(0, new Uint8Array(), new Uint8Array());
-
-      const diff = createProllyTreeDiff();
-      for await (const { nodes, buckets } of mutate(
-        blockstore,
-        tree,
-        [node],
-        [],
-      )) {
-        diff.nodes.push(...nodes);
-        diff.buckets.push(...buckets);
-      }
-
-      const rm: Tuple[] = [];
-      for (const [_, added] of diff.nodes) {
-        rm.push(added!);
-      }
-
-      for (const [_, added] of diff.buckets) {
-        added != null && blockstore.put(added!.getCID(), added!.getBytes());
-      }
-
-      for await (const _ of mutate(blockstore, tree, [], rm)) {
-      }
-
-      expect(tree).to.deep.equal(createEmptyTree());
     });
   });
 });

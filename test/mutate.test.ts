@@ -1,11 +1,11 @@
 import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
-import { Update, builder } from "../src/builder.js";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
 import { BucketDiff, NodeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
 import { Node, ProllyTree } from "../src/interface.js";
+import { Update, mutate } from "../src/mutate.js";
 import { blockstore, trees, treesToStates } from "./helpers/constants.js";
 
 const checkBuilder = async (
@@ -31,7 +31,7 @@ const checkBuilder = async (
 
   let actualNodeDiffs: NodeDiff[] = [];
   let actualBucketDiffs: BucketDiff[] = [];
-  for await (const { nodes, buckets } of builder(blockstore, clone1, updates)) {
+  for await (const { nodes, buckets } of mutate(blockstore, clone1, updates)) {
     for (const diff of nodes) {
       actualNodeDiffs.push(diff);
     }
@@ -88,7 +88,7 @@ const checkBuilder = async (
 
   actualNodeDiffs = [];
   actualBucketDiffs = [];
-  for await (const { nodes, buckets } of builder(blockstore, clone1, updates)) {
+  for await (const { nodes, buckets } of mutate(blockstore, clone1, updates)) {
     for (const diff of nodes) {
       actualNodeDiffs.push(diff);
     }
@@ -139,7 +139,7 @@ const checkBuilder = async (
   }
 };
 
-describe("builder", () => {
+describe("mutate", () => {
   for (const tree1 of trees) {
     const tree1Name = treesToStates.get(tree1)!.name;
     for (const tree2 of trees) {

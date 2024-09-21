@@ -1,7 +1,7 @@
 import { compare as compareBytes } from "uint8arrays";
-import { Update } from "./builder.js";
 import { BucketDiff } from "./diff.js";
 import { Bucket, Node, Tuple } from "./interface.js";
+import { Update } from "./mutate.js";
 
 export { compareBytes };
 
@@ -36,7 +36,7 @@ export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
   compareBytes(a.getDigest(), b.getDigest());
 
 export const compareBoundaries = (a: Bucket, b: Bucket): number => {
-  // compare level before boundary tuple so builder diffs can be yielded without issues
+  // buckets are first ordered by level
   const levelComparison = a.level - b.level;
 
   if (levelComparison !== 0) return levelComparison;

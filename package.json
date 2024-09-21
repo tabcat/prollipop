@@ -11,10 +11,6 @@
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
     },
-    "./builder": {
-      "types": "./dist/src/builder.d.ts",
-      "import": "./dist/src/builder.js"
-    },
     "./compare": {
       "types": "./dist/src/compare.d.ts",
       "import": "./dist/src/compare.js"

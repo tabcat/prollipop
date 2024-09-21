@@ -2,6 +2,11 @@
 
 A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) implementation in Typescript.
 
+## Features
+
+- **Efficient diff** - yields node and bucket diffs!
+- **Powerful cursor api** - climb 🌳s like a pro
+
 ## Project Status
 
 It's working! Now I'm working on adding docs/usage, async-iterator parameters, and repo dev tools.

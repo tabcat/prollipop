@@ -13,7 +13,7 @@ It's working! Now I'm working on adding docs/usage, async-iterator parameters, a
 
 ## Data-structure
 
-This package implements a modded prolly-tree in Typescript.
+This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/builder.ts`](./src/builder.ts) and [`src/diff.ts`](./src/diff.ts).
 
 mods:
 

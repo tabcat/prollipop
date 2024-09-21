@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Allows git commit --amend to be used to edit commit message.
+# Does not allow empty commits that are empty as a result of prettier --write.
+
 # 1. Record exit code of git diff --cached --quiet to variable
 if git diff --cached --quiet; then
     exit_code_before=0

@@ -32,10 +32,9 @@ export const bucketToPrefix = ({ average, level }: Bucket): Prefix => ({
  * Creates a new bucket from the provided nodes. Does not handle boundary creation.
  * This is a low level function and is easy to use incorrectly.
  *
- * @param prefix
+ * @param average
+ * @param level
  * @param nodes
- * @param codec
- * @param hasher
  * @returns
  */
 export const createBucket = (
@@ -53,8 +52,6 @@ export const createBucket = (
  * @param blockstore
  * @param hash
  * @param expectedPrefix
- * @param codec
- * @param hasher
  * @returns
  */
 export async function loadBucket(

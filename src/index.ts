@@ -8,7 +8,7 @@ import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { createBucket, nodeToTuple } from "./utils.js";
 
-export function createEmptyTree(options?: { average: number }) {
+export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;
 
   return new DefaultProllyTree(createBucket(average, 0, []));
@@ -23,7 +23,7 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
  *
  * @param blockstore - blockstore to use to fetch buckets
  * @param tree - ProllyTree to search
- * @param tuple - Tuple used to search for associated value
+ * @param tuples - Tuple used to search for associated value
  *
  * @returns Associated Node if found, otherwise returns Tuple
  */

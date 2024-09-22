@@ -9,6 +9,8 @@ import { decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 
+export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
+
 export const bucketDigestToCid = (digest: Uint8Array): CID =>
   CID.createV1(cborCode, createMultihashDigest(sha2.sha256.code, digest));
 

@@ -3,7 +3,7 @@ import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
-import { createBucket, nodeToTuple } from "./utils.js";
+import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
 export { mutate } from "./mutate.js";
 
@@ -29,29 +29,28 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
 export async function* search(
   blockstore: Blockstore,
   tree: ProllyTree,
-  tuples: Tuple[],
+  tuples: AwaitIterable<Tuple>,
 ): AsyncIterable<Node | Tuple> {
-  tuples = tuples.slice().sort(compareTuples).map(nodeToTuple);
-
   const cursor = createCursor(blockstore, tree);
 
-  while (tuples.length > 0) {
-    // remove first tuple from tuples
-    const [tuple] = tuples.splice(0, 1) as [Tuple];
+  let lastTuple: Tuple | null = null;
+  for await (const tuple of tuples) {
+    if (lastTuple != null && compareTuples(tuple, lastTuple) <= 0) {
+      throw new Error("Tuples must be ordered and non-repeating");
+    }
+    lastTuple = tuple;
 
     if (cursor.done()) {
-      yield tuple;
+      yield nodeToTuple(tuple);
       continue;
     }
 
     await cursor.nextTuple(tuple, 0);
 
-    const node: Node = cursor.current();
-
-    if (compareTuples(tuple, node) === 0) {
-      yield node;
+    if (compareTuples(tuple, cursor.current()) === 0) {
+      yield cursor.current();
     } else {
-      yield tuple;
+      yield nodeToTuple(tuple);
     }
   }
 }

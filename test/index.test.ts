@@ -5,6 +5,7 @@ import { DefaultProllyTree } from "../src/impls.js";
 import { cloneTree, createEmptyTree, search } from "../src/index.js";
 import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
+import { createProllyTreeNodes } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
@@ -69,6 +70,32 @@ describe("index", () => {
           await checkSearch(tree1, tree2);
         }
       }
+    });
+
+    it("rejects if tuples is unordered or contains duplicates", async () => {
+      const unorderedTuples = createProllyTreeNodes([1, 0]);
+      const unorderedSearch = search(
+        blockstore,
+        tree,
+        unorderedTuples,
+      ) as AsyncGenerator;
+
+      await unorderedSearch.next();
+      expect(unorderedSearch.next()).rejects.toThrow(
+        "Tuples must be ordered and non-repeating",
+      );
+
+      const repeatingTuples = createProllyTreeNodes([1, 1]);
+      const repeatingSearch = search(
+        blockstore,
+        tree,
+        repeatingTuples,
+      ) as AsyncGenerator;
+
+      await repeatingSearch.next();
+      expect(repeatingSearch.next()).rejects.toThrow(
+        "Tuples must be ordered and non-repeating",
+      );
     });
   });
 });

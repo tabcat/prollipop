@@ -43,6 +43,9 @@
       "prettier-plugin-organize-imports"
     ]
   },
+  "lint-staged": {
+    "*.ts": "prettier --ignore-unknown --write"
+  },
   "keywords": [
     "distributed",
     "deterministic",

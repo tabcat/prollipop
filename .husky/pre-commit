@@ -1,1 +1,3 @@
-prettier $(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g') --check --ignore-unknown
+# .husky/pre-commit
+
+npx lint-staged

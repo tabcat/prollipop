@@ -14,7 +14,7 @@ It's in a decent state but have not done performance analysis. API breaks will r
 
 ## Data-structure
 
-This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/builder.ts`](./src/builder.ts) and [`src/diff.ts`](./src/diff.ts).
+This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/builder.ts`](https://github.com/tabcat/prollipop/src/builder.ts) and [`src/diff.ts`](https://github.com/tabcat/prollipop/src/diff.ts).
 
 mods:
 
@@ -24,7 +24,7 @@ mods:
 
 ## Usage
 
-**See [usage.test.ts](test/usage.test.ts)!!!**
+**See [usage.test.ts](https://github.com/tabcat/prollipop/test/usage.test.ts)!!!**
 
 **[API](https://tabcat.github.io/prollipop/)**
 

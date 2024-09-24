@@ -12,6 +12,8 @@ A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) im
 
 It's in a decent state but have not done performance analysis. API breaks will result in major version change.
 
+I haven't tested with non-local blockstores. Need to add abort signals and timeouts.
+
 ## Data-structure
 
 This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/mutator.ts`](https://github.com/tabcat/prollipop/blob/master/src/mutator.ts) and [`src/diff.ts`](https://github.com/tabcat/prollipop/blob/master/src/diff.ts).

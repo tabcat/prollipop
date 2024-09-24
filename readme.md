@@ -24,7 +24,9 @@ mods:
 
 ## Usage
 
-**See [usage.test.ts](test/usage.test.ts)!**
+**See [usage.test.ts](test/usage.test.ts)!!!**
+
+**[API](https://tabcat.github.io/prollipop/)**
 
 ## Learning Resources:
 

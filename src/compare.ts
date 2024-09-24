@@ -1,6 +1,6 @@
 import { compare as compareBytes } from "uint8arrays";
 import { BucketDiff } from "./diff.js";
-import { Bucket, Node, Tuple, Update } from "./interface.js";
+import { Bucket, Node, Tuple } from "./interface.js";
 
 export { compareBytes };
 
@@ -25,11 +25,6 @@ export const compareNodes = (a: Node, b: Node): number => {
 
   return compareBytes(a.message, b.message);
 };
-
-export const compareUpdates = (a: Update, b: Update): number =>
-  a.op === "add" && b.op === "add"
-    ? compareNodes(a.value, b.value)
-    : compareTuples(a.value, b.value);
 
 export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
   compareBytes(a.getDigest(), b.getDigest());

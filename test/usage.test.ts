@@ -12,6 +12,11 @@ import { nodeToTuple } from "../src/utils.js";
  * !!!
  */
 
+/**
+ * This test can be run from the cli with `pnpm usage` after installing the package with `pnpm install`.
+ * It can also be run with the Vitest extension for Vscode.
+ */
+
 describe("usage", () => {
   it("explains usage", async () => {
     /**

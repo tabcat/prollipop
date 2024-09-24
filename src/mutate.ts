@@ -96,10 +96,11 @@ async function populateUpdts(
 
 /**
  * Mutates the tree according to updates given and yields the different nodes and buckets.
+ * The updates parameter MUST yield non-repeating (per tuple), ordered nodes (to add) or tuples (to remove).
  *
  * @param blockstore
  * @param tree
- * @param updts
+ * @param updates
  * @returns
  */
 export async function* mutate(

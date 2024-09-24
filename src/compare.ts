@@ -41,7 +41,7 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   // empty buckets first
   // wondering if empty bucket should be last
   if (aBoundary == null && bBoundary == null) {
-    return compareBytes(a.getDigest(), b.getDigest());
+    return 0;
   } else if (aBoundary == null) {
     return -1;
   } else if (bBoundary == null) {

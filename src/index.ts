@@ -7,18 +7,33 @@ import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
 export { mutate } from "./mutate.js";
 
+/**
+ * Creates an empty prolly-tree.
+ *
+ * @param options
+ * @returns
+ */
 export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;
 
   return new DefaultProllyTree(createBucket(average, 0, []));
 }
 
+/**
+ * Clones a prolly-tree.
+ * The `mutate` function will mutate the given prolly-tree, assuming no errors are thrown.
+ * This function can be used to keep old versions of a tree after it has been mutated.
+ *
+ * @param tree
+ * @returns
+ */
 export function cloneTree(tree: ProllyTree): ProllyTree {
   // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
   return new DefaultProllyTree(tree.root);
 }
 
 /**
+ * Search the tree for nodes.
  *
  * @param blockstore - blockstore to use to fetch buckets
  * @param tree - ProllyTree to search

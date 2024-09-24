@@ -6,6 +6,13 @@ export { compareBytes };
 
 export const compareTimestamp = (a: number, b: number): number => a - b;
 
+/**
+ * Compare two tuples.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareTuples = (a: Tuple, b: Tuple): number => {
   const difference = compareTimestamp(a.timestamp, b.timestamp);
 
@@ -16,6 +23,13 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
   return comparison;
 };
 
+/**
+ * Compare two nodes.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareNodes = (a: Node, b: Node): number => {
   const tuples = compareTuples(a, b);
 
@@ -26,9 +40,25 @@ export const compareNodes = (a: Node, b: Node): number => {
   return compareBytes(a.message, b.message);
 };
 
+/**
+ * Compare two buckets by their digests.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
   compareBytes(a.getDigest(), b.getDigest());
 
+/**
+ * Compare two buckets by their boundaries.
+ * If a bucket does not have a boundary because it is empty, that bucket is first.
+ * If both buckets are empty the 0 is returned.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   // buckets are first ordered by level
   const levelComparison = a.level - b.level;
@@ -51,6 +81,13 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   return compareTuples(aBoundary, bBoundary);
 };
 
+/**
+ * Compare two buckets.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareBuckets = (a: Bucket, b: Bucket): number => {
   const boundaryComparison = compareBoundaries(a, b);
 
@@ -61,5 +98,12 @@ export const compareBuckets = (a: Bucket, b: Bucket): number => {
   return compareBucketDigests(a, b);
 };
 
+/**
+ * Compare two bucket diffs.
+ *
+ * @param a
+ * @param b
+ * @returns
+ */
 export const compareBucketDiffs = (a: BucketDiff, b: BucketDiff): number =>
   compareBuckets(a[0] ?? a[1], b[0] ?? b[1]);

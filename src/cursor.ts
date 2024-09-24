@@ -199,6 +199,15 @@ function createCursorFromState(state: CursorState): Cursor {
   };
 }
 
+/**
+ * Create a cursor for the given tree.
+ * If the tree is not empty, the cursor is initialized at the 0th index of the root node.
+ * Otherwise, the index is -1 and the cursor is set to done.
+ *
+ * @param blockstore
+ * @param tree
+ * @returns
+ */
 export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
   const state = createCursorState(blockstore, tree);
   return createCursorFromState(state);
@@ -250,7 +259,7 @@ const getIsAtTail = (state: CursorState): boolean =>
 const getIsAtHead = (state: CursorState): boolean =>
   getIsExtremity(state, lastElement);
 
-export const guideByTuple =
+const guideByTuple =
   (target: Tuple) =>
   (nodes: Node[]): number => {
     const index = nodes.findIndex((n) => compareTuples(target, n) <= 0);
@@ -258,12 +267,9 @@ export const guideByTuple =
     return index === -1 ? nodes.length - 1 : index;
   };
 
-// when descending it is important to keep to the left side
-// otherwise nodes are skipped
-export const guideByLowestIndex = () => 0;
-
 /**
- * Moves the cursor vertically. Never causes the cursor to increment without a provided _guide parameter.
+ * Moves the cursor vertically.
+ * Never causes the cursor to increment without a provided _guide parameter.
  *
  * @param state
  * @param level
@@ -290,7 +296,7 @@ const moveToLevel = async (
   const guide: (nodes: Node[]) => number =
     _guide ??
     // 0 index when descending, current tuple when ascending
-    (level < levelOf(state) ? guideByLowestIndex : guideByTuple(nodeOf(state)));
+    (level < levelOf(state) ? () => 0 : guideByTuple(nodeOf(state)));
 
   while (level !== levelOf(state)) {
     if (level > levelOf(state)) {

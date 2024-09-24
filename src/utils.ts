@@ -11,6 +11,12 @@ import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
+/**
+ * Returns the CID for a given bucket digest.
+ *
+ * @param digest
+ * @returns
+ */
 export const bucketDigestToCid = (digest: Uint8Array): CID =>
   CID.createV1(cborCode, createMultihashDigest(sha2.sha256.code, digest));
 
@@ -25,7 +31,13 @@ export const nodeToTuple = ({ timestamp, hash }: Tuple): Tuple => ({
   hash,
 });
 
-export const bucketToPrefix = ({ average, level }: Bucket): Prefix => ({
+/**
+ * Returns a new prefix for the provided bucket or prefix.
+ *
+ * @param prefix
+ * @returns
+ */
+export const bucketToPrefix = ({ average, level }: Prefix): Prefix => ({
   average,
   level,
 });

@@ -20,6 +20,12 @@ import {
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
+/**
+ * An update is made of a Tuple, a Node, or a Node with a `strict: true` property.
+ * Tuples will result in a remove.
+ * Nodes will result in an add.
+ * Nodes with a `strict: true` property will result in a remove only if the given node and the node found in the tree match.
+ */
 export type Update = Tuple | Node | (Node & { strict: true });
 
 /**

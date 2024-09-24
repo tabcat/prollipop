@@ -1,13 +1,16 @@
+/**
+ * implements similar boundary resolution as okra-js but only considering keys
+ * https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114
+ *
+ */
+
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import type { Node, Tuple } from "./interface.js";
 
 /**
- * Returns true if digest falls below limit, false otherwise
+ * Returns true if digest falls below limit, false otherwise.
  * Checks first 2 bytes of digest
- *
- * implements similar boundary resolution as okra-js but only considering keys
- * https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114
  *
  * @param digest
  * @param limit

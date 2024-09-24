@@ -42,6 +42,11 @@ export interface ProllyTreeDiff {
   buckets: BucketDiff[];
 }
 
+/**
+ * Create an empty prolly-tree diff
+ *
+ * @returns
+ */
 export const createProllyTreeDiff = (): ProllyTreeDiff => ({
   nodes: [],
   buckets: [],
@@ -90,6 +95,16 @@ async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
   }
 }
 
+/**
+ * Yields the diff of two trees.
+ * A separate blockstore can be provided for fetching the blocks of each tree.
+ * Diffs of nodes and buckets will be yielded in a deterministic order.
+ *
+ * @param blockstore
+ * @param left
+ * @param right
+ * @param rightBlockstore
+ */
 export async function* diff(
   blockstore: Blockstore,
   left: ProllyTree,

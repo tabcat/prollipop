@@ -24,15 +24,19 @@ mods:
 - right-side backbone
 - key-defined, normalized boundaries instead of rolling-hash
 
+## Install
+
+`npm install prollipop`
+
+## Build
+
+`pnpm install && pnpm build`
+
 ## Usage
 
 **See [usage.test.ts](https://github.com/tabcat/prollipop/blob/master/test/usage.test.ts)!!!**
 
 **API [docs](https://tabcat.github.io/prollipop/)**
-
-## Install
-
-`npm install prollipop`
 
 ## Learning Resources:
 

@@ -1,4 +1,4 @@
-import { firstElement, ithElement } from "@tabcat/ith-element";
+import { firstElement } from "@tabcat/ith-element";
 import { union } from "@tabcat/ordered-sets/union";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
@@ -18,7 +18,7 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { createBucket, nodeToTuple } from "./utils.js";
+import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
 export type Update = Tuple | Node | (Node & { strict: true });
 
@@ -61,21 +61,48 @@ const handleUpdate = (
     }
   }
 };
+
+async function takeOne<T>(it: AwaitIterable<T>): Promise<T | void> {
+  for await (const v of it) return v;
+}
+
+async function populateUpdts(
+  updates: AwaitIterable<Update>,
+  updts: Update[],
+  updatee: Bucket,
+  isHead: boolean,
+): Promise<void> {
+  for await (const update of updates) {
+    updts.push(update);
+    const boundary = updatee.getBoundary();
+
+    if (boundary != null && !isHead && compareTuples(update, boundary) >= 0) {
+      break;
+    }
+  }
+}
+
 /**
  * Mutates the tree according to updates given and yields the different nodes and buckets.
  *
  * @param blockstore
  * @param tree
- * @param updates
+ * @param updts
  * @returns
  */
 export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
-  updates: Update[],
+  updates: AwaitIterable<Update>,
 ): AsyncGenerator<ProllyTreeDiff> {
-  if (updates.length === 0) {
-    return;
+  // whole function should be rewritten around updates async iterator, too complicated right now
+  if (Array.isArray(updates)) {
+    updates = updates[Symbol.iterator]();
+  }
+  const firstUpdate = await takeOne(updates);
+
+  if (firstUpdate == null) {
+    return tree;
   }
 
   let diff: ProllyTreeDiff = createProllyTreeDiff();
@@ -84,7 +111,7 @@ export async function* mutate(
   let newRoot: Bucket | null = null;
 
   const cursor = createCursor(blockstore, tree);
-  await cursor.jumpTo(ithElement(updates, 0), 0);
+  await cursor.jumpTo(firstUpdate, 0);
 
   let updatee: Bucket = cursor.currentBucket();
 
@@ -93,7 +120,8 @@ export async function* mutate(
   let nodeDiffs: NodeDiff[] = [];
   let removedBuckets: Bucket[] = [];
 
-  let updatesNextLevel: Update[] = [];
+  let updts: Update[] = [firstUpdate];
+  let updtsNextLevel: Update[] = [];
 
   let firstBucketOfLevel: boolean = true;
   let bucketsOnLevel: number = 0;
@@ -102,16 +130,20 @@ export async function* mutate(
   let pastRootLevel: boolean = false;
 
   let i: number = 0;
-  while (updates.length > 0 && i < 10000) {
+  while (updts.length > 0 && i < 10000) {
     i++;
     const { average, level } = updatee;
     const buckets: Bucket[] = [];
     const isBoundary = createIsBoundary(average, level);
 
+    if (level === 0) {
+      await populateUpdts(updates, updts, updatee, visitedLevelHead);
+    }
+
     let updatesProcessed = 0;
     for (const [node, updt, nodesDone] of pairwiseTraversal(
       updatee.nodes,
-      updates,
+      updts,
       compareTuples,
     )) {
       let n: Node | null = null;
@@ -141,7 +173,7 @@ export async function* mutate(
         nodeDiffs.push(d);
       }
     }
-    updates.splice(0, updatesProcessed);
+    updts.splice(0, updatesProcessed);
 
     if (visitedLevelHead && (bounds.length === 0 || nodes.length > 0)) {
       bounds.push(nodes);
@@ -206,7 +238,7 @@ export async function* mutate(
         }
       }
 
-      u != null && updatesNextLevel.push(u);
+      u != null && updtsNextLevel.push(u);
     }
     removedBuckets.splice(0, removesProcessed);
 
@@ -221,18 +253,18 @@ export async function* mutate(
 
     if (newRootFound) {
       newRoot = firstElement(buckets);
-      updates.length = 0;
+      updts.length = 0;
       break;
     }
 
-    let nextUpdt = updates[0];
+    let nextUpdt = updts[0] ?? (await takeOne(updates));
     let nextLevel = level;
 
     if (nextUpdt == null) {
-      if (updatesNextLevel.length > 0) {
-        updates = updatesNextLevel;
-        updatesNextLevel = [];
-        nextUpdt = firstElement(updates);
+      if (updtsNextLevel.length > 0) {
+        updts = updtsNextLevel;
+        updtsNextLevel = [];
+        nextUpdt = firstElement(updts);
         nextLevel += 1;
       } else {
         if (mutated) {
@@ -241,6 +273,8 @@ export async function* mutate(
 
         return tree;
       }
+    } else {
+      updts[0] = nextUpdt;
     }
 
     pastRootLevel = nextLevel > cursor.rootLevel();

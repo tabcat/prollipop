@@ -4,8 +4,9 @@ import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
 import { BucketDiff, NodeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
-import { Node, ProllyTree, Update } from "../src/interface.js";
-import { mutate } from "../src/mutate.js";
+import { Node, ProllyTree } from "../src/interface.js";
+import { Update, mutate } from "../src/mutate.js";
+import { nodeToTuple } from "../src/utils.js";
 import { blockstore, trees, treesToStates } from "./helpers/constants.js";
 
 const checkBuilder = async (
@@ -21,9 +22,9 @@ const checkBuilder = async (
   let updates: Update[] = [];
   for (const [a, r] of pairwiseTraversal(nodes2, nodes1, compareTuples)) {
     if (a != null) {
-      updates.push({ op: "add", value: a });
+      updates.push(a);
     } else {
-      updates.push({ op: "rm", value: r });
+      updates.push(nodeToTuple(r));
     }
   }
 
@@ -80,9 +81,9 @@ const checkBuilder = async (
   updates = [];
   for (const [a, r] of pairwiseTraversal(nodes1, nodes2, compareTuples)) {
     if (a != null) {
-      updates.push({ op: "add", value: a });
+      updates.push(a);
     } else {
-      updates.push({ op: "rm", value: r });
+      updates.push(nodeToTuple(r));
     }
   }
 

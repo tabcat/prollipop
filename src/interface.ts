@@ -26,14 +26,3 @@ export interface Bucket extends Prefix {
 export interface ProllyTree {
   root: Bucket;
 }
-
-interface AddUpdate {
-  op: "add";
-  value: Node;
-}
-interface RmUpdate {
-  op: "rm";
-  value: Tuple;
-}
-
-export type Update = AddUpdate | RmUpdate;

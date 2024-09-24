@@ -17,10 +17,10 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { Bucket, Node, ProllyTree, Update } from "./interface.js";
-import { createBucket } from "./utils.js";
+import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
+import { createBucket, nodeToTuple } from "./utils.js";
 
-type LeveledUpdate = Update & { level: number };
+export type Update = Tuple | Node | (Node & { strict: true });
 
 /**
  * Takes a node and update of equal tuples and returns whether a change must be made.
@@ -32,34 +32,35 @@ type LeveledUpdate = Update & { level: number };
  */
 const handleUpdate = (
   node: Node | null,
-  update: LeveledUpdate,
+  update: Update,
 ): [Node | null, NodeDiff | null] => {
-  if (update.op === "add") {
-    const addedNode = update.value;
+  if ("message" in update) {
+    const updateNode = update as Node;
     if (node != null) {
-      if (compareBytes(node.message, addedNode.message) !== 0) {
-        return [addedNode, [node, addedNode]];
+      if (compareBytes(node.message, update.message) === 0) {
+        if ("strict" in update) {
+          return [null, [node, null]];
+        } else {
+          return [node, null];
+        }
       } else {
-        return [node, null];
+        if ("strict" in update) {
+          return [node, null];
+        } else {
+          return [updateNode, [node, updateNode]];
+        }
       }
     } else {
-      return [addedNode, [null, addedNode]];
+      return [updateNode, [null, updateNode]];
     }
-  }
-
-  if (update.op === "rm") {
+  } else {
     if (node != null) {
       return [null, [node, null]];
     } else {
       return [null, null];
     }
   }
-
-  throw new TypeError(
-    `Unrecognized Prollipop update operation: ${update["op"]}`,
-  );
 };
-
 /**
  * Mutates the tree according to updates given and yields the different nodes and buckets.
  *
@@ -73,11 +74,7 @@ export async function* mutate(
   tree: ProllyTree,
   updates: Update[],
 ): AsyncGenerator<ProllyTreeDiff> {
-  const updts: LeveledUpdate[] = updates.map((u) =>
-    Object.assign(u, { level: 0 }),
-  );
-
-  if (updts.length === 0) {
+  if (updates.length === 0) {
     return;
   }
 
@@ -87,7 +84,7 @@ export async function* mutate(
   let newRoot: Bucket | null = null;
 
   const cursor = createCursor(blockstore, tree);
-  await cursor.jumpTo(ithElement(updts, 0).value, 0);
+  await cursor.jumpTo(ithElement(updates, 0), 0);
 
   let updatee: Bucket = cursor.currentBucket();
 
@@ -96,6 +93,8 @@ export async function* mutate(
   let nodeDiffs: NodeDiff[] = [];
   let removedBuckets: Bucket[] = [];
 
+  let updatesNextLevel: Update[] = [];
+
   let firstBucketOfLevel: boolean = true;
   let bucketsOnLevel: number = 0;
   let visitedLevelTail: boolean = cursor.isAtTail();
@@ -103,7 +102,7 @@ export async function* mutate(
   let pastRootLevel: boolean = false;
 
   let i: number = 0;
-  while (updts.length > 0 && i < 10000) {
+  while (updates.length > 0 && i < 10000) {
     i++;
     const { average, level } = updatee;
     const buckets: Bucket[] = [];
@@ -112,8 +111,8 @@ export async function* mutate(
     let updatesProcessed = 0;
     for (const [node, updt, nodesDone] of pairwiseTraversal(
       updatee.nodes,
-      updts,
-      (a, b) => compareTuples(a, b.value),
+      updates,
+      compareTuples,
     )) {
       let n: Node | null = null;
       let d: NodeDiff | null = null;
@@ -121,7 +120,7 @@ export async function* mutate(
       if (updt == null) {
         n = node;
       } else {
-        if (updt.level !== level || (nodesDone && !visitedLevelHead)) {
+        if (nodesDone && !visitedLevelHead) {
           break;
         }
 
@@ -142,7 +141,7 @@ export async function* mutate(
         nodeDiffs.push(d);
       }
     }
-    updts.splice(0, updatesProcessed);
+    updates.splice(0, updatesProcessed);
 
     if (visitedLevelHead && (bounds.length === 0 || nodes.length > 0)) {
       bounds.push(nodes);
@@ -178,7 +177,7 @@ export async function* mutate(
       removedBuckets,
       compareBoundaries,
     )) {
-      let u: LeveledUpdate | null = null;
+      let u: Update | null = null;
 
       if (removed != null) {
         if (
@@ -192,7 +191,7 @@ export async function* mutate(
 
         const parentNode = removed.getParentNode();
         if (parentNode != null && level < cursor.rootLevel()) {
-          u = { op: "rm", level: level + 1, value: parentNode };
+          u = nodeToTuple(parentNode);
         }
 
         removesProcessed++;
@@ -203,11 +202,11 @@ export async function* mutate(
 
         const parentNode = bucket.getParentNode();
         if (parentNode != null) {
-          u = { op: "add", level: level + 1, value: parentNode };
+          u = parentNode;
         }
       }
 
-      u != null && updts.push(u);
+      u != null && updatesNextLevel.push(u);
     }
     removedBuckets.splice(0, removesProcessed);
 
@@ -222,22 +221,30 @@ export async function* mutate(
 
     if (newRootFound) {
       newRoot = firstElement(buckets);
-      updts.length = 0;
+      updates.length = 0;
       break;
     }
 
-    const nextUpdt = updts[0];
+    let nextUpdt = updates[0];
+    let nextLevel = level;
 
     if (nextUpdt == null) {
-      if (mutated) {
-        break;
-      }
+      if (updatesNextLevel.length > 0) {
+        updates = updatesNextLevel;
+        updatesNextLevel = [];
+        nextUpdt = firstElement(updates);
+        nextLevel += 1;
+      } else {
+        if (mutated) {
+          break;
+        }
 
-      return tree;
+        return tree;
+      }
     }
 
-    pastRootLevel = nextUpdt.level > cursor.rootLevel();
-    firstBucketOfLevel = nextUpdt.level > level;
+    pastRootLevel = nextLevel > cursor.rootLevel();
+    firstBucketOfLevel = nextLevel > level;
     if (firstBucketOfLevel) {
       bucketsOnLevel = 0;
       visitedLevelHead = false;
@@ -247,7 +254,7 @@ export async function* mutate(
     // reassign updatee
     if (!pastRootLevel) {
       if (bounds.length === 0) {
-        await cursor.jumpTo(nextUpdt.value, nextUpdt.level);
+        await cursor.jumpTo(nextUpdt, nextLevel);
       } else {
         await cursor.nextBucket();
       }

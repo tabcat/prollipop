@@ -28,6 +28,10 @@ mods:
 
 **API [docs](https://tabcat.github.io/prollipop/)**
 
+## Install
+
+`npm install prollipop`
+
 ## Learning Resources:
 
 As you can see from the list below, a lot of ideas have been stolen from the [Dolt](https://www.dolthub.com/) project's blog so be sure to check them out!

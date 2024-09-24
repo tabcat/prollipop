@@ -5,6 +5,13 @@ import { cloneTree, createEmptyTree, mutate } from "../src/index.js";
 import { Bucket, Node, ProllyTree } from "../src/interface.js";
 import { nodeToTuple } from "../src/utils.js";
 
+/**
+ * !!!
+ * If you are not familiar with content addressed structures, parts of this may be confusing.
+ * If parts of this are confusing to you, I recommend visiting the Learning Resources section of the readme.
+ * !!!
+ */
+
 describe("usage", () => {
   it("explains usage", async () => {
     /**

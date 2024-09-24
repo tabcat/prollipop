@@ -16,7 +16,7 @@ I haven't tested with non-local blockstores. Need to add abort signals and timeo
 
 ## Data-structure
 
-This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/mutator.ts`](https://github.com/tabcat/prollipop/blob/master/src/mutate.ts) and [`src/diff.ts`](https://github.com/tabcat/prollipop/blob/master/src/diff.ts).
+This package implements a modded prolly-tree in Typescript. Most relevant code is in [`src/mutate.ts`](https://github.com/tabcat/prollipop/blob/master/src/mutate.ts) and [`src/diff.ts`](https://github.com/tabcat/prollipop/blob/master/src/diff.ts).
 
 mods:
 

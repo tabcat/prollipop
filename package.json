@@ -1,6 +1,6 @@
 {
   "name": "prollipop",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "modded prolly-tree with (number, uint8array) tuples for keys",
   "type": "module",
   "files": [

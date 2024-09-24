@@ -33,7 +33,7 @@
     }
   },
   "scripts": {
-    "check-format": "prettier src test --check",
+    "lint": "prettier src test --check",
     "format": "prettier src test --write",
     "build": "tsc",
     "test": "vitest --config vitest.config.ts",

@@ -17,6 +17,7 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
+import { DefaultNode } from "./impls.js";
 import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
 import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
@@ -41,7 +42,12 @@ const handleUpdate = (
   update: Update,
 ): [Node | null, NodeDiff | null] => {
   if ("message" in update) {
-    const updateNode = update as Node;
+    const updateNode = new DefaultNode(
+      update.timestamp,
+      update.hash,
+      update.message,
+    );
+
     if (node != null) {
       if (compareBytes(node.message, update.message) === 0) {
         if ("strict" in update) {

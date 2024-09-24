@@ -10,7 +10,7 @@ A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) im
 
 ## Project Status
 
-It's working! Now I'm working on adding docs/usage, ~~~async-iterator parameters~~~, and ~~~repo dev tools~~~.
+It's in a decent state but have not done performance analysis. API breaks will result in major version change.
 
 ## Data-structure
 

@@ -3,7 +3,7 @@ import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
 import { BucketDiff, NodeDiff } from "../src/diff.js";
-import { cloneTree } from "../src/index.js";
+import { cloneTree, createEmptyTree } from "../src/index.js";
 import { Node, ProllyTree } from "../src/interface.js";
 import { Update, mutate } from "../src/mutate.js";
 import { nodeToTuple } from "../src/utils.js";
@@ -162,4 +162,21 @@ describe("mutate", () => {
       });
     }
   }
+
+  it("accepts updates with type AwaitIterable<Update | Update[]>", async () => {
+    const tree1 = createEmptyTree();
+    const tree2 = createEmptyTree();
+
+    const updates: Update[] = [
+      { timestamp: 1, hash: new Uint8Array(32), message: new Uint8Array() },
+    ];
+
+    for await (const _ of mutate(blockstore, tree1, updates)) {
+    }
+
+    for await (const _ of mutate(blockstore, tree2, [updates])) {
+    }
+
+    expect(tree1).to.deep.equal(tree2);
+  });
 });

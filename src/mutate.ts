@@ -1,4 +1,4 @@
-import { firstElement } from "@tabcat/ith-element";
+import { firstElement, lastElement } from "@tabcat/ith-element";
 import { union } from "@tabcat/ordered-sets/union";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { Blockstore } from "interface-blockstore";
@@ -74,21 +74,33 @@ const handleUpdate = (
   }
 };
 
-async function takeOne<T>(it: AwaitIterable<T>): Promise<T | void> {
-  for await (const v of it) return v;
+async function takeOneUpdate(
+  updates: AwaitIterable<Update | Update[]>,
+): Promise<Update | void> {
+  for await (const u of updates) return Array.isArray(u) ? u[0] : u;
 }
 
 async function populateUpdts(
-  updates: AwaitIterable<Update>,
+  updates: AwaitIterable<Update | Update[]>,
   updts: Update[],
   updatee: Bucket,
   isHead: boolean,
 ): Promise<void> {
-  for await (const update of updates) {
-    updts.push(update);
-    const boundary = updatee.getBoundary();
+  for await (let _updates of updates) {
+    if (!Array.isArray(_updates)) {
+      _updates = [_updates];
+    }
 
-    if (boundary != null && !isHead && compareTuples(update, boundary) >= 0) {
+    for (const u of _updates) {
+      updts.push(u);
+    }
+
+    const boundary = updatee.getBoundary();
+    if (
+      boundary != null &&
+      !isHead &&
+      compareTuples(lastElement(updts), boundary) >= 0
+    ) {
       break;
     }
   }
@@ -106,13 +118,14 @@ async function populateUpdts(
 export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
-  updates: AwaitIterable<Update>,
+  updates: AwaitIterable<Update | Update[]>,
 ): AsyncGenerator<ProllyTreeDiff> {
   // whole function should be rewritten around updates async iterator, too complicated right now
   if (Array.isArray(updates)) {
     updates = updates[Symbol.iterator]();
   }
-  const firstUpdate = await takeOne(updates);
+
+  const firstUpdate = await takeOneUpdate(updates);
 
   if (firstUpdate == null) {
     return tree;
@@ -270,7 +283,7 @@ export async function* mutate(
       break;
     }
 
-    let nextUpdt = updts[0] ?? (await takeOne(updates));
+    let nextUpdt = updts[0] ?? (await takeOneUpdate(updates));
     let nextLevel = level;
 
     if (nextUpdt == null) {

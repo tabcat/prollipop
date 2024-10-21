@@ -1,12 +1,13 @@
 import { Blockstore } from "interface-blockstore";
 import { asyncMap } from "iter-tools-es";
+import { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import { Node, ProllyTree, Tuple } from "./interface.js";
 import { mutate } from "./mutate.js";
-import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
+import { Await, AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
 
 export { mutate };
 
@@ -90,6 +91,10 @@ export async function* merge(
   remoteBlockstore?: Blockstore,
   choose?: (a: Node, b: Node) => Node,
 ): AsyncIterable<ProllyTreeDiff> {
+  if (target.root.average !== source.root.average) {
+    throw new Error("Provided trees are not compatible.");
+  }
+
   remoteBlockstore = remoteBlockstore ?? blockstore;
 
   const getNewNodes = ({ nodes }: ProllyTreeDiff) => {
@@ -111,4 +116,40 @@ export async function* merge(
     target,
     asyncMap(getNewNodes, diff(blockstore, target, source, remoteBlockstore)),
   );
+}
+
+/**
+ * Fetch missing buckets from remote blockstore and add them to a local blockstore.
+ * Should work just fine by only supplying Helia's blockstore.
+ *
+ * @param blockstore
+ * @param source
+ * @param remoteBlockstore
+ * @returns
+ */
+export async function* replicate(
+  blockstore: Blockstore,
+  source: ProllyTree,
+  remoteBlockstore?: Blockstore,
+): AsyncIterable<CID[]> {
+  remoteBlockstore = remoteBlockstore ?? blockstore;
+
+  for await (const { buckets } of diff(
+    blockstore,
+    createEmptyTree({ average: source.root.average }),
+    source,
+    remoteBlockstore,
+  )) {
+    const promises: Await<CID>[] = [];
+
+    for (const [_t, s] of buckets) {
+      if (s != null && !blockstore.has(s.getCID())) {
+        promises.push(blockstore.put(s.getCID(), s.getBytes()));
+      }
+    }
+
+    if (promises.length > 0) {
+      yield await Promise.all(promises);
+    }
+  }
 }

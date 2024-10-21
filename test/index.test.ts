@@ -1,8 +1,15 @@
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";
 import { DefaultProllyTree } from "../src/impls.js";
-import { cloneTree, createEmptyTree, merge, search } from "../src/index.js";
+import {
+  cloneTree,
+  createEmptyTree,
+  merge,
+  replicate,
+  search,
+} from "../src/index.js";
 import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
 import { createProllyTreeNodes } from "./helpers/build-tree.js";
@@ -138,6 +145,20 @@ describe("index", () => {
       }
 
       expect(tree).to.deep.equal(tree2);
+    });
+  });
+
+  describe("replicate", () => {
+    it("fetches missing blocks and adds them to the local blockstore", async () => {
+      const localBlockstore = new MemoryBlockstore();
+
+      for await (const cids of replicate(localBlockstore, tree, blockstore)) {
+        expect(cids).to.deep.equal([tree.root.getCID()]);
+      }
+
+      expect(await localBlockstore.get(tree.root.getCID())).to.deep.equal(
+        tree.root.getBytes(),
+      );
     });
   });
 });

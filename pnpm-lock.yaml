@@ -23,6 +23,9 @@ importers:
       interface-blockstore:
         specifier: ^5.2.10
         version: 5.2.10
+      iter-tools-es:
+        specifier: ^7.5.3
+        version: 7.5.3
       multiformats:
         specifier: ^13.1.0
         version: 13.1.0
@@ -634,6 +637,9 @@ packages:
   it-stream-types@2.0.1:
     resolution: {integrity: sha512-6DmOs5r7ERDbvS4q8yLKENcj6Yecr7QQTqWApbZdfAUTEC947d+PEha7PCqhm//9oxaLYL7TWRekwhoXl2s6fg==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
+
+  iter-tools-es@7.5.3:
+    resolution: {integrity: sha512-xj+T3W48RBrooJhafZZ3m8l0JQ/GBmRTcGfqJx4rA/IevwPRkff/919C8EgfQP3HPTnJnHVi+0KgeGKYjoKzvg==}
 
   js-tokens@9.0.0:
     resolution: {integrity: sha512-WriZw1luRMlmV3LGJaR6QOJjWwgLUTf89OwT2lUOyjX2dJGBwgmIkbcz+7WFZjrZM635JOIR517++e/67CP9dQ==}
@@ -1590,6 +1596,8 @@ snapshots:
       p-defer: 4.0.1
 
   it-stream-types@2.0.1: {}
+
+  iter-tools-es@7.5.3: {}
 
   js-tokens@9.0.0: {}
 

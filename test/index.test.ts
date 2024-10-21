@@ -2,14 +2,17 @@ import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";
 import { DefaultProllyTree } from "../src/impls.js";
-import { cloneTree, createEmptyTree, search } from "../src/index.js";
+import { cloneTree, createEmptyTree, merge, search } from "../src/index.js";
 import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
 import { createProllyTreeNodes } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
+  hash,
   level,
+  node,
+  timestamp,
   tree,
   trees,
   treesToStates,
@@ -96,6 +99,45 @@ describe("index", () => {
       expect(repeatingSearch.next()).rejects.toThrow(
         "Tuples must be ordered and non-repeating",
       );
+    });
+  });
+
+  describe("merge", () => {
+    it("merges two trees", async () => {
+      const emptryTree = createEmptyTree();
+
+      expect(emptryTree).to.not.deep.equal(tree);
+
+      for await (const diff of merge(blockstore, emptryTree, tree)) {
+        expect(diff.nodes[0]).to.deep.equal([null, node]);
+        expect(diff.buckets[0]).to.deep.equal([emptryTree.root, null]);
+        expect(diff.buckets[1]).to.deep.equal([null, tree.root]);
+      }
+
+      expect(emptryTree).to.deep.equal(tree);
+    });
+
+    it("accepts a choose function for handling key conflicts", async () => {
+      const node2 = { timestamp, hash, message: new Uint8Array(32) };
+      const tree2 = new DefaultProllyTree(
+        createBucket(average, level, [node2]),
+      );
+
+      expect(tree).to.not.deep.equal(tree2);
+
+      for await (const diff of merge(
+        blockstore,
+        tree,
+        tree2,
+        undefined,
+        (_node1, node2) => node2,
+      )) {
+        expect(diff.nodes[0]).to.deep.equal([node, node2]);
+        expect(diff.buckets[0]).to.deep.equal([null, tree2.root]);
+        expect(diff.buckets[1]).to.deep.equal([tree.root, null]);
+      }
+
+      expect(tree).to.deep.equal(tree2);
     });
   });
 });

@@ -38,7 +38,8 @@
     "build": "tsc",
     "test": "vitest --config vitest.config.ts",
     "api-docs": "typedoc src/compare.ts src/cursor.ts src/diff.ts src/index.ts src/mutate.ts src/utils.ts",
-    "usage": "vitest test/usage.test.ts"
+    "usage": "vitest test/usage.test.ts",
+    "ci": "pnpm build && pnpm lint && pnpm test"
   },
   "prettier": {
     "plugins": [

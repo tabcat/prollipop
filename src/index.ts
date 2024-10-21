@@ -119,16 +119,20 @@ export async function* merge(
 }
 
 /**
- * Fetch missing buckets from remote blockstore and add them to a local blockstore.
- * Should work just fine by only supplying Helia's blockstore.
+ * Syncs the target with the source.
+ * Any changes in target but not in source will be removed.
+ * Any changes in source but not in target will be added.
+ * Useful for fetching all the remote buckets and adding them to the blockstore.
  *
  * @param blockstore
+ * @param target
  * @param source
  * @param remoteBlockstore
  * @returns
  */
-export async function* replicate(
+export async function* sync(
   blockstore: Blockstore,
+  target: ProllyTree,
   source: ProllyTree,
   remoteBlockstore?: Blockstore,
 ): AsyncIterable<CID[]> {
@@ -136,7 +140,7 @@ export async function* replicate(
 
   for await (const { buckets } of diff(
     blockstore,
-    createEmptyTree({ average: source.root.average }),
+    target,
     source,
     remoteBlockstore,
   )) {
@@ -152,4 +156,6 @@ export async function* replicate(
       yield await Promise.all(promises);
     }
   }
+
+  target.root = source.root;
 }

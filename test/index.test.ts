@@ -7,8 +7,8 @@ import {
   cloneTree,
   createEmptyTree,
   merge,
-  replicate,
   search,
+  sync,
 } from "../src/index.js";
 import { Node, ProllyTree, Tuple } from "../src/interface.js";
 import { createBucket, nodeToTuple } from "../src/utils.js";
@@ -148,17 +148,27 @@ describe("index", () => {
     });
   });
 
-  describe("replicate", () => {
+  describe("pull", () => {
     it("fetches missing blocks and adds them to the local blockstore", async () => {
       const localBlockstore = new MemoryBlockstore();
+      const target = createEmptyTree({ average });
 
-      for await (const cids of replicate(localBlockstore, tree, blockstore)) {
+      expect(target).to.not.deep.equal(tree);
+
+      for await (const cids of sync(
+        localBlockstore,
+        target,
+        tree,
+        blockstore,
+      )) {
         expect(cids).to.deep.equal([tree.root.getCID()]);
       }
 
       expect(await localBlockstore.get(tree.root.getCID())).to.deep.equal(
         tree.root.getBytes(),
       );
+
+      expect(target).to.deep.equal(tree);
     });
   });
 });

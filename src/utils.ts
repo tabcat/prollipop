@@ -9,6 +9,8 @@ import { decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Node, Prefix, Tuple } from "./interface.js";
 
+export type Await<T> = Promise<T> | T;
+
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
 /**

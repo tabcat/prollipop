@@ -162,6 +162,10 @@ export async function* mutate(
     const buckets: Bucket[] = [];
     const isBoundary = createIsBoundary(average, level);
 
+    // if (level === 2 && updatee.getBoundary()!.timestamp === 29486) {
+    //   console.log("here");
+    // }
+
     if (level === 0) {
       await populateUpdts(updates, updts, updatee, visitedLevelHead);
     }
@@ -250,6 +254,9 @@ export async function* mutate(
         const parentNode = removed.getParentNode();
         if (parentNode != null && level < cursor.rootLevel()) {
           u = nodeToTuple(parentNode);
+          if (u.timestamp === 29997) {
+            console.log("here");
+          }
         }
 
         removesProcessed++;
@@ -262,6 +269,10 @@ export async function* mutate(
         if (parentNode != null) {
           u = parentNode;
         }
+      }
+
+      if (u != null && u.timestamp === 19999) {
+        console.log("here");
       }
 
       u != null && updtsNextLevel.push(u);
@@ -289,6 +300,7 @@ export async function* mutate(
     if (nextUpdt == null) {
       if (updtsNextLevel.length > 0) {
         updts = updtsNextLevel;
+        updts.sort(compareTuples);
         updtsNextLevel = [];
         nextUpdt = firstElement(updts);
         nextLevel += 1;

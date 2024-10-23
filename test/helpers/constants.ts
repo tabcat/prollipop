@@ -11,6 +11,10 @@ import {
 import { Bucket, Node, ProllyTree } from "../../src/interface.js";
 import { buildProllyTreeState, createProllyTreeNodes } from "./build-tree.js";
 
+declare global {
+  var TREE_NODES_MAX: string;
+}
+
 export const timestamp = 0;
 export const hash = new Uint8Array(4); // isBoundaryHash expects Uint8Array with length >= 4
 export const message = new Uint8Array(0);
@@ -47,7 +51,7 @@ export const tree = new DefaultProllyTree(bucket);
 
 export const blockstore = new MemoryBlockstore();
 
-export const treeNodesMax = 3000;
+export const treeNodesMax = Number.parseInt(TREE_NODES_MAX);
 
 export const emptyTreeIds: number[] = [];
 export const superTreeIds = Array(treeNodesMax)

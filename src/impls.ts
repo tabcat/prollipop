@@ -1,7 +1,7 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { Bucket, Entry, ProllyTree } from "./interface.js";
-import { bucketDigestToCid } from "./utils.js";
+import { bucketDigestToCid, entriesToDeltaBase } from "./utils.js";
 
 const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
 
@@ -28,6 +28,7 @@ export class DefaultEntry implements Entry {
 export class DefaultBucket implements Bucket {
   #bytes: Uint8Array;
   #digest: Uint8Array;
+  readonly base: number;
 
   constructor(
     readonly average: number,
@@ -38,6 +39,7 @@ export class DefaultBucket implements Bucket {
   ) {
     this.#bytes = bytes;
     this.#digest = digest;
+    this.base = entriesToDeltaBase(entries);
   }
 
   getBytes(): Uint8Array {

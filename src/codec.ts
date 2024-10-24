@@ -1,14 +1,17 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import type { ByteView } from "multiformats";
+import { compareEntries } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix } from "./interface.js";
+import { entriesToDeltaBase } from "./utils.js";
 
 type EncodedEntry = [Entry["seq"], Entry["key"], Entry["val"]];
 
 export interface EncodedBucket {
   level: number;
   average: number;
+  base: number;
   entries: EncodedEntry[];
 }
 
@@ -39,7 +42,7 @@ const getValidatedPrefix = (prefix: unknown): Prefix => {
     throw new TypeError("Expected bucket prefix to be an object.");
   }
 
-  const { average, level } = prefix as Partial<Prefix>;
+  const { average, level, base } = prefix as Partial<Prefix>;
 
   if (typeof average !== "number") {
     throw new TypeError("Expected prefix average field to be a number.");
@@ -49,7 +52,11 @@ const getValidatedPrefix = (prefix: unknown): Prefix => {
     throw new TypeError("Expected prefix level field to be a number.");
   }
 
-  return { average, level };
+  if (typeof base !== "number") {
+    throw new TypeError("Expected prefix base field to be a number.");
+  }
+
+  return { average, level, base };
 };
 
 const getValidatedBucket = (bucket: unknown): EncodedBucket => {
@@ -57,7 +64,7 @@ const getValidatedBucket = (bucket: unknown): EncodedBucket => {
     throw new TypeError("Expected bucket to be an object.");
   }
 
-  const { average, level } = getValidatedPrefix(bucket);
+  const { average, level, base } = getValidatedPrefix(bucket);
 
   const { entries } = bucket as Partial<EncodedBucket>;
 
@@ -65,7 +72,7 @@ const getValidatedBucket = (bucket: unknown): EncodedBucket => {
     throw new TypeError("Expected bucket entries field to be a number.");
   }
 
-  return { average, level, entries };
+  return { average, level, base, entries };
 };
 
 export function encodeBucket(
@@ -73,10 +80,25 @@ export function encodeBucket(
   level: number,
   entries: Entry[],
 ): ByteView<EncodedBucket> {
+  const base = entriesToDeltaBase(entries);
+
+  entries.sort(compareEntries);
+
+  let i = entries.length;
+  const encodedEntries: EncodedEntry[] = new Array(i);
+  let delta = base;
+  while (i > 0) {
+    i--;
+    const { seq, key, val } = entries[i]!;
+    encodedEntries[i] = [delta - seq, key, val];
+    delta = seq;
+  }
+
   return encode({
     average,
     level,
-    entries: entries.map(({ seq, key, val }) => [seq, key, val]),
+    base,
+    entries: encodedEntries,
   });
 }
 
@@ -89,6 +111,7 @@ export function decodeBucket(
   const {
     average,
     level,
+    base,
     entries: encodedEntries,
   } = getValidatedBucket(decoded);
 
@@ -104,12 +127,21 @@ export function decodeBucket(
     );
   }
 
+  if (base !== expectedPrefix.base) {
+    throw new TypeError(
+      `Expect prefix to have base ${expectedPrefix.base}. Received prefix with base ${base}`,
+    );
+  }
+
   // could validate boundaries and tuple order here
-  let i = 0;
-  const entries: Entry[] = new Array(encodedEntries.length);
-  for (const entry of encodedEntries) {
-    entries[i] = new DefaultEntry(...getValidatedEntry(entry));
-    i++;
+  let i = encodedEntries.length;
+  const entries: Entry[] = new Array(i);
+  let delta: number = base;
+  while (i > 0) {
+    i--;
+    const encodedEntry = encodedEntries[i];
+    const [seq, key, val] = getValidatedEntry(encodedEntry);
+    entries[i] = new DefaultEntry((delta -= seq), key, val);
   }
 
   return new DefaultBucket(average, level, entries, bytes, sha256(bytes));

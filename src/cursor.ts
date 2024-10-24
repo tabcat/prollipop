@@ -310,6 +310,7 @@ const moveToLevel = async (
       const bucket = await loadBucket(state.blockstore, digest, {
         ...bucketToPrefix(bucketOf(state)),
         level: levelOf(state) - 1,
+        base: entryOf(state).seq,
       });
 
       if (bucket.entries.length === 0) {

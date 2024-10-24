@@ -23,11 +23,13 @@ export const entry = new DefaultEntry(seq, key, val);
 
 export const average = 32;
 export const level = 0;
-export const prefix = { average, level };
+export const base = 0;
+export const prefix = { average, level, base };
 export const entries = [entry];
 export const encodedBucket = encode({
   average,
   level,
+  base,
   entries: [[seq, key, val]],
 });
 export const bucketDigest = sha256(encodedBucket);
@@ -38,7 +40,12 @@ export const bucket = new DefaultBucket(
   encodedBucket,
   bucketDigest,
 );
-export const encodedEmptyBucket = encode({ average, level, entries: [] });
+export const encodedEmptyBucket = encode({
+  average,
+  level,
+  base: 0,
+  entries: [],
+});
 export const emptyBucket = new DefaultBucket(
   average,
   level,

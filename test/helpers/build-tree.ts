@@ -4,62 +4,64 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
-import { DefaultBucket, DefaultNode } from "../../src/impls.js";
-import type { Bucket, Node } from "../../src/interface.js";
+import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
+import type { Bucket, Entry } from "../../src/interface.js";
 
-const levelOfNodes = (
+const levelOfEntries = (
   average: number,
   level: number,
-  nodes: Node[],
-): Node[][] => {
-  const nodeLevel: Node[][] = [[]];
-  for (const node of nodes) {
-    lastElement(nodeLevel).push(new DefaultNode(node.seq, node.key, node.val));
+  entries: Entry[],
+): Entry[][] => {
+  const entryLevel: Entry[][] = [[]];
+  for (const entry of entries) {
+    lastElement(entryLevel).push(
+      new DefaultEntry(entry.seq, entry.key, entry.val),
+    );
 
-    if (createIsBoundary(average, level)(node)) {
-      nodeLevel.push([]);
+    if (createIsBoundary(average, level)(entry)) {
+      entryLevel.push([]);
     }
   }
 
-  if (lastElement(nodeLevel).length === 0) {
-    nodeLevel.pop();
+  if (lastElement(entryLevel).length === 0) {
+    entryLevel.pop();
   }
 
-  return nodeLevel;
+  return entryLevel;
 };
 
 const levelOfBuckets = (
   average: number,
   level: number,
-  nodeLevel: Node[][],
+  entryLevel: Entry[][],
 ): Bucket[] => {
-  if (nodeLevel.length === 0) {
-    nodeLevel.push([]);
+  if (entryLevel.length === 0) {
+    entryLevel.push([]);
   }
 
-  return nodeLevel.map((nodes) => {
-    const bytes = encodeBucket(average, level, nodes);
-    return new DefaultBucket(average, level, nodes, bytes, sha256(bytes));
+  return entryLevel.map((entries) => {
+    const bytes = encodeBucket(average, level, entries);
+    return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
   });
 };
 
-const nextLevelNodes = (buckets: Bucket[]): Node[] => {
-  const nodes: Node[] = [];
+const nextLevelEntries = (buckets: Bucket[]): Entry[] => {
+  const entries: Entry[] = [];
   for (const bucket of buckets) {
     // should never get empty bucket here as there would not be another level
-    nodes.push({ ...bucket.getBoundary()!, val: bucket.getDigest() });
+    entries.push({ ...bucket.getBoundary()!, val: bucket.getDigest() });
   }
-  return nodes;
+  return entries;
 };
 
 export const buildProllyTreeState = (
   blockstore: Blockstore,
   average: number,
-  nodes: Node[],
+  entries: Entry[],
 ): Bucket[][] => {
   let level: number = 0;
-  let nodeLevel = levelOfNodes(average, level, nodes);
-  let bucketLevel = levelOfBuckets(average, level, nodeLevel);
+  let entryLevel = levelOfEntries(average, level, entries);
+  let bucketLevel = levelOfBuckets(average, level, entryLevel);
   bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
 
   const treeState: Bucket[][] = [bucketLevel];
@@ -70,8 +72,8 @@ export const buildProllyTreeState = (
       throw new Error("e");
     }
     level++;
-    nodeLevel = levelOfNodes(average, level, nextLevelNodes(bucketLevel));
-    bucketLevel = levelOfBuckets(average, level, nodeLevel);
+    entryLevel = levelOfEntries(average, level, nextLevelEntries(bucketLevel));
+    bucketLevel = levelOfBuckets(average, level, entryLevel);
     bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
     treeState.push(bucketLevel);
   }
@@ -79,10 +81,10 @@ export const buildProllyTreeState = (
   return treeState.reverse(); // root to base
 };
 
-export const createProllyTreeNodes = (ids: number[]): Node[] =>
+export const createProllyTreeEntries = (ids: number[]): Entry[] =>
   ids.map((id) => {
-    const hash = sha256(new Uint8Array(Array(id).fill(id)));
-    // make message unique to tree
-    const message = encode(id + -firstElement(ids) + lastElement(ids));
-    return new DefaultNode(id, hash, message);
+    const key = sha256(new Uint8Array(Array(id).fill(id)));
+    // make val unique to tree
+    const val = encode(id + -firstElement(ids) + lastElement(ids));
+    return new DefaultEntry(id, key, val);
   });

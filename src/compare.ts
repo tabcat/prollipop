@@ -1,10 +1,10 @@
 import { compare as compareBytes } from "uint8arrays";
 import { BucketDiff } from "./diff.js";
-import { Bucket, Node, Tuple } from "./interface.js";
+import { Bucket, Entry, Tuple } from "./interface.js";
 
 export { compareBytes };
 
-export const compareTimestamp = (a: number, b: number): number => a - b;
+export const compareSeq = (a: number, b: number): number => a - b;
 
 /**
  * Compare two tuples.
@@ -14,7 +14,7 @@ export const compareTimestamp = (a: number, b: number): number => a - b;
  * @returns
  */
 export const compareTuples = (a: Tuple, b: Tuple): number => {
-  const difference = compareTimestamp(a.seq, b.seq);
+  const difference = compareSeq(a.seq, b.seq);
 
   if (difference !== 0) return difference;
 
@@ -24,13 +24,13 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 };
 
 /**
- * Compare two nodes.
+ * Compare two entries.
  *
  * @param a
  * @param b
  * @returns
  */
-export const compareNodes = (a: Node, b: Node): number => {
+export const compareEntries = (a: Entry, b: Entry): number => {
   const tuples = compareTuples(a, b);
 
   if (tuples !== 0) {

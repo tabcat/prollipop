@@ -2,7 +2,7 @@ import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";
-import { DefaultProllyTree } from "../src/impls.js";
+import { DefaultEntry, DefaultProllyTree } from "../src/impls.js";
 import {
   cloneTree,
   createEmptyTree,
@@ -10,16 +10,16 @@ import {
   search,
   sync,
 } from "../src/index.js";
-import { Node, ProllyTree, Tuple } from "../src/interface.js";
-import { createBucket, nodeToTuple } from "../src/utils.js";
-import { createProllyTreeNodes } from "./helpers/build-tree.js";
+import { Entry, ProllyTree, Tuple } from "../src/interface.js";
+import { createBucket, entryToTuple } from "../src/utils.js";
+import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
-  hash,
+  entry,
+  key,
   level,
-  node,
-  timestamp,
+  seq,
   tree,
   trees,
   treesToStates,
@@ -49,23 +49,23 @@ describe("index", () => {
     const states1 = treesToStates.get(tree1)!;
     const states2 = treesToStates.get(tree2)!;
 
-    const result: (Node | Tuple)[] = [];
+    const result: (Entry | Tuple)[] = [];
 
-    for await (const node of search(blockstore, tree1, states2.nodes)) {
-      result.push(node);
+    for await (const entry of search(blockstore, tree1, states2.entries)) {
+      result.push(entry);
     }
 
-    let expectedResult: (Node | Tuple)[] = [];
-    for (const [node1, node2] of pairwiseTraversal(
-      states1.nodes,
-      states2.nodes,
+    let expectedResult: (Entry | Tuple)[] = [];
+    for (const [entry1, entry2] of pairwiseTraversal(
+      states1.entries,
+      states2.entries,
       compareTuples,
     )) {
-      if (node2 != null) {
-        if (node1 != null) {
-          expectedResult.push(node1);
+      if (entry2 != null) {
+        if (entry1 != null) {
+          expectedResult.push(entry1);
         } else {
-          expectedResult.push(nodeToTuple(node2));
+          expectedResult.push(entryToTuple(entry2));
         }
       }
     }
@@ -74,7 +74,7 @@ describe("index", () => {
   };
 
   describe("search", async () => {
-    it("yields nodes for found and tuples for missing", async () => {
+    it("yields entries for found and tuples for missing", async () => {
       for (const tree1 of trees) {
         for (const tree2 of trees) {
           await checkSearch(tree1, tree2);
@@ -83,7 +83,7 @@ describe("index", () => {
     });
 
     it("rejects if tuples is unordered or contains duplicates", async () => {
-      const unorderedTuples = createProllyTreeNodes([1, 0]);
+      const unorderedTuples = createProllyTreeEntries([1, 0]);
       const unorderedSearch = search(
         blockstore,
         tree,
@@ -95,7 +95,7 @@ describe("index", () => {
         "Tuples must be ordered and non-repeating",
       );
 
-      const repeatingTuples = createProllyTreeNodes([1, 1]);
+      const repeatingTuples = createProllyTreeEntries([1, 1]);
       const repeatingSearch = search(
         blockstore,
         tree,
@@ -116,7 +116,7 @@ describe("index", () => {
       expect(emptryTree).to.not.deep.equal(tree);
 
       for await (const diff of merge(blockstore, emptryTree, tree)) {
-        expect(diff.nodes[0]).to.deep.equal([null, node]);
+        expect(diff.entries[0]).to.deep.equal([null, entry]);
         expect(diff.buckets[0]).to.deep.equal([emptryTree.root, null]);
         expect(diff.buckets[1]).to.deep.equal([null, tree.root]);
       }
@@ -125,9 +125,9 @@ describe("index", () => {
     });
 
     it("accepts a choose function for handling key conflicts", async () => {
-      const node2 = { timestamp, hash, message: new Uint8Array(32) };
+      const entry2 = new DefaultEntry(seq, key, new Uint8Array(32));
       const tree2 = new DefaultProllyTree(
-        createBucket(average, level, [node2]),
+        createBucket(average, level, [entry2]),
       );
 
       expect(tree).to.not.deep.equal(tree2);
@@ -137,11 +137,11 @@ describe("index", () => {
         tree,
         tree2,
         undefined,
-        (_node1, node2) => node2,
+        (_e1, e2) => e2,
       )) {
-        expect(diff.nodes[0]).to.deep.equal([node, node2]);
-        expect(diff.buckets[0]).to.deep.equal([null, tree2.root]);
-        expect(diff.buckets[1]).to.deep.equal([tree.root, null]);
+        expect(diff.entries[0]).to.deep.equal([entry, entry2]);
+        expect(diff.buckets[0]).to.deep.equal([tree.root, null]);
+        expect(diff.buckets[1]).to.deep.equal([null, tree2.root]);
       }
 
       expect(tree).to.deep.equal(tree2);

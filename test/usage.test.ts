@@ -2,8 +2,8 @@ import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { diff } from "../src/diff.js";
 import { cloneTree, createEmptyTree, mutate } from "../src/index.js";
-import { Bucket, Node, ProllyTree } from "../src/interface.js";
-import { nodeToTuple } from "../src/utils.js";
+import { Bucket, Entry, ProllyTree } from "../src/interface.js";
+import { entryToTuple } from "../src/utils.js";
 
 /**
  * !!!
@@ -43,40 +43,40 @@ describe("usage", () => {
     const blockstore = new MemoryBlockstore();
 
     /**
-     * Tuples are made up of a timestamp and a hash. These are used like keys in a key/value store.
+     * Tuples are made up of a seq and a hash. These are used like keys in a key/value store.
      */
     const tuple = {
-      timestamp: 0,
-      hash: new Uint8Array(32),
+      seq: 0,
+      key: new Uint8Array(32),
     };
 
     /**
-     * Nodes are made up of a timestamp, hash, and message.
-     * The timestamp and hash are the key, while the message is the value.
-     * The timestamp and hash give nodes an order, nodes are stored in this order in the tree.
+     * Entries are made up of a seq, hash, and val.
+     * The seq and key are the key, while the val is the value.
+     * The seq and key give entries a sort, entries are stored in this order in the tree.
      */
-    const node: Node = {
+    const entry: Entry = {
       ...tuple,
       val: new TextEncoder().encode("hello"),
     };
 
     /**
-     * To add a node to a tree the mutate function is used. It takes an AwaitIterable of Nodes or Tuples.
-     * If a node is supplied it will be added to the tree. If a tuple is supplied, the matching node (if existing in the tree) will be removed.
+     * To add a entry to a tree the mutate function is used. It takes an AwaitIterable of Entries or Tuples.
+     * If a entry is supplied it will be added to the tree. If a tuple is supplied, the matching entry (if existing in the tree) will be removed.
      *
      * THE ORDER THE NODES AND TUPLES ARE SUPPLIED IS CRITICAL.
      * THERE CAN BE NO DUPLICATE NODES OR TUPLES PER TUPLE SUPPLIED TO THE SAME MUTATE CALL.
      * VIOLATING EITHER OF THESE WILL RESULT IN INCONSISTENT TREES.
      *
-     * The AwaitIterable supplying Nodes and Tuples MUST be an ordered set where each element is unique per Tuple.
-     * Utility functions for maintaining order can be found in `prollipop/compare`, specifically `compareTuples` which can compare tuples and nodes.
+     * The AwaitIterable supplying Entries and Tuples MUST be an ordered set where each element is unique per Tuple.
+     * Utility functions for maintaining order can be found in `prollipop/compare`, specifically `compareTuples` which can compare tuples and entries.
      */
-    for await (const diff of mutate(blockstore, tree, [node])) {
-      for (const [removed, added] of diff.nodes) {
+    for await (const diff of mutate(blockstore, tree, [entry])) {
+      for (const [removed, added] of diff.entries) {
         /**
-         * With node diffs, removed and added could be defined, or only one could be defined.
-         * If only one is defined then a node was either added or removed.
-         * If both are defined the node's message has been changed.
+         * With entry diffs, removed and added could be defined, or only one could be defined.
+         * If only one is defined then a entry was either added or removed.
+         * If both are defined the entry's val has been changed.
          */
 
         if (removed != null) {
@@ -111,7 +111,7 @@ describe("usage", () => {
     }
 
     /**
-     * The mutate function yields node and buckets diffs but also changes the `root` property of the tree.
+     * The mutate function yields entry and buckets diffs but also changes the `root` property of the tree.
      */
     expect(tree).to.not.deep.equal(clone);
 
@@ -119,26 +119,26 @@ describe("usage", () => {
 
     /**
      * The diff function can be used to diff two trees.
-     * Like mutate, diff yields the different nodes and buckets of the trees in a deterministic order.
+     * Like mutate, diff yields the different entries and buckets of the trees in a deterministic order.
      */
-    for await (const { nodes, buckets } of diff(blockstore, clone, tree)) {
+    for await (const { entries, buckets } of diff(blockstore, clone, tree)) {
       /**
        * By looking at the tree structure while diffing, sections of the tree which are identical can be skipped.
        * This can make diffing a tree stored locally with a remote one efficient as only sections which are different need to be traversed.
        */
 
-      for (const [_local, _remote] of nodes) {
+      for (const [_local, _remote] of entries) {
         /**
-         * To merge a remote tree simply add any remote nodes to the local tree like so:
+         * To merge a remote tree simply add any remote entries to the local tree like so:
          *
          * if (remote != null) {
          *   for await (const _ of mutate(blockstore, clone, [remote])) {}
          * }
          *
-         * or better yet, map the diff to yield remote nodes and give directly to mutate:
+         * or better yet, map the diff to yield remote entries and give directly to mutate:
          *
-         * const remoteNodesAsyncIter = diffsToRemoteNodes(diff(blockstore, clone, tree))
-         * for await (const _ of mutate(blockstore, clone, remoteNodesAsyncIter)) {}
+         * const remoteEntriesAsyncIter = diffsToRemoteEntries(diff(blockstore, clone, tree))
+         * for await (const _ of mutate(blockstore, clone, remoteEntriesAsyncIter)) {}
          */
       }
 
@@ -164,9 +164,9 @@ describe("usage", () => {
     expect(tree).to.deep.equal(clone2!);
 
     /**
-     * To remove nodes from a tree the mutate function is used. But instead of giving it full nodes, we give it the tuple (aka the key).
+     * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the tuple (aka the key).
      */
-    for await (const _ of mutate(blockstore, tree, [nodeToTuple(node)])) {
+    for await (const _ of mutate(blockstore, tree, [entryToTuple(entry)])) {
       /**
        * Like before any buckets that were added should be added to the blockstore.
        * Any buckets that were removed could be removed safely if not used by other trees.

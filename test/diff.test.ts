@@ -2,8 +2,8 @@ import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
-import { BucketDiff, NodeDiff, diff } from "../src/diff.js";
-import { Node, ProllyTree } from "../src/interface.js";
+import { BucketDiff, EntryDiff, diff } from "../src/diff.js";
+import { Entry, ProllyTree } from "../src/interface.js";
 import {
   blockstore,
   emptyBucket,
@@ -15,12 +15,12 @@ export async function checkDiffs(
   tree1: ProllyTree,
   tree2: ProllyTree,
 ): Promise<void> {
-  const actualNodeDiffs: NodeDiff[] = [];
+  const actualEntryDiffs: EntryDiff[] = [];
   const actualBucketDiffs: BucketDiff[] = [];
 
-  for await (const { nodes, buckets } of diff(blockstore, tree1, tree2)) {
-    for (const diff of nodes) {
-      actualNodeDiffs.push(diff);
+  for await (const { entries, buckets } of diff(blockstore, tree1, tree2)) {
+    for (const diff of entries) {
+      actualEntryDiffs.push(diff);
     }
 
     for (const diff of buckets) {
@@ -28,12 +28,12 @@ export async function checkDiffs(
     }
   }
 
-  const expectedNodeDiffs = Array.from(
+  const expectedEntryDiffs = Array.from(
     orderedDiff(
-      treesToStates.get(tree1)!.nodes,
-      treesToStates.get(tree2)!.nodes,
+      treesToStates.get(tree1)!.entries,
+      treesToStates.get(tree2)!.entries,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
+      (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   const expectedBucketDiffs = Array.from(
@@ -44,10 +44,10 @@ export async function checkDiffs(
     ),
   );
 
-  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  expect(actualEntryDiffs.length).to.equal(expectedEntryDiffs.length);
   for (const [actualDiff, expectedDiff] of pairwiseTraversal(
-    actualNodeDiffs,
-    expectedNodeDiffs,
+    actualEntryDiffs,
+    expectedEntryDiffs,
     () => 0,
   )) {
     expect(actualDiff).to.deep.equal(expectedDiff);

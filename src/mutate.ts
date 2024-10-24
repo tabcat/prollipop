@@ -13,57 +13,57 @@ import {
 import { createCursor } from "./cursor.js";
 import {
   BucketDiff,
-  NodeDiff,
+  EntryDiff,
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { DefaultNode } from "./impls.js";
-import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
-import { AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
+import { DefaultEntry } from "./impls.js";
+import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
+import { AwaitIterable, createBucket, entryToTuple } from "./utils.js";
 
 /**
- * An update is made of a Tuple, a Node, or a Node with a `strict: true` property.
+ * An update is made of a Tuple, a Entry, or a Entry with a `strict: true` property.
  * Tuples will result in a remove.
- * Nodes will result in an add.
- * Nodes with a `strict: true` property will result in a remove only if the given node and the node found in the tree match.
+ * Entries will result in an add.
+ * Entries with a `strict: true` property will result in a remove only if the given entry and the entry found in the tree match.
  */
-export type Update = Tuple | Node | (Node & { strict: true });
+export type Update = Tuple | Entry | (Entry & { strict: true });
 
 /**
- * Takes a node and update of equal tuples and returns whether a change must be made.
- * The node may be null but the update will always be defined.
+ * Takes a entry and update of equal tuples and returns whether a change must be made.
+ * The entry may be null but the update will always be defined.
  *
- * @param node
+ * @param entry
  * @param update
  * @returns
  */
 const handleUpdate = (
-  node: Node | null,
+  entry: Entry | null,
   update: Update,
-): [Node | null, NodeDiff | null] => {
-  if ("message" in update) {
-    const updateNode = new DefaultNode(update.seq, update.key, update.val);
+): [Entry | null, EntryDiff | null] => {
+  if ("val" in update) {
+    const updateEntry = new DefaultEntry(update.seq, update.key, update.val);
 
-    if (node != null) {
-      if (compareBytes(node.val, update.val) === 0) {
+    if (entry != null) {
+      if (compareBytes(entry.val, update.val) === 0) {
         if ("strict" in update) {
-          return [null, [node, null]];
+          return [null, [entry, null]];
         } else {
-          return [node, null];
+          return [entry, null];
         }
       } else {
         if ("strict" in update) {
-          return [node, null];
+          return [entry, null];
         } else {
-          return [updateNode, [node, updateNode]];
+          return [updateEntry, [entry, updateEntry]];
         }
       }
     } else {
-      return [updateNode, [null, updateNode]];
+      return [updateEntry, [null, updateEntry]];
     }
   } else {
-    if (node != null) {
-      return [null, [node, null]];
+    if (entry != null) {
+      return [null, [entry, null]];
     } else {
       return [null, null];
     }
@@ -103,8 +103,8 @@ async function populateUpdts(
 }
 
 /**
- * Mutates the tree according to updates given and yields the different nodes and buckets.
- * The updates parameter MUST yield non-repeating (per tuple), ordered nodes (to add) or tuples (to remove).
+ * Mutates the tree according to updates given and yields the different entries and buckets.
+ * The updates parameter MUST yield non-repeating (per tuple), ordered entries (to add) or tuples (to remove).
  *
  * @param blockstore
  * @param tree
@@ -137,9 +137,9 @@ export async function* mutate(
 
   let updatee: Bucket = cursor.currentBucket();
 
-  let nodes: Node[] = [];
-  let bounds: Node[][] = [];
-  let nodeDiffs: NodeDiff[] = [];
+  let entries: Entry[] = [];
+  let bounds: Entry[][] = [];
+  let entryDiffs: EntryDiff[] = [];
   let removedBuckets: Bucket[] = [];
 
   let updts: Update[] = [firstUpdate];
@@ -163,43 +163,43 @@ export async function* mutate(
     }
 
     let updatesProcessed = 0;
-    for (const [node, updt, nodesDone] of pairwiseTraversal(
+    for (const [entry, updt, entriesDone] of pairwiseTraversal(
       updatee.entries,
       updts,
       compareTuples,
     )) {
-      let n: Node | null = null;
-      let d: NodeDiff | null = null;
+      let e: Entry | null = null;
+      let d: EntryDiff | null = null;
 
       if (updt == null) {
-        n = node;
+        e = entry;
       } else {
-        if (nodesDone && !visitedLevelHead) {
+        if (entriesDone && !visitedLevelHead) {
           break;
         }
 
-        [n, d] = handleUpdate(node, updt);
+        [e, d] = handleUpdate(entry, updt);
         updatesProcessed++;
       }
 
-      if (n != null) {
-        nodes.push(n);
+      if (e != null) {
+        entries.push(e);
 
-        if (isBoundary(n)) {
-          bounds.push(nodes);
-          nodes = [];
+        if (isBoundary(e)) {
+          bounds.push(entries);
+          entries = [];
         }
       }
 
       if (d != null && level === 0) {
-        nodeDiffs.push(d);
+        entryDiffs.push(d);
       }
     }
     updts.splice(0, updatesProcessed);
 
-    if (visitedLevelHead && (bounds.length === 0 || nodes.length > 0)) {
-      bounds.push(nodes);
-      nodes = [];
+    if (visitedLevelHead && (bounds.length === 0 || entries.length > 0)) {
+      bounds.push(entries);
+      entries = [];
     }
 
     for (const bound of bounds) {
@@ -210,7 +210,7 @@ export async function* mutate(
 
     const newRootFound =
       bucketsOnLevel === 1 &&
-      nodes.length === 0 &&
+      entries.length === 0 &&
       visitedLevelTail &&
       visitedLevelHead;
 
@@ -243,9 +243,9 @@ export async function* mutate(
 
         diff.buckets.push([removed, null]);
 
-        const parentNode = removed.getParentNode();
-        if (parentNode != null && level < cursor.rootLevel()) {
-          u = nodeToTuple(parentNode);
+        const parentEntry = removed.getParentEntry();
+        if (parentEntry != null && level < cursor.rootLevel()) {
+          u = entryToTuple(parentEntry);
         }
 
         removesProcessed++;
@@ -254,9 +254,9 @@ export async function* mutate(
       if (bucket != null && updated) {
         diff.buckets.push([null, bucket]);
 
-        const parentNode = bucket.getParentNode();
-        if (parentNode != null) {
-          u = parentNode;
+        const parentEntry = bucket.getParentEntry();
+        if (parentEntry != null) {
+          u = parentEntry;
         }
       }
 
@@ -264,10 +264,10 @@ export async function* mutate(
     }
     removedBuckets.splice(0, removesProcessed);
 
-    if (diff.buckets.length > 0 && buckets.length > 0 && nodes.length === 0) {
+    if (diff.buckets.length > 0 && buckets.length > 0 && entries.length === 0) {
       diff.buckets.sort(compareBucketDiffs);
-      diff.nodes.push(...nodeDiffs);
-      nodeDiffs = [];
+      diff.entries.push(...entryDiffs);
+      entryDiffs = [];
 
       yield diff;
       diff = createProllyTreeDiff();

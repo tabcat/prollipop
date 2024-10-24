@@ -6,7 +6,7 @@
 
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import type { Node, Tuple } from "./interface.js";
+import type { Entry, Tuple } from "./interface.js";
 
 /**
  * Returns true if digest falls below limit, false otherwise.
@@ -19,7 +19,7 @@ import type { Node, Tuple } from "./interface.js";
 function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
   if (digest.length < 4) {
     throw new TypeError(
-      `Hash parameter must have a byte length greater than or equal to 4. Received hash byte length: ${digest.length}`,
+      `Hash parameter must have a byte length greater than or equal to 4. Received key byte length: ${digest.length}`,
     );
   }
 
@@ -31,7 +31,7 @@ const MAX_UINT32 = 1n << 32n;
 export const createIsBoundary = (
   average: number,
   level: number,
-): ((node: Node) => boolean) => {
+): ((entry: Entry) => boolean) => {
   if (average < 1) {
     throw new TypeError(
       `Average parameter must be greater than or equal to 1. Received average: ${average}`,
@@ -52,7 +52,7 @@ export const createIsBoundary = (
 
   const limit = Number(MAX_UINT32 / BigInt(average));
 
-  return ({ seq: timestamp, key: hash }: Tuple) =>
+  return ({ seq, key }: Tuple) =>
     // value does not determine boundary
-    isBoundaryHash(sha256(encode([level, timestamp, hash])), limit);
+    isBoundaryHash(sha256(encode([level, seq, key])), limit);
 };

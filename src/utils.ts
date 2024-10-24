@@ -7,7 +7,7 @@ import * as sha2 from "multiformats/hashes/sha2";
 import { compare as compareBytes } from "uint8arrays";
 import { decodeBucket, encodeBucket } from "./codec.js";
 import { DefaultBucket } from "./impls.js";
-import { Bucket, Node, Prefix, Tuple } from "./interface.js";
+import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
 
 export type Await<T> = Promise<T> | T;
 
@@ -23,14 +23,14 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
   CID.createV1(cborCode, createMultihashDigest(sha2.sha256.code, digest));
 
 /**
- * Returns a new tuple for the provided node or tuple.
+ * Returns a new tuple for the provided entry or tuple.
  *
- * @param node
+ * @param entry
  * @returns
  */
-export const nodeToTuple = ({ seq: timestamp, key: hash }: Tuple): Tuple => ({
-  seq: timestamp,
-  key: hash,
+export const entryToTuple = ({ seq, key }: Tuple): Tuple => ({
+  seq,
+  key,
 });
 
 /**
@@ -45,39 +45,39 @@ export const bucketToPrefix = ({ average, level }: Prefix): Prefix => ({
 });
 
 /**
- * Creates a new bucket from the provided nodes. Does not handle boundary creation.
+ * Creates a new bucket from the provided entries. Does not handle boundary creation.
  * This is a low level function and is easy to use incorrectly.
  *
  * @param average
  * @param level
- * @param nodes
+ * @param entries
  * @returns
  */
 export const createBucket = (
   average: number,
   level: number,
-  nodes: Node[],
+  entries: Entry[],
 ): Bucket => {
-  const bytes = encodeBucket(average, level, nodes);
-  return new DefaultBucket(average, level, nodes, bytes, sha256(bytes));
+  const bytes = encodeBucket(average, level, entries);
+  return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
 };
 
 /**
  * Fetches a bucket from the provided blockstore.
  *
  * @param blockstore
- * @param hash
+ * @param digest
  * @param expectedPrefix
  * @returns
  */
 export async function loadBucket(
   blockstore: Blockstore,
-  hash: Uint8Array,
+  digest: Uint8Array,
   expectedPrefix: Prefix,
 ): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
-    bytes = await blockstore.get(bucketDigestToCid(hash));
+    bytes = await blockstore.get(bucketDigestToCid(digest));
   } catch (e) {
     if (e instanceof Error && e.message === "Not Found") {
       throw new Error("Bucket not found in blockstore.", { cause: e });
@@ -88,8 +88,8 @@ export async function loadBucket(
 
   const bucket: Bucket = decodeBucket(bytes, expectedPrefix);
 
-  if (compareBytes(hash, bucket.getDigest()) !== 0) {
-    throw new Error("Unexpected bucket hash.");
+  if (compareBytes(digest, bucket.getDigest()) !== 0) {
+    throw new Error("Unexpected bucket digest.");
   }
 
   return bucket;

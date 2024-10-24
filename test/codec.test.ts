@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { decodeBucket, encodeBucket } from "../src/codec.js";
 import { emptyBucket, encodedEmptyBucket } from "./helpers/constants.js";
 
-const { average, level, entries: nodes } = emptyBucket;
+const { average, level, entries } = emptyBucket;
 
 describe("codec", () => {
   describe("encodeBucket", () => {
     it("encodes a bucket", () => {
-      expect(encodeBucket(average, level, nodes)).to.deep.equal(
+      expect(encodeBucket(average, level, entries)).to.deep.equal(
         encodedEmptyBucket,
       );
     });
@@ -51,37 +51,40 @@ describe("codec", () => {
       ).toThrow("Expected prefix level field to be a number.");
     });
 
-    it("throws when decoded nodes is not an array", () => {
+    it("throws when decoded entries is not an array", () => {
       expect(() =>
         decodeBucket(encode({ average, level }), { average, level }),
-      ).toThrow("Expected bucket nodes field to be a number.");
+      ).toThrow("Expected bucket entries field to be a number.");
     });
 
-    it("throws when decoded nodes contains an invalid timestamp", () => {
-      expect(() =>
-        decodeBucket(encode({ average, level, nodes: [[null, null, null]] }), {
-          average,
-          level,
-        }),
-      ).toThrow("Expected node timestamp field to be a number.");
-    });
-
-    it("throws when decoded nodes contains an invalid hash", () => {
-      expect(() =>
-        decodeBucket(encode({ average, level, nodes: [[0, null, null]] }), {
-          average,
-          level,
-        }),
-      ).toThrow("Expected node hash field to be a byte array.");
-    });
-
-    it("throws when decoded nodes contains an invalid message", () => {
+    it("throws when decoded entries contains an invalid seq", () => {
       expect(() =>
         decodeBucket(
-          encode({ average, level, nodes: [[0, new Uint8Array(), null]] }),
+          encode({ average, level, entries: [[null, null, null]] }),
+          {
+            average,
+            level,
+          },
+        ),
+      ).toThrow("Expected entry seq field to be a number.");
+    });
+
+    it("throws when decoded entries contains an invalid hash", () => {
+      expect(() =>
+        decodeBucket(encode({ average, level, entries: [[0, null, null]] }), {
+          average,
+          level,
+        }),
+      ).toThrow("Expected entry key field to be a byte array.");
+    });
+
+    it("throws when decoded entries contains an invalid val", () => {
+      expect(() =>
+        decodeBucket(
+          encode({ average, level, entries: [[0, new Uint8Array(), null]] }),
           { average, level },
         ),
-      ).toThrow("Expected node message field to be a byte array.");
+      ).toThrow("Expected entry val field to be a byte array.");
     });
   });
 });

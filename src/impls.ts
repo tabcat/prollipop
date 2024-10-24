@@ -1,22 +1,22 @@
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
-import { Bucket, Node, ProllyTree } from "./interface.js";
+import { Bucket, Entry, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
 
-const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
+const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
 
-export class DefaultNode implements Node {
+export class DefaultEntry implements Entry {
   constructor(
-    readonly seq: Node["seq"],
-    readonly key: Node["key"],
-    readonly val: Node["val"],
+    readonly seq: Entry["seq"],
+    readonly key: Entry["key"],
+    readonly val: Entry["val"],
   ) {}
 
   [nodeInspectSymbol]() {
     return {
-      timestamp: this.seq,
-      hash: base32.encode(this.key),
-      message: base32.encode(this.val),
+      seq: this.seq,
+      key: base32.encode(this.key),
+      val: base32.encode(this.val),
     };
   }
 
@@ -32,7 +32,7 @@ export class DefaultBucket implements Bucket {
   constructor(
     readonly average: number,
     readonly level: number,
-    readonly entries: Node[],
+    readonly entries: Entry[],
     bytes: Uint8Array,
     digest: Uint8Array,
   ) {
@@ -52,14 +52,14 @@ export class DefaultBucket implements Bucket {
     return bucketDigestToCid(this.getDigest());
   }
 
-  getBoundary(): Node | null {
+  getBoundary(): Entry | null {
     return this.entries[this.entries.length - 1] ?? null;
   }
 
-  getParentNode(): Node | null {
-    const { seq: timestamp, key: hash } = this.getBoundary() ?? {};
-    return timestamp != null && hash != null
-      ? new DefaultNode(timestamp, hash, this.getDigest())
+  getParentEntry(): Entry | null {
+    const { seq, key } = this.getBoundary() ?? {};
+    return seq != null && key != null
+      ? new DefaultEntry(seq, key, this.getDigest())
       : null;
   }
 
@@ -67,8 +67,8 @@ export class DefaultBucket implements Bucket {
     return {
       average: this.average,
       level: this.level,
-      nodes: this.entries,
-      hash: base32.encode(this.#digest),
+      entries: this.entries,
+      digest: base32.encode(this.#digest),
     };
   }
 

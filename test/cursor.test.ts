@@ -51,7 +51,7 @@ describe("cursor", () => {
       });
 
       describe("index", () => {
-        it("returns the index of the current node", () => {
+        it("returns the index of the current entry", () => {
           const cursor = createCursor(blockstore, { root: bucket });
           expect(cursor.index()).to.equal(
             lastElement(cursor.buckets()).entries.indexOf(cursor.current()),
@@ -65,7 +65,7 @@ describe("cursor", () => {
       });
 
       describe("current", () => {
-        it("returns the current node", () => {
+        it("returns the current entry", () => {
           const cursor = createCursor(blockstore, { root: bucket });
           expect(cursor.current()).to.deep.equal(firstElement(bucket.entries));
         });
@@ -73,7 +73,7 @@ describe("cursor", () => {
         it("throws if called on empty bucket", () => {
           const cursor = createCursor(blockstore, { root: emptyBucket });
           expect(() => cursor.current()).toThrow(
-            "Failed to return current node from empty bucket.",
+            "Failed to return current entry from empty bucket.",
           );
         });
       });
@@ -123,7 +123,7 @@ describe("cursor", () => {
       });
 
       describe("next", () => {
-        it("sets cursor to done if last node on level", async () => {
+        it("sets cursor to done if last entry on level", async () => {
           const cursor = createCursor(blockstore, { root: bucket });
 
           expect(cursor.index()).to.equal(0);
@@ -344,7 +344,7 @@ describe("cursor", () => {
           }
         });
 
-        it("does not move cursor if tuple is lower than or equal to current nodes and moving sideways or up", async () => {
+        it("does not move cursor if tuple is lower than or equal to current entries and moving sideways or up", async () => {
           for (const tree of trees) {
             if (tree.root.level === 0) {
               continue;

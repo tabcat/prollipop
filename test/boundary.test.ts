@@ -33,7 +33,7 @@ describe("boundary", () => {
     describe("isBoundary", () => {
       const isBoundary = createIsBoundary(average, 0);
 
-      it("returns false when the node is not a boundary", () => {
+      it("returns false when the entry is not a boundary", () => {
         const digest = sha256(encode([level, 1, empty]));
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
@@ -44,7 +44,7 @@ describe("boundary", () => {
         expect(passed).to.equal(false);
       });
 
-      it("returns true when the node is a boundary", () => {
+      it("returns true when the entry is a boundary", () => {
         const digest = sha256(encode([level, 1, filled]));
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;

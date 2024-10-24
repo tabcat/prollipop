@@ -5,9 +5,9 @@ import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Node, ProllyTree, Tuple } from "./interface.js";
+import { Entry, ProllyTree, Tuple } from "./interface.js";
 import { mutate } from "./mutate.js";
-import { Await, AwaitIterable, createBucket, nodeToTuple } from "./utils.js";
+import { Await, AwaitIterable, createBucket, entryToTuple } from "./utils.js";
 
 export { mutate };
 
@@ -32,24 +32,24 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
  * @returns
  */
 export function cloneTree(tree: ProllyTree): ProllyTree {
-  // only care about tree.root property mutations, Buckets and Nodes of a tree should never be mutated
+  // only care about tree.root property mutations, Buckets and Entries of a tree should never be mutated
   return new DefaultProllyTree(tree.root);
 }
 
 /**
- * Search the tree for nodes.
+ * Search the tree for entries.
  *
  * @param blockstore - blockstore to use to fetch buckets
  * @param tree - ProllyTree to search
  * @param tuples - Tuple used to search for associated value
  *
- * @returns Associated Node if found, otherwise returns Tuple
+ * @returns Associated Entry if found, otherwise returns Tuple
  */
 export async function* search(
   blockstore: Blockstore,
   tree: ProllyTree,
   tuples: AwaitIterable<Tuple>,
-): AsyncIterable<Node | Tuple> {
+): AsyncIterable<Entry | Tuple> {
   const cursor = createCursor(blockstore, tree);
 
   let lastTuple: Tuple | null = null;
@@ -60,7 +60,7 @@ export async function* search(
     lastTuple = tuple;
 
     if (cursor.done()) {
-      yield nodeToTuple(tuple);
+      yield entryToTuple(tuple);
       continue;
     }
 
@@ -69,27 +69,27 @@ export async function* search(
     if (compareTuples(tuple, cursor.current()) === 0) {
       yield cursor.current();
     } else {
-      yield nodeToTuple(tuple);
+      yield entryToTuple(tuple);
     }
   }
 }
 
 /**
  * Merge a source prolly-tree into target. If a key does not exist in target then it is added from source into target.
- * If both trees have a node at the same tuple and a `choose` function was provided, then the node from the source tree may also be added to target.
+ * If both trees have a entry at the same tuple and a `choose` function was provided, then the entry from the source tree may also be added to target.
  *
  * @param blockstore - target blockstore
  * @param target - Prolly-tree to merge source into
  * @param source - Prolly-tree to merge into target
  * @param remoteBlockstore - source blockstore
- * @param choose - Chooses between two nodes. Must return one of the provided node instances.
+ * @param choose - Chooses between two entries. Must return one of the provided entry instances.
  */
 export async function* merge(
   blockstore: Blockstore,
   target: ProllyTree,
   source: ProllyTree,
   remoteBlockstore?: Blockstore,
-  choose?: (a: Node, b: Node) => Node,
+  choose?: (a: Entry, b: Entry) => Entry,
 ): AsyncIterable<ProllyTreeDiff> {
   if (target.root.average !== source.root.average) {
     throw new Error("Provided trees are not compatible.");
@@ -97,9 +97,9 @@ export async function* merge(
 
   remoteBlockstore = remoteBlockstore ?? blockstore;
 
-  const getNewNodes = ({ nodes }: ProllyTreeDiff) => {
-    const add: Node[] = [];
-    for (const [t, s] of nodes) {
+  const getNewEntries = ({ entries }: ProllyTreeDiff) => {
+    const add: Entry[] = [];
+    for (const [t, s] of entries) {
       if (t == null) {
         add.push(s);
       }
@@ -114,7 +114,7 @@ export async function* merge(
   yield* mutate(
     blockstore,
     target,
-    asyncMap(getNewNodes, diff(blockstore, target, source, remoteBlockstore)),
+    asyncMap(getNewEntries, diff(blockstore, target, source, remoteBlockstore)),
   );
 }
 

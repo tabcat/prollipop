@@ -5,7 +5,7 @@ export interface Tuple {
   readonly key: Uint8Array;
 }
 
-export interface Node extends Tuple {
+export interface Entry extends Tuple {
   readonly val: Uint8Array;
 }
 
@@ -15,12 +15,12 @@ export interface Prefix {
 }
 
 export interface Bucket extends Prefix {
-  readonly entries: Node[];
+  readonly entries: Entry[];
   getBytes(): Uint8Array;
   getCID(): CID;
   getDigest(): Uint8Array;
-  getBoundary(): Node | null; // null if bucket is empty
-  getParentNode(): Node | null;
+  getBoundary(): Entry | null; // null if bucket is empty
+  getParentEntry(): Entry | null;
 }
 
 export interface ProllyTree {

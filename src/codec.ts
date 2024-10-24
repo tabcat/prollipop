@@ -1,37 +1,37 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import type { ByteView } from "multiformats";
-import { DefaultBucket, DefaultNode } from "./impls.js";
-import { Bucket, Node, Prefix } from "./interface.js";
+import { DefaultBucket, DefaultEntry } from "./impls.js";
+import { Bucket, Entry, Prefix } from "./interface.js";
 
-type EncodedNode = [Node["seq"], Node["key"], Node["val"]];
+type EncodedEntry = [Entry["seq"], Entry["key"], Entry["val"]];
 
 export interface EncodedBucket {
   level: number;
   average: number;
-  nodes: EncodedNode[];
+  entries: EncodedEntry[];
 }
 
-const getValidatedNode = (encodedNode: unknown): EncodedNode => {
-  if (typeof encodedNode !== "object" || !Array.isArray(encodedNode)) {
-    throw new TypeError("Expected encoded node to be an array.");
+const getValidatedEntry = (encodedEntry: unknown): EncodedEntry => {
+  if (typeof encodedEntry !== "object" || !Array.isArray(encodedEntry)) {
+    throw new TypeError("Expected encoded entry to be an array.");
   }
 
-  const [timestamp, hash, message] = encodedNode as Partial<EncodedNode>;
+  const [seq, key, val] = encodedEntry as Partial<EncodedEntry>;
 
-  if (typeof timestamp !== "number") {
-    throw new TypeError("Expected node timestamp field to be a number.");
+  if (typeof seq !== "number") {
+    throw new TypeError("Expected entry seq field to be a number.");
   }
 
-  if (!(hash instanceof Uint8Array)) {
-    throw new TypeError("Expected node hash field to be a byte array.");
+  if (!(key instanceof Uint8Array)) {
+    throw new TypeError("Expected entry key field to be a byte array.");
   }
 
-  if (!(message instanceof Uint8Array)) {
-    throw new TypeError("Expected node message field to be a byte array.");
+  if (!(val instanceof Uint8Array)) {
+    throw new TypeError("Expected entry val field to be a byte array.");
   }
 
-  return [timestamp, hash, message];
+  return [seq, key, val];
 };
 
 const getValidatedPrefix = (prefix: unknown): Prefix => {
@@ -59,28 +59,24 @@ const getValidatedBucket = (bucket: unknown): EncodedBucket => {
 
   const { average, level } = getValidatedPrefix(bucket);
 
-  const { nodes } = bucket as Partial<EncodedBucket>;
+  const { entries } = bucket as Partial<EncodedBucket>;
 
-  if (typeof nodes !== "object" || !Array.isArray(nodes)) {
-    throw new TypeError("Expected bucket nodes field to be a number.");
+  if (typeof entries !== "object" || !Array.isArray(entries)) {
+    throw new TypeError("Expected bucket entries field to be a number.");
   }
 
-  return { average, level, nodes };
+  return { average, level, entries };
 };
 
 export function encodeBucket(
   average: number,
   level: number,
-  nodes: Node[],
+  entries: Entry[],
 ): ByteView<EncodedBucket> {
   return encode({
     average,
     level,
-    nodes: nodes.map(({ seq: timestamp, key: hash, val: message }) => [
-      timestamp,
-      hash,
-      message,
-    ]),
+    entries: entries.map(({ seq, key, val }) => [seq, key, val]),
   });
 }
 
@@ -90,7 +86,11 @@ export function decodeBucket(
 ): Bucket {
   const decoded = decode(bytes);
 
-  const { average, level, nodes: encodedNodes } = getValidatedBucket(decoded);
+  const {
+    average,
+    level,
+    entries: encodedEntries,
+  } = getValidatedBucket(decoded);
 
   if (average !== expectedPrefix.average) {
     throw new TypeError(
@@ -106,11 +106,11 @@ export function decodeBucket(
 
   // could validate boundaries and tuple order here
   let i = 0;
-  const nodes: Node[] = new Array(encodedNodes.length);
-  for (const node of encodedNodes) {
-    nodes[i] = new DefaultNode(...getValidatedNode(node));
+  const entries: Entry[] = new Array(encodedEntries.length);
+  for (const entry of encodedEntries) {
+    entries[i] = new DefaultEntry(...getValidatedEntry(entry));
     i++;
   }
 
-  return new DefaultBucket(average, level, nodes, bytes, sha256(bytes));
+  return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
 }

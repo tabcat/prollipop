@@ -2,11 +2,11 @@ import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
 import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
 import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
-import { BucketDiff, NodeDiff } from "../src/diff.js";
+import { BucketDiff, EntryDiff } from "../src/diff.js";
 import { cloneTree, createEmptyTree } from "../src/index.js";
-import { Node, ProllyTree } from "../src/interface.js";
+import { Entry, ProllyTree } from "../src/interface.js";
 import { Update, mutate } from "../src/mutate.js";
-import { nodeToTuple } from "../src/utils.js";
+import { entryToTuple } from "../src/utils.js";
 import { blockstore, trees, treesToStates } from "./helpers/constants.js";
 
 const checkBuilder = async (
@@ -16,25 +16,29 @@ const checkBuilder = async (
   const tree1States = treesToStates.get(tree1)!;
   const tree2States = treesToStates.get(tree2)!;
 
-  const nodes1 = tree1States.nodes;
-  const nodes2 = tree2States.nodes;
+  const entries1 = tree1States.entries;
+  const entries2 = tree2States.entries;
 
   let updates: Update[] = [];
-  for (const [a, r] of pairwiseTraversal(nodes2, nodes1, compareTuples)) {
+  for (const [a, r] of pairwiseTraversal(entries2, entries1, compareTuples)) {
     if (a != null) {
       updates.push(a);
     } else {
-      updates.push(nodeToTuple(r));
+      updates.push(entryToTuple(r));
     }
   }
 
   const clone1 = cloneTree(tree1);
 
-  let actualNodeDiffs: NodeDiff[] = [];
+  let actualEntryDiffs: EntryDiff[] = [];
   let actualBucketDiffs: BucketDiff[] = [];
-  for await (const { nodes, buckets } of mutate(blockstore, clone1, updates)) {
-    for (const diff of nodes) {
-      actualNodeDiffs.push(diff);
+  for await (const { entries, buckets } of mutate(
+    blockstore,
+    clone1,
+    updates,
+  )) {
+    for (const diff of entries) {
+      actualEntryDiffs.push(diff);
     }
 
     for (const diff of buckets) {
@@ -42,12 +46,12 @@ const checkBuilder = async (
     }
   }
 
-  let expectedNodeDiffs = Array.from(
+  let expectedEntryDiffs = Array.from(
     orderedDiff(
-      treesToStates.get(tree1)!.nodes,
-      treesToStates.get(tree2)!.nodes,
+      treesToStates.get(tree1)!.entries,
+      treesToStates.get(tree2)!.entries,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
+      (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   let expectedBucketDiffs = Array.from(
@@ -60,10 +64,10 @@ const checkBuilder = async (
 
   expect(clone1).to.deep.equal(tree2);
 
-  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  expect(actualEntryDiffs.length).to.equal(expectedEntryDiffs.length);
   for (const [actualDiff, expectedDiff] of pairwiseTraversal(
-    actualNodeDiffs,
-    expectedNodeDiffs,
+    actualEntryDiffs,
+    expectedEntryDiffs,
     () => 0,
   )) {
     expect(actualDiff).to.deep.equal(expectedDiff);
@@ -79,19 +83,23 @@ const checkBuilder = async (
   }
 
   updates = [];
-  for (const [a, r] of pairwiseTraversal(nodes1, nodes2, compareTuples)) {
+  for (const [a, r] of pairwiseTraversal(entries1, entries2, compareTuples)) {
     if (a != null) {
       updates.push(a);
     } else {
-      updates.push(nodeToTuple(r));
+      updates.push(entryToTuple(r));
     }
   }
 
-  actualNodeDiffs = [];
+  actualEntryDiffs = [];
   actualBucketDiffs = [];
-  for await (const { nodes, buckets } of mutate(blockstore, clone1, updates)) {
-    for (const diff of nodes) {
-      actualNodeDiffs.push(diff);
+  for await (const { entries, buckets } of mutate(
+    blockstore,
+    clone1,
+    updates,
+  )) {
+    for (const diff of entries) {
+      actualEntryDiffs.push(diff);
     }
 
     for (const diff of buckets) {
@@ -99,12 +107,12 @@ const checkBuilder = async (
     }
   }
 
-  expectedNodeDiffs = Array.from(
+  expectedEntryDiffs = Array.from(
     orderedDiff(
-      treesToStates.get(tree2)!.nodes,
-      treesToStates.get(tree1)!.nodes,
+      treesToStates.get(tree2)!.entries,
+      treesToStates.get(tree1)!.entries,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
+      (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   expectedBucketDiffs = Array.from(
@@ -117,10 +125,10 @@ const checkBuilder = async (
 
   expect(clone1).to.deep.equal(tree1);
 
-  expect(actualNodeDiffs.length).to.equal(expectedNodeDiffs.length);
+  expect(actualEntryDiffs.length).to.equal(expectedEntryDiffs.length);
   for (const [actualDiff, expectedDiff] of pairwiseTraversal(
-    actualNodeDiffs,
-    expectedNodeDiffs,
+    actualEntryDiffs,
+    expectedEntryDiffs,
     () => 0,
   )) {
     expect(actualDiff).to.deep.equal(expectedDiff);

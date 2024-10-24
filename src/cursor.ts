@@ -2,7 +2,7 @@ import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
-import { Bucket, Node, ProllyTree, Tuple } from "./interface.js";
+import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
 import { bucketToPrefix, loadBucket } from "./utils.js";
 
 interface CursorState {
@@ -31,7 +31,7 @@ const createCursorState = (
 
   if (currentIndex >= lastElement(currentBuckets).entries.length) {
     throw new Error(
-      `${FailedToCreateCursorState}currentIndex >= bucket.nodes.length`,
+      `${FailedToCreateCursorState}currentIndex >= bucket.entries.length`,
     );
   }
 
@@ -59,13 +59,13 @@ export interface Cursor {
   rootLevel(): number;
 
   /**
-   * Returns the index of the current node in the bucket. If index is -1 the bucket is empty and current() will throw an error.
+   * Returns the index of the current entry in the bucket. If index is -1 the bucket is empty and current() will throw an error.
    */
   index(): number;
   /**
-   * Returns the current node in the bucket. If the bucket is empty this method will throw an error.
+   * Returns the current entry in the bucket. If the bucket is empty this method will throw an error.
    */
-  current(): Node;
+  current(): Entry;
 
   /**
    * Returns an array of buckets from root to current level.
@@ -160,7 +160,7 @@ function createCursorFromState(state: CursorState): Cursor {
     rootLevel: () => rootLevelOf(state),
 
     index: () => state.currentIndex,
-    current: () => nodeOf(state),
+    current: () => entryOf(state),
 
     buckets: () => Array.from(state.currentBuckets),
     currentBucket: () => bucketOf(state),
@@ -201,7 +201,7 @@ function createCursorFromState(state: CursorState): Cursor {
 
 /**
  * Create a cursor for the given tree.
- * If the tree is not empty, the cursor is initialized at the 0th index of the root node.
+ * If the tree is not empty, the cursor is initialized at the 0th index of the root entry.
  * Otherwise, the index is -1 and the cursor is set to done.
  *
  * @param blockstore
@@ -219,9 +219,9 @@ const cloneCursorState = (state: CursorState): CursorState =>
 const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);
 
-const nodeOf = (state: CursorState): Node => {
+const entryOf = (state: CursorState): Entry => {
   if (state.currentIndex === -1) {
-    throw new Error("Failed to return current node from empty bucket.");
+    throw new Error("Failed to return current entry from empty bucket.");
   }
 
   return ithElement(bucketOf(state).entries, state.currentIndex);
@@ -234,7 +234,7 @@ const rootLevelOf = (state: CursorState): number =>
 
 const getIsExtremity = (
   state: CursorState,
-  findExtemity: (nodes: Node[]) => Node,
+  findExtemity: (entries: Entry[]) => Entry,
 ): boolean => {
   let i = 0;
 
@@ -243,7 +243,7 @@ const getIsExtremity = (
     const parent = ithElement(state.currentBuckets, i);
     const child = ithElement(state.currentBuckets, i + 1);
 
-    // check if the extreme node of the parent matches the current child all the way down from root
+    // check if the extreme entry of the parent matches the current child all the way down from root
     if (compare(findExtemity(parent.entries).val, child.getDigest()) !== 0) {
       return false;
     }
@@ -261,10 +261,10 @@ const getIsAtHead = (state: CursorState): boolean =>
 
 const guideByTuple =
   (target: Tuple) =>
-  (nodes: Node[]): number => {
-    const index = nodes.findIndex((n) => compareTuples(target, n) <= 0);
+  (entries: Entry[]): number => {
+    const index = entries.findIndex((n) => compareTuples(target, n) <= 0);
 
-    return index === -1 ? nodes.length - 1 : index;
+    return index === -1 ? entries.length - 1 : index;
   };
 
 /**
@@ -278,7 +278,7 @@ const guideByTuple =
 const moveToLevel = async (
   state: CursorState,
   level: number,
-  _guide?: (nodes: Node[]) => number,
+  _guide?: (entries: Entry[]) => number,
 ): Promise<void> => {
   if (level === levelOf(state)) {
     throw new Error("Level to move to cannot be same as current level.");
@@ -293,10 +293,10 @@ const moveToLevel = async (
   }
 
   // guides currentIndex during traversal
-  const guide: (nodes: Node[]) => number =
+  const guide: (entries: Entry[]) => number =
     _guide ??
     // 0 index when descending, current tuple when ascending
-    (level < levelOf(state) ? () => 0 : guideByTuple(nodeOf(state)));
+    (level < levelOf(state) ? () => 0 : guideByTuple(entryOf(state)));
 
   while (level !== levelOf(state)) {
     if (level > levelOf(state)) {
@@ -306,7 +306,7 @@ const moveToLevel = async (
       state.currentBuckets.splice(difference, -difference);
     } else {
       // walk down to lower level
-      const digest = nodeOf(state).val;
+      const digest = entryOf(state).val;
       const bucket = await loadBucket(state.blockstore, digest, {
         ...bucketToPrefix(bucketOf(state)),
         level: levelOf(state) - 1,
@@ -314,7 +314,7 @@ const moveToLevel = async (
 
       if (bucket.entries.length === 0) {
         throw new Error(
-          "Malformed tree: fetched a child bucket with empty node set.",
+          "Malformed tree: fetched a child bucket with empty entry set.",
         );
       }
 
@@ -386,8 +386,8 @@ const nextTupleAtLevel = async (
   level: number,
   state: CursorState,
 ): Promise<void> => {
-  if (compareTuples(tuple, nodeOf(state)) <= 0 && level >= levelOf(state)) {
-    tuple = nodeOf(state);
+  if (compareTuples(tuple, entryOf(state)) <= 0 && level >= levelOf(state)) {
+    tuple = entryOf(state);
   }
 
   while (compareTuples(tuple, lastElement(bucketOf(state).entries)) > 0) {

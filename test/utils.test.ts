@@ -4,15 +4,15 @@ import {
   bucketDigestToCid,
   bucketToPrefix,
   createBucket,
+  entryToTuple,
   loadBucket,
-  nodeToTuple,
 } from "../src/utils.js";
 import {
   average,
   bucket,
   emptyBucket,
+  entry,
   level,
-  node,
   prefix,
   tuple,
 } from "./helpers/constants.js";
@@ -26,9 +26,9 @@ describe("utils", () => {
     });
   });
 
-  describe("nodeToTuple", () => {
-    it("returns a new tuple from a node", () => {
-      expect(nodeToTuple(node)).to.deep.equal(tuple);
+  describe("entryToTuple", () => {
+    it("returns a new tuple from a entry", () => {
+      expect(entryToTuple(entry)).to.deep.equal(tuple);
     });
   });
 
@@ -40,7 +40,7 @@ describe("utils", () => {
 
   describe("createBucket", () => {
     it("returns a bucket", () => {
-      expect(createBucket(average, level, [node])).to.deep.equal(bucket);
+      expect(createBucket(average, level, [entry])).to.deep.equal(bucket);
     });
   });
 
@@ -67,7 +67,7 @@ describe("utils", () => {
       ).rejects.toSatisfy((e) => e instanceof TypeError);
     });
 
-    it("throws if bucket hash does not match requested hash", () => {
+    it("throws if bucket key does not match requested hash", () => {
       const blockstore = new MemoryBlockstore();
       blockstore.put(emptyBucket.getCID(), bucket.getBytes());
       expect(() =>

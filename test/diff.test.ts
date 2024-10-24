@@ -33,7 +33,7 @@ export async function checkDiffs(
       treesToStates.get(tree1)!.nodes,
       treesToStates.get(tree2)!.nodes,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   const expectedBucketDiffs = Array.from(

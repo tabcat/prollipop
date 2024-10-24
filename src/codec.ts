@@ -4,7 +4,7 @@ import type { ByteView } from "multiformats";
 import { DefaultBucket, DefaultNode } from "./impls.js";
 import { Bucket, Node, Prefix } from "./interface.js";
 
-type EncodedNode = [Node["timestamp"], Node["hash"], Node["message"]];
+type EncodedNode = [Node["seq"], Node["key"], Node["val"]];
 
 export interface EncodedBucket {
   level: number;
@@ -76,7 +76,7 @@ export function encodeBucket(
   return encode({
     average,
     level,
-    nodes: nodes.map(({ timestamp, hash, message }) => [
+    nodes: nodes.map(({ seq: timestamp, key: hash, val: message }) => [
       timestamp,
       hash,
       message,

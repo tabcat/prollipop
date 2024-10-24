@@ -14,9 +14,7 @@ const levelOfNodes = (
 ): Node[][] => {
   const nodeLevel: Node[][] = [[]];
   for (const node of nodes) {
-    lastElement(nodeLevel).push(
-      new DefaultNode(node.timestamp, node.hash, node.message),
-    );
+    lastElement(nodeLevel).push(new DefaultNode(node.seq, node.key, node.val));
 
     if (createIsBoundary(average, level)(node)) {
       nodeLevel.push([]);
@@ -49,7 +47,7 @@ const nextLevelNodes = (buckets: Bucket[]): Node[] => {
   const nodes: Node[] = [];
   for (const bucket of buckets) {
     // should never get empty bucket here as there would not be another level
-    nodes.push({ ...bucket.getBoundary()!, message: bucket.getDigest() });
+    nodes.push({ ...bucket.getBoundary()!, val: bucket.getDigest() });
   }
   return nodes;
 };

@@ -42,14 +42,10 @@ const handleUpdate = (
   update: Update,
 ): [Node | null, NodeDiff | null] => {
   if ("message" in update) {
-    const updateNode = new DefaultNode(
-      update.timestamp,
-      update.hash,
-      update.message,
-    );
+    const updateNode = new DefaultNode(update.seq, update.key, update.val);
 
     if (node != null) {
-      if (compareBytes(node.message, update.message) === 0) {
+      if (compareBytes(node.val, update.val) === 0) {
         if ("strict" in update) {
           return [null, [node, null]];
         } else {
@@ -168,7 +164,7 @@ export async function* mutate(
 
     let updatesProcessed = 0;
     for (const [node, updt, nodesDone] of pairwiseTraversal(
-      updatee.nodes,
+      updatee.entries,
       updts,
       compareTuples,
     )) {

@@ -23,13 +23,13 @@ const createCursorState = (
 ): CursorState => {
   currentBuckets = currentBuckets ?? [tree.root];
   currentIndex =
-    currentIndex ?? Math.min(0, lastElement(currentBuckets).nodes.length - 1);
+    currentIndex ?? Math.min(0, lastElement(currentBuckets).entries.length - 1);
 
   if (currentBuckets.length === 0) {
     throw new Error(`${FailedToCreateCursorState}currentBuckets.length === 0`);
   }
 
-  if (currentIndex >= lastElement(currentBuckets).nodes.length) {
+  if (currentIndex >= lastElement(currentBuckets).entries.length) {
     throw new Error(
       `${FailedToCreateCursorState}currentIndex >= bucket.nodes.length`,
     );
@@ -224,7 +224,7 @@ const nodeOf = (state: CursorState): Node => {
     throw new Error("Failed to return current node from empty bucket.");
   }
 
-  return ithElement(bucketOf(state).nodes, state.currentIndex);
+  return ithElement(bucketOf(state).entries, state.currentIndex);
 };
 
 const levelOf = (state: CursorState): number => bucketOf(state).level;
@@ -244,7 +244,7 @@ const getIsExtremity = (
     const child = ithElement(state.currentBuckets, i + 1);
 
     // check if the extreme node of the parent matches the current child all the way down from root
-    if (compare(findExtemity(parent.nodes).message, child.getDigest()) !== 0) {
+    if (compare(findExtemity(parent.entries).val, child.getDigest()) !== 0) {
       return false;
     }
 
@@ -306,13 +306,13 @@ const moveToLevel = async (
       state.currentBuckets.splice(difference, -difference);
     } else {
       // walk down to lower level
-      const digest = nodeOf(state).message;
+      const digest = nodeOf(state).val;
       const bucket = await loadBucket(state.blockstore, digest, {
         ...bucketToPrefix(bucketOf(state)),
         level: levelOf(state) - 1,
       });
 
-      if (bucket.nodes.length === 0) {
+      if (bucket.entries.length === 0) {
         throw new Error(
           "Malformed tree: fetched a child bucket with empty node set.",
         );
@@ -322,7 +322,7 @@ const moveToLevel = async (
     }
 
     // set to guided index
-    state.currentIndex = guide(bucketOf(state).nodes);
+    state.currentIndex = guide(bucketOf(state).entries);
   }
 };
 
@@ -333,7 +333,7 @@ const moveToLevel = async (
  * @returns
  */
 const overflows = (state: CursorState): boolean =>
-  state.currentIndex === lastElement(state.currentBuckets).nodes.length - 1;
+  state.currentIndex === lastElement(state.currentBuckets).entries.length - 1;
 
 /**
  * Increments the cursor by one on the same level. Handles traversing buckets if necessary.
@@ -375,7 +375,7 @@ const nextAtLevel = async (
   // only increment if level was higher or equal to original level
   if (!movingDown) {
     if (bucket) {
-      state.currentIndex = bucketOf(state).nodes.length - 1;
+      state.currentIndex = bucketOf(state).entries.length - 1;
     }
     await moveSideways(state);
   }
@@ -390,7 +390,7 @@ const nextTupleAtLevel = async (
     tuple = nodeOf(state);
   }
 
-  while (compareTuples(tuple, lastElement(bucketOf(state).nodes)) > 0) {
+  while (compareTuples(tuple, lastElement(bucketOf(state).entries)) > 0) {
     if (state.currentBuckets.length === 1) {
       state.isDone = true;
       break;
@@ -399,7 +399,7 @@ const nextTupleAtLevel = async (
   }
 
   const guide = guideByTuple(tuple);
-  state.currentIndex = guide(bucketOf(state).nodes);
+  state.currentIndex = guide(bucketOf(state).entries);
 
   if (level < levelOf(state)) {
     await moveToLevel(state, level, guide);
@@ -417,7 +417,7 @@ const jumpToTupleAtLevel = async (
 
   // set to root at index matching tuple
   state.currentBuckets = [firstElement(state.currentBuckets)];
-  state.currentIndex = guideByTuple(tuple)(bucketOf(state).nodes);
+  state.currentIndex = guideByTuple(tuple)(bucketOf(state).entries);
 
   // move to level if needed
   if (level < levelOf(state)) {

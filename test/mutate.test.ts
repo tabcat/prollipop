@@ -47,7 +47,7 @@ const checkBuilder = async (
       treesToStates.get(tree1)!.nodes,
       treesToStates.get(tree2)!.nodes,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   let expectedBucketDiffs = Array.from(
@@ -104,7 +104,7 @@ const checkBuilder = async (
       treesToStates.get(tree2)!.nodes,
       treesToStates.get(tree1)!.nodes,
       compareTuples,
-      (a: Node, b: Node) => compareBytes(a.message, b.message) !== 0,
+      (a: Node, b: Node) => compareBytes(a.val, b.val) !== 0,
     ),
   );
   expectedBucketDiffs = Array.from(
@@ -168,7 +168,7 @@ describe("mutate", () => {
     const tree2 = createEmptyTree();
 
     const updates: Update[] = [
-      { timestamp: 1, hash: new Uint8Array(32), message: new Uint8Array() },
+      { seq: 1, key: new Uint8Array(32), val: new Uint8Array() },
     ];
 
     for await (const _ of mutate(blockstore, tree1, updates)) {

@@ -10,8 +10,8 @@ import {
   treesToStates,
 } from "./helpers/constants.js";
 
-const lowTuple: Tuple = { timestamp: 0, hash: new Uint8Array() };
-const highTuple: Tuple = { timestamp: Infinity, hash: new Uint8Array() };
+const lowTuple: Tuple = { seq: 0, key: new Uint8Array() };
+const highTuple: Tuple = { seq: Infinity, key: new Uint8Array() };
 
 describe("cursor", () => {
   describe("createCursor", () => {
@@ -54,7 +54,7 @@ describe("cursor", () => {
         it("returns the index of the current node", () => {
           const cursor = createCursor(blockstore, { root: bucket });
           expect(cursor.index()).to.equal(
-            lastElement(cursor.buckets()).nodes.indexOf(cursor.current()),
+            lastElement(cursor.buckets()).entries.indexOf(cursor.current()),
           );
         });
 
@@ -67,7 +67,7 @@ describe("cursor", () => {
       describe("current", () => {
         it("returns the current node", () => {
           const cursor = createCursor(blockstore, { root: bucket });
-          expect(cursor.current()).to.deep.equal(firstElement(bucket.nodes));
+          expect(cursor.current()).to.deep.equal(firstElement(bucket.entries));
         });
 
         it("throws if called on empty bucket", () => {
@@ -137,7 +137,7 @@ describe("cursor", () => {
 
         it("increments cursor index on same level", async () => {
           for (const tree of trees) {
-            if (tree.root.nodes.length <= 1) {
+            if (tree.root.entries.length <= 1) {
               continue;
             }
 
@@ -280,16 +280,16 @@ describe("cursor", () => {
 
         it("moves cursor to tuple on same level", async () => {
           for (const tree of trees) {
-            if (tree.root.nodes.length <= 1) {
+            if (tree.root.entries.length <= 1) {
               continue;
             }
 
             const cursor = createCursor(blockstore, tree);
 
-            await cursor.nextTuple(lastElement(cursor.currentBucket().nodes));
+            await cursor.nextTuple(lastElement(cursor.currentBucket().entries));
 
             expect(cursor.index()).to.equal(
-              cursor.currentBucket().nodes.length - 1,
+              cursor.currentBucket().entries.length - 1,
             );
             expect(cursor.done()).to.equal(false);
           }
@@ -313,7 +313,7 @@ describe("cursor", () => {
             );
 
             await cursor.nextTuple(
-              ithElement(tree.root.nodes, 1),
+              ithElement(tree.root.entries, 1),
               cursor.rootLevel(),
             );
 
@@ -375,7 +375,7 @@ describe("cursor", () => {
       describe("jumpTo", () => {
         it("jumps to the domain of the tuple at the requested level", async () => {
           for (const tree of trees) {
-            if (tree.root.nodes.length === 0) {
+            if (tree.root.entries.length === 0) {
               continue;
             }
             const { state } = treesToStates.get(tree)!;
@@ -384,14 +384,11 @@ describe("cursor", () => {
 
             expect(cursor.done()).to.equal(false);
 
-            await cursor.jumpTo(
-              { timestamp: Infinity, hash: new Uint8Array() },
-              0,
-            );
+            await cursor.jumpTo({ seq: Infinity, key: new Uint8Array() }, 0);
 
             expect(cursor.level()).to.equal(0);
             expect(cursor.index()).to.equal(
-              cursor.currentBucket().nodes.length - 1,
+              cursor.currentBucket().entries.length - 1,
             );
             expect(cursor.currentBucket()).to.deep.equal(
               lastElement(lastElement(state)),
@@ -399,7 +396,7 @@ describe("cursor", () => {
             expect(cursor.done()).to.equal(false);
 
             await cursor.jumpTo(
-              { timestamp: 0, hash: new Uint8Array() },
+              { seq: 0, key: new Uint8Array() },
               cursor.rootLevel(),
             );
 
@@ -414,7 +411,7 @@ describe("cursor", () => {
 
         it("rejects if jumping to level higher than root", async () => {
           for (const tree of trees) {
-            if (tree.root.nodes.length === 0) {
+            if (tree.root.entries.length === 0) {
               continue;
             }
 
@@ -422,7 +419,7 @@ describe("cursor", () => {
 
             expect(
               cursor.jumpTo(
-                { timestamp: 0, hash: new Uint8Array() },
+                { seq: 0, key: new Uint8Array() },
                 cursor.rootLevel() + 1,
               ),
             ).rejects.toThrow("Cannot jump to level higher than root.");

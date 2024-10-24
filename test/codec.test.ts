@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { decodeBucket, encodeBucket } from "../src/codec.js";
 import { emptyBucket, encodedEmptyBucket } from "./helpers/constants.js";
 
-const { average, level, nodes } = emptyBucket;
+const { average, level, entries: nodes } = emptyBucket;
 
 describe("codec", () => {
   describe("encodeBucket", () => {

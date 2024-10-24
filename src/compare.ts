@@ -14,11 +14,11 @@ export const compareTimestamp = (a: number, b: number): number => a - b;
  * @returns
  */
 export const compareTuples = (a: Tuple, b: Tuple): number => {
-  const difference = compareTimestamp(a.timestamp, b.timestamp);
+  const difference = compareTimestamp(a.seq, b.seq);
 
   if (difference !== 0) return difference;
 
-  const comparison = compareBytes(a.hash, b.hash);
+  const comparison = compareBytes(a.key, b.key);
 
   return comparison;
 };
@@ -37,7 +37,7 @@ export const compareNodes = (a: Node, b: Node): number => {
     return tuples;
   }
 
-  return compareBytes(a.message, b.message);
+  return compareBytes(a.val, b.val);
 };
 
 /**

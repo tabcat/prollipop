@@ -179,7 +179,7 @@ export async function* diff(
       d.nodes.push([null, rv]);
       await rc.next(0);
     } else {
-      if (compareBytes(lv.message, rv.message) !== 0) {
+      if (compareBytes(lv.val, rv.val) !== 0) {
         d.nodes.push([lv, rv]);
         await Promise.all([lc.next(0), rc.next(0)]);
       } else {

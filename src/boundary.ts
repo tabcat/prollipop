@@ -52,7 +52,7 @@ export const createIsBoundary = (
 
   const limit = Number(MAX_UINT32 / BigInt(average));
 
-  return ({ timestamp, hash }: Tuple) =>
+  return ({ seq: timestamp, key: hash }: Tuple) =>
     // value does not determine boundary
     isBoundaryHash(sha256(encode([level, timestamp, hash])), limit);
 };

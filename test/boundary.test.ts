@@ -39,7 +39,7 @@ describe("boundary", () => {
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
         expect(
-          isBoundary({ timestamp: 1, hash: empty, message: new Uint8Array() }),
+          isBoundary({ seq: 1, key: empty, val: new Uint8Array() }),
         ).to.equal(passed);
         expect(passed).to.equal(false);
       });
@@ -50,7 +50,7 @@ describe("boundary", () => {
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
         expect(
-          isBoundary({ timestamp: 1, hash: filled, message: new Uint8Array() }),
+          isBoundary({ seq: 1, key: filled, val: new Uint8Array() }),
         ).to.equal(passed);
         expect(passed).to.equal(true);
       });

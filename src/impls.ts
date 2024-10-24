@@ -7,21 +7,21 @@ const nodeInspectSymbol = Symbol.for("nodejs.util.inspect.custom");
 
 export class DefaultNode implements Node {
   constructor(
-    readonly timestamp: Node["timestamp"],
-    readonly hash: Node["hash"],
-    readonly message: Node["message"],
+    readonly seq: Node["seq"],
+    readonly key: Node["key"],
+    readonly val: Node["val"],
   ) {}
 
   [nodeInspectSymbol]() {
     return {
-      timestamp: this.timestamp,
-      hash: base32.encode(this.hash),
-      message: base32.encode(this.message),
+      timestamp: this.seq,
+      hash: base32.encode(this.key),
+      message: base32.encode(this.val),
     };
   }
 
   toString() {
-    return `N:t:${this.timestamp}:h:${base32.encode(this.hash)}:m:${base32.encode(this.message)}`;
+    return `N:t:${this.seq}:h:${base32.encode(this.key)}:m:${base32.encode(this.val)}`;
   }
 }
 
@@ -32,7 +32,7 @@ export class DefaultBucket implements Bucket {
   constructor(
     readonly average: number,
     readonly level: number,
-    readonly nodes: Node[],
+    readonly entries: Node[],
     bytes: Uint8Array,
     digest: Uint8Array,
   ) {
@@ -53,11 +53,11 @@ export class DefaultBucket implements Bucket {
   }
 
   getBoundary(): Node | null {
-    return this.nodes[this.nodes.length - 1] ?? null;
+    return this.entries[this.entries.length - 1] ?? null;
   }
 
   getParentNode(): Node | null {
-    const { timestamp, hash } = this.getBoundary() ?? {};
+    const { seq: timestamp, key: hash } = this.getBoundary() ?? {};
     return timestamp != null && hash != null
       ? new DefaultNode(timestamp, hash, this.getDigest())
       : null;
@@ -67,7 +67,7 @@ export class DefaultBucket implements Bucket {
     return {
       average: this.average,
       level: this.level,
-      nodes: this.nodes,
+      nodes: this.entries,
       hash: base32.encode(this.#digest),
     };
   }

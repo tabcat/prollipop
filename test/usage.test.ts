@@ -57,7 +57,7 @@ describe("usage", () => {
      */
     const node: Node = {
       ...tuple,
-      message: new TextEncoder().encode("hello"),
+      val: new TextEncoder().encode("hello"),
     };
 
     /**

@@ -1,12 +1,12 @@
 import { CID } from "multiformats/cid";
 
 export interface Tuple {
-  readonly timestamp: number;
-  readonly hash: Uint8Array;
+  readonly seq: number;
+  readonly key: Uint8Array;
 }
 
 export interface Node extends Tuple {
-  readonly message: Uint8Array;
+  readonly val: Uint8Array;
 }
 
 export interface Prefix {
@@ -15,7 +15,7 @@ export interface Prefix {
 }
 
 export interface Bucket extends Prefix {
-  readonly nodes: Node[];
+  readonly entries: Node[];
   getBytes(): Uint8Array;
   getCID(): CID;
   getDigest(): Uint8Array;

@@ -59,20 +59,22 @@ export const tree = new DefaultProllyTree(bucket);
 export const blockstore = new MemoryBlockstore();
 
 export const treeEntriesMax = Number.parseInt(TREE_ENTRIES_MAX);
+export const treeEntriesHalf = Math.floor(treeEntriesMax / 2);
+export const treeEntriesThird = Math.floor(treeEntriesMax / 3);
 
 export const emptyTreeIds: number[] = [];
 export const superTreeIds = Array(treeEntriesMax)
   .fill(0)
   .map((_, i) => i);
-export const subTreeIds = Array(treeEntriesMax / 3)
+export const subTreeIds = Array(treeEntriesThird)
   .fill(0)
-  .map((_, i) => i + treeEntriesMax / 3);
-export const lowerTreeIds = Array(Math.floor(treeEntriesMax / 2))
+  .map((_, i) => i + treeEntriesThird);
+export const lowerTreeIds = Array(Math.floor(treeEntriesThird))
   .fill(0)
   .map((_, i) => i);
-export const upperTreeIds = Array(Math.floor(treeEntriesMax / 2))
+export const upperTreeIds = Array(Math.floor(treeEntriesHalf))
   .fill(0)
-  .map((_, i) => i + treeEntriesMax / 2);
+  .map((_, i) => i + treeEntriesHalf);
 export const randomTreeIds = Array(treeEntriesMax)
   .fill(0)
   .map((_, i) => i)

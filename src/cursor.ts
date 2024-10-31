@@ -89,7 +89,7 @@ export interface Cursor {
   nextTuple(tuple: Tuple, level?: number): Promise<void>;
 
   /**
-   * Fast forwards the cursor to
+   * Moves the cursor from root to the tuple or parent tuple at level.
    *
    * @param tuple
    * @param level

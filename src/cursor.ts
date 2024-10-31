@@ -407,6 +407,8 @@ const nextTupleAtLevel = async (
   }
 };
 
+// should look at current buckets to traverse faster
+// could have the current buckets be part of a cache that can be read from by the other methods
 const jumpToTupleAtLevel = async (
   tuple: Tuple,
   level: number,

@@ -28,10 +28,17 @@ function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
 
 const MAX_UINT32 = 1n << 32n;
 
-export const createIsBoundary = (
+export interface CreateIsBoundary {
+  (average: number, level: number): IsBoundary;
+}
+export interface IsBoundary {
+  (entry: Entry): boolean;
+}
+
+export const createIsBoundary: CreateIsBoundary = (
   average: number,
   level: number,
-): ((entry: Entry) => boolean) => {
+): IsBoundary => {
   if (average < 1) {
     throw new TypeError(
       `Average parameter must be greater than or equal to 1. Received average: ${average}`,

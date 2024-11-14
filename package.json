@@ -37,6 +37,7 @@
     "format": "prettier src test --write",
     "build": "tsc",
     "test": "vitest --config vitest.config.ts --run",
+    "test:watch": "vitest --config vitest.config.ts",
     "test:stress": "TREE_ENTRIES_MAX=30000 vitest --config vitest.config.ts --run",
     "api-docs": "typedoc src/compare.ts src/cursor.ts src/diff.ts src/index.ts src/mutate.ts src/utils.ts",
     "usage": "vitest test/usage.test.ts",

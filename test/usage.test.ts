@@ -1,7 +1,8 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { diff } from "../src/diff.js";
-import { cloneTree, createEmptyTree, mutate } from "../src/index.js";
+import { DefaultEntry } from "../src/impls.js";
+import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
 import { Bucket, Entry, ProllyTree } from "../src/interface.js";
 import { entryToTuple } from "../src/utils.js";
 
@@ -47,7 +48,7 @@ describe("usage", () => {
      */
     const tuple = {
       seq: 0,
-      key: new Uint8Array(32),
+      key: new TextEncoder().encode("hello"),
     };
 
     /**
@@ -55,10 +56,11 @@ describe("usage", () => {
      * The seq and key are the key, while the val is the value.
      * The seq and key give entries a sort, entries are stored in this order in the tree.
      */
-    const entry: Entry = {
-      ...tuple,
-      val: new TextEncoder().encode("hello"),
-    };
+    const entry: Entry = new DefaultEntry(
+      tuple.seq,
+      tuple.key,
+      new TextEncoder().encode("world"),
+    );
 
     /**
      * To add a entry to a tree the mutate function is used. It takes an AwaitIterable of Entries or Tuples.
@@ -114,6 +116,27 @@ describe("usage", () => {
      * The mutate function yields entry and buckets diffs but also changes the `root` property of the tree.
      */
     expect(tree).to.not.deep.equal(clone);
+
+    const found: Entry[] = [];
+    /**
+     * The search function can be used to read keys from the tree.
+     * Again, it is important to provide the keys you want to search sorted.
+     */
+    for await (const entry of search(blockstore, tree, [tuple])) {
+      if ("val" in entry) {
+        /**
+         * If an entry is yieled then the key tuple exists in the tree.
+         */
+        found.push(entry);
+        console.log(new TextDecoder().decode(entry.key));
+        console.log(new TextDecoder().decode(entry.val));
+      } else {
+        /**
+         * If a tuple is yielded then the key does not exist in the tree
+         */
+      }
+    }
+    expect(found).to.deep.equal([entry]);
 
     let clone2: ProllyTree;
 

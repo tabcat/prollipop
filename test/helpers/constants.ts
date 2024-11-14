@@ -15,11 +15,15 @@ declare global {
   var TREE_ENTRIES_MAX: string;
 }
 
+export const createEntry = (seq: number) => new DefaultEntry(seq, bytes, bytes);
+
+export const bytes = new Uint8Array();
+
 export const seq = 0;
-export const key = new Uint8Array(4); // isBoundaryHash expects Uint8Array with length >= 4
-export const val = new Uint8Array(0);
+export const key = bytes;
+export const val = bytes;
 export const tuple = { seq, key };
-export const entry = new DefaultEntry(seq, key, val);
+export const entry = createEntry(seq);
 
 export const average = 32;
 export const level = 0;
@@ -69,10 +73,10 @@ export const superTreeIds = Array(treeEntriesMax)
 export const subTreeIds = Array(treeEntriesThird)
   .fill(0)
   .map((_, i) => i + treeEntriesThird);
-export const lowerTreeIds = Array(Math.floor(treeEntriesThird))
+export const lowerTreeIds = Array(treeEntriesThird)
   .fill(0)
   .map((_, i) => i);
-export const upperTreeIds = Array(Math.floor(treeEntriesHalf))
+export const upperTreeIds = Array(treeEntriesHalf)
   .fill(0)
   .map((_, i) => i + treeEntriesHalf);
 export const randomTreeIds = Array(treeEntriesMax)

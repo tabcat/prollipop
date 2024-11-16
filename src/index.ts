@@ -5,9 +5,16 @@ import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Entry, ProllyTree, Tuple } from "./interface.js";
+import { Entry, Prefix, ProllyTree, Tuple } from "./interface.js";
 import { mutate } from "./mutate.js";
-import { Await, AwaitIterable, createBucket, entryToTuple } from "./utils.js";
+import {
+  Await,
+  AwaitIterable,
+  bucketCidToDigest,
+  createBucket,
+  entryToTuple,
+  loadBucket,
+} from "./utils.js";
 
 export { mutate };
 
@@ -21,6 +28,16 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;
 
   return new DefaultProllyTree(createBucket(average, 0, []));
+}
+
+export async function loadTree(
+  blockstore: Blockstore,
+  cid: CID,
+  expectedPrefix?: Prefix,
+): Promise<ProllyTree> {
+  return new DefaultProllyTree(
+    await loadBucket(blockstore, bucketCidToDigest(cid), expectedPrefix),
+  );
 }
 
 /**

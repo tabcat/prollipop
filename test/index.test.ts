@@ -6,6 +6,7 @@ import { DefaultEntry, DefaultProllyTree } from "../src/impls.js";
 import {
   cloneTree,
   createEmptyTree,
+  loadTree,
   merge,
   search,
   sync,
@@ -31,6 +32,15 @@ describe("index", () => {
       expect(createEmptyTree()).to.deep.equal(
         new DefaultProllyTree(createBucket(average, level, [])),
       );
+    });
+  });
+
+  describe("loadTree", () => {
+    it("loads a tree from the blockstore", async () => {
+      const blockstore = new MemoryBlockstore();
+      blockstore.put(tree.root.getCID(), tree.root.getBytes());
+      const loadedTree = await loadTree(blockstore, tree.root.getCID());
+      expect(loadedTree).to.deep.equal(tree);
     });
   });
 

@@ -104,7 +104,7 @@ export function encodeBucket(
 
 export function decodeBucket(
   bytes: Uint8Array,
-  expectedPrefix: Prefix,
+  expectedPrefix?: Prefix,
 ): Bucket {
   const decoded = decode(bytes);
 
@@ -115,22 +115,24 @@ export function decodeBucket(
     entries: encodedEntries,
   } = getValidatedBucket(decoded);
 
-  if (average !== expectedPrefix.average) {
-    throw new TypeError(
-      `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${average}`,
-    );
-  }
+  if (expectedPrefix != null) {
+    if (average !== expectedPrefix.average) {
+      throw new TypeError(
+        `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${average}`,
+      );
+    }
 
-  if (level !== expectedPrefix.level) {
-    throw new TypeError(
-      `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${level}`,
-    );
-  }
+    if (level !== expectedPrefix.level) {
+      throw new TypeError(
+        `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${level}`,
+      );
+    }
 
-  if (base !== expectedPrefix.base) {
-    throw new TypeError(
-      `Expect prefix to have base ${expectedPrefix.base}. Received prefix with base ${base}`,
-    );
+    if (base !== expectedPrefix.base) {
+      throw new TypeError(
+        `Expect prefix to have base ${expectedPrefix.base}. Received prefix with base ${base}`,
+      );
+    }
   }
 
   // could validate boundaries and tuple order here

@@ -78,7 +78,7 @@ export const createBucket = (
 export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
-  expectedPrefix: Prefix,
+  expectedPrefix?: Prefix,
 ): Promise<Bucket> {
   let bytes: Uint8Array;
   try {

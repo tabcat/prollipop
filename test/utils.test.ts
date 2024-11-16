@@ -1,6 +1,7 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import {
+  bucketCidToDigest,
   bucketDigestToCid,
   bucketToPrefix,
   createBucket,
@@ -22,6 +23,14 @@ describe("utils", () => {
     it("returns the cid for a given bucket hash", () => {
       expect(bucketDigestToCid(bucket.getDigest())).to.deep.equal(
         bucket.getCID(),
+      );
+    });
+  });
+
+  describe("bucketCidToDigest", () => {
+    it("returns the digest for a given bucket cid", () => {
+      expect(bucketCidToDigest(bucket.getCID())).to.deep.equal(
+        bucket.getDigest(),
       );
     });
   });

@@ -24,6 +24,14 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
   CID.createV1(cborCode, createMultihashDigest(sha2.sha256.code, digest));
 
 /**
+ * Returns the digest for a given bucket CID.
+ *
+ * @param cid
+ * @returns
+ */
+export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
+
+/**
  * Returns a new tuple for the provided entry or tuple.
  *
  * @param entry

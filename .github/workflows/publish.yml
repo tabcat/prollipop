@@ -33,8 +33,9 @@ jobs:
         run: |
           echo "LOCAL_VERSION=$(pnpm pkg get version | tr -d '"')" >> $GITHUB_OUTPUT
           echo "PUBLISHED_VERSION=$(npm view prollipop version 2>/dev/null || echo "")" >> $GITHUB_OUTPUT
-          echo "Local version: ${{ steps.check-version.outputs.LOCAL_VERSION }}"
-          echo "Published version: ${{ steps.check-version.outputs.PUBLISHED_VERSION }}"
+          echo $LOCAL_VERSION
+          echo $PUBLISHED_VERSION
+          cat $GITHUB_OUTPUT
 
       - name: Publish to NPM
         if: steps.check-version.outputs.LOCAL_VERSION != steps.check-version.outputs.PUBLISHED_VERSION

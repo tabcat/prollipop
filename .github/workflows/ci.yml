@@ -32,4 +32,4 @@ jobs:
         cache: 'pnpm'
         cache-dependency-path: pnpm-lock.yaml
     - run: pnpm install
-    - run: pnpm ci
+    - run: pnpm run ci

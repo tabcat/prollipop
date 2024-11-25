@@ -32,7 +32,7 @@ jobs:
         id: check-version
         run: |
           echo "local_version=$(pnpm pkg get version | tr -d '"')" >> $GITHUB_OUTPUT
-          echo "published_version=$(npm view prollipop version)" >> $GITHUB_OUTPUT
+          echo "published_version=$(npm view prollipop version 2>/dev/null || echo "")" >> $GITHUB_OUTPUT
           echo "Local version: ${{ steps.check-version.outputs.local_version }}"
           echo "Published version: ${{ steps.check-version.outputs.published_version }}"
 

@@ -27,8 +27,16 @@ jobs:
           always-auth: true
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - run: pnpm install
-      - run: pnpm build
-      - run: npm publish --access public
+
+      - name: Check latest version
+        id: check-version
+        run: |
+          echo "local_version=$(pnpm pkg get version | tr -d '"')" >> $GITHUB_OUTPUT
+          echo "published_version=$(npm view prollipop version)" >> $GITHUB_OUTPUT
+          echo $GITHUB_OUTPUT
+
+      - name: Publish to NPM
+        if: steps.check-version.outputs.local_version != steps.check-version.outputs.published_version
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}

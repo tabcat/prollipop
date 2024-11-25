@@ -37,6 +37,7 @@
     }
   },
   "scripts": {
+    "prepublishOnly": "pnpm install && pnpm build",
     "lint": "prettier src test --check",
     "format": "prettier src test --write",
     "build": "tsc",

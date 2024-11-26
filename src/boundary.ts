@@ -26,7 +26,7 @@ function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
   return new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit;
 }
 
-const MAX_UINT32 = 1n << 32n;
+const MAX_UINT32 = (1n << 32n) - 1n;
 
 export interface CreateIsBoundary {
   (average: number, level: number): IsBoundary;

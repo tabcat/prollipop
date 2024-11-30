@@ -1,5 +1,6 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
+import { lastElement } from "@tabcat/ith-element";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareEntries, compareTuples, minTuple } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
@@ -184,7 +185,7 @@ export function encodeBucket(
 export function decodeBucket(
   bytes: Uint8Array,
   isHead: boolean,
-  range: TupleRange,
+  range?: TupleRange,
   expectedPrefix?: Prefix,
 ): Bucket {
   const decoded = decode(bytes);
@@ -208,6 +209,10 @@ export function decodeBucket(
 
   const isBoundary = createIsBoundary(decoded.average, decoded.level);
 
+  range = range ?? [
+    minTuple,
+    decoded.entries.length > 0 ? lastElement(decoded.entries) : minTuple,
+  ];
   const entries = decodeEntries(decoded.entries, isHead, isBoundary, range);
 
   return new DefaultBucket(

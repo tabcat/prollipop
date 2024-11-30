@@ -14,6 +14,9 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
+export const isPositiveInteger = (n: unknown): n is number =>
+  typeof n === "number" && n >= 0 && Number.isInteger(n);
+
 /**
  * Returns the CID for a given bucket digest.
  *

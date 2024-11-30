@@ -6,6 +6,8 @@ export { compareBytes };
 
 export const compareSeq = (a: number, b: number): number => a - b;
 
+export const minTuple = { seq: 0, key: new Uint8Array(0) };
+
 /**
  * Compare two tuples.
  *

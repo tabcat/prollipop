@@ -1,98 +1,177 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import type { ByteView } from "multiformats";
-import { compareEntries } from "./compare.js";
+import { IsBoundary, createIsBoundary } from "./boundary.js";
+import { compareEntries, compareTuples, minTuple } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
-import { Bucket, Entry, Prefix } from "./interface.js";
-import { entriesToDeltaBase } from "./utils.js";
+import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
+import { isPositiveInteger } from "./utils.js";
 
-type EncodedEntry = [Entry["seq"], Entry["key"], Entry["val"]];
+export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
-export interface EncodedBucket {
-  level: number;
-  average: number;
-  base: number;
+export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
 }
 
-const getValidatedEntry = (encodedEntry: unknown): EncodedEntry => {
-  if (typeof encodedEntry !== "object" || !Array.isArray(encodedEntry)) {
-    throw new TypeError("Expected encoded entry to be an array.");
+export interface TupleRange {
+  /**
+   * Exclusive lower bound.
+   */
+  0: Tuple;
+
+  /**
+   * Inclusive upper bound.
+   */
+  1: Tuple;
+}
+
+export const emptyTupleRange: TupleRange = [minTuple, minTuple];
+
+export const isValidEntry = (e: Partial<Entry>): e is Entry =>
+  typeof e === "object" &&
+  e !== null &&
+  isPositiveInteger(e.seq) &&
+  e.key instanceof Uint8Array &&
+  e.val instanceof Uint8Array;
+
+export const isValidEncodedEntry = (e: any): e is EncodedEntry =>
+  Array.isArray(e) &&
+  isPositiveInteger(e[0]) &&
+  e[1] instanceof Uint8Array &&
+  e[2] instanceof Uint8Array;
+
+export const isValidPrefix = <P extends Prefix>(p: any): p is P =>
+  typeof p === "object" &&
+  p !== null &&
+  isPositiveInteger(p.average) &&
+  isPositiveInteger(p.level) &&
+  isPositiveInteger(p.base);
+
+/**
+ * Ensures that entries are sorted and non-duplicative.
+ * Ensures that isHead or isBoundary for last entry of bucket.
+ * Ensures that !isBoundary for all other entries.
+ *
+ * @param entry
+ * @param next
+ * @param isHead
+ * @param isBoundary
+ */
+export const validateEntryRelation = (
+  entry: Entry,
+  next: Entry | undefined,
+  isHead: boolean,
+  isBoundary: IsBoundary,
+  range?: TupleRange,
+): void => {
+  if (next == null) {
+    // entry is last entry of bucket
+    if (!isHead && !isBoundary(entry)) {
+      throw new TypeError(
+        "Last entry must be a boundary unless inside a head bucket.",
+      );
+    }
+
+    if (range != null && compareTuples(entry, range[1]) !== 0) {
+      throw new TypeError("Last entry must equal max tuple range.");
+    }
+  } else {
+    // entry is not last entry of bucket
+    if (compareEntries(entry, next) >= 0) {
+      throw new TypeError("Entries must be sorted and non-duplicative.");
+    }
+
+    if (isBoundary(entry)) {
+      throw new TypeError("Buckets can have only one boundary.");
+    }
+
+    if (range != null && compareTuples(entry, range[0]) > 0) {
+      throw new TypeError("Entry must be greater than min tuple range.");
+    }
   }
-
-  const [seq, key, val] = encodedEntry as Partial<EncodedEntry>;
-
-  if (typeof seq !== "number") {
-    throw new TypeError("Expected entry seq field to be a number.");
-  }
-
-  if (!(key instanceof Uint8Array)) {
-    throw new TypeError("Expected entry key field to be a byte array.");
-  }
-
-  if (!(val instanceof Uint8Array)) {
-    throw new TypeError("Expected entry val field to be a byte array.");
-  }
-
-  return [seq, key, val];
 };
 
-const getValidatedPrefix = (prefix: unknown): Prefix => {
-  if (typeof prefix !== "object") {
-    throw new TypeError("Expected bucket prefix to be an object.");
+export function encodeEntries(
+  entries: Entry[],
+  isHead: boolean,
+  isBoundary: IsBoundary,
+  range?: TupleRange,
+): [EncodedEntry[], number] {
+  const encodedEntries: EncodedEntry[] = new Array(entries.length);
+  let base = 0;
+
+  let i = entries.length;
+  while (i > 0) {
+    i--;
+
+    const entry = entries[i]!;
+
+    if (!isValidEntry(entry)) {
+      throw new TypeError("invalid entry.");
+    }
+
+    if (i === entries.length - 1) base = entry.seq;
+
+    const next = entries[i + 1];
+
+    validateEntryRelation(entry, next, isHead, isBoundary, range);
+
+    // entry seq is delta encoded
+    const delta = (next?.seq ?? base) - entry.seq;
+    encodedEntries[i] = [delta, entry.key, entry.val];
   }
 
-  const { average, level, base } = prefix as Partial<Prefix>;
+  return [encodedEntries, base];
+}
 
-  if (typeof average !== "number") {
-    throw new TypeError("Expected prefix average field to be a number.");
+export function decodeEntries(
+  encodedEntries: EncodedEntry[],
+  isHead: boolean,
+  isBoundary: IsBoundary,
+  range: TupleRange,
+): Entry[] {
+  const entries: Entry[] = new Array(encodedEntries.length);
+
+  let i = encodedEntries.length;
+  while (i > 0) {
+    i--;
+
+    const encodedEntry = encodedEntries[i];
+
+    if (!isValidEncodedEntry(encodedEntry)) {
+      throw new TypeError("invalid encoded entry.");
+    }
+
+    const [delta, key, val] = encodedEntry;
+
+    const next = entries[i + 1]!;
+
+    const seq = (next?.seq ?? range[1].seq) - delta;
+
+    const entry = new DefaultEntry(seq, key, val);
+
+    validateEntryRelation(entry, next, isHead, isBoundary, range);
+
+    entries[i] = entry;
   }
 
-  if (typeof level !== "number") {
-    throw new TypeError("Expected prefix level field to be a number.");
-  }
-
-  if (typeof base !== "number") {
-    throw new TypeError("Expected prefix base field to be a number.");
-  }
-
-  return { average, level, base };
-};
-
-const getValidatedBucket = (bucket: unknown): EncodedBucket => {
-  if (typeof bucket !== "object" || bucket == null) {
-    throw new TypeError("Expected bucket to be an object.");
-  }
-
-  const { average, level, base } = getValidatedPrefix(bucket);
-
-  const { entries } = bucket as Partial<EncodedBucket>;
-
-  if (typeof entries !== "object" || !Array.isArray(entries)) {
-    throw new TypeError("Expected bucket entries field to be a number.");
-  }
-
-  return { average, level, base, entries };
-};
+  return entries;
+}
 
 export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-): ByteView<EncodedBucket> {
-  const base = entriesToDeltaBase(entries);
+  isHead: boolean,
+  range?: TupleRange,
+): Uint8Array {
+  const isBoundary = createIsBoundary(average, level);
 
-  entries.sort(compareEntries);
-
-  let i = entries.length;
-  const encodedEntries: EncodedEntry[] = new Array(i);
-  let delta = base;
-  while (i > 0) {
-    i--;
-    const { seq, key, val } = entries[i]!;
-    encodedEntries[i] = [delta - seq, key, val];
-    delta = seq;
-  }
+  const [encodedEntries, base] = encodeEntries(
+    entries,
+    isHead,
+    isBoundary,
+    range ?? emptyTupleRange,
+  );
 
   return encode({
     average,
@@ -104,47 +183,38 @@ export function encodeBucket(
 
 export function decodeBucket(
   bytes: Uint8Array,
+  isHead: boolean,
+  range: TupleRange,
   expectedPrefix?: Prefix,
 ): Bucket {
   const decoded = decode(bytes);
 
-  const {
-    average,
-    level,
-    base,
-    entries: encodedEntries,
-  } = getValidatedBucket(decoded);
-
-  if (expectedPrefix != null) {
-    if (average !== expectedPrefix.average) {
-      throw new TypeError(
-        `Expect prefix to have average ${expectedPrefix.average}. Received prefix with average ${average}`,
-      );
-    }
-
-    if (level !== expectedPrefix.level) {
-      throw new TypeError(
-        `Expect prefix to have level ${expectedPrefix.level}. Received prefix with level ${level}`,
-      );
-    }
-
-    if (base !== expectedPrefix.base) {
-      throw new TypeError(
-        `Expect prefix to have base ${expectedPrefix.base}. Received prefix with base ${base}`,
-      );
-    }
+  if (!isValidPrefix(decoded)) {
+    throw new TypeError("invalid prefix.");
   }
 
-  // could validate boundaries and tuple order here
-  let i = encodedEntries.length;
-  const entries: Entry[] = new Array(i);
-  let delta: number = base;
-  while (i > 0) {
-    i--;
-    const encodedEntry = encodedEntries[i];
-    const [seq, key, val] = getValidatedEntry(encodedEntry);
-    entries[i] = new DefaultEntry((delta -= seq), key, val);
+  if (
+    expectedPrefix != null &&
+    (decoded.average !== expectedPrefix.average ||
+      decoded.level !== expectedPrefix.level ||
+      decoded.base !== expectedPrefix.base)
+  ) {
+    throw new TypeError("prefix mismatch.");
   }
 
-  return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
+  if (!("entries" in decoded) || !Array.isArray(decoded.entries)) {
+    throw new TypeError("invalid entries.");
+  }
+
+  const isBoundary = createIsBoundary(decoded.average, decoded.level);
+
+  const entries = decodeEntries(decoded.entries, isHead, isBoundary, range);
+
+  return new DefaultBucket(
+    decoded.average,
+    decoded.level,
+    entries,
+    bytes,
+    sha256(bytes),
+  );
 }

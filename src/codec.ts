@@ -12,7 +12,7 @@ export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
 }
 
-export const isValidEntry = (e: Partial<Entry>): e is Entry =>
+export const isValidEntry = (e: any): e is Entry =>
   typeof e === "object" &&
   e !== null &&
   isPositiveInteger(e.seq) &&

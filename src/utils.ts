@@ -6,7 +6,12 @@ import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { compare as compareBytes } from "uint8arrays";
-import { TupleRange, decodeBucket, encodeBucket } from "./codec.js";
+import {
+  CodecPredicates,
+  TupleRange,
+  decodeBucket,
+  encodeBucket,
+} from "./codec.js";
 import { minTuple } from "./compare.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
@@ -93,8 +98,9 @@ export const createBucket = (
   average: number,
   level: number,
   entries: Entry[],
+  predicates: CodecPredicates,
 ): Bucket => {
-  const bytes = encodeBucket(average, level, entries);
+  const bytes = encodeBucket(average, level, entries, predicates);
   return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
 };
 
@@ -109,7 +115,7 @@ export const createBucket = (
 export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
-  expectedPrefix?: Prefix,
+  predicates: CodecPredicates,
 ): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
@@ -122,7 +128,7 @@ export async function loadBucket(
     }
   }
 
-  const bucket: Bucket = decodeBucket(bytes, expectedPrefix);
+  const bucket: Bucket = decodeBucket(bytes, predicates);
 
   if (compareBytes(digest, bucket.getDigest()) !== 0) {
     throw new Error("Unexpected bucket digest.");

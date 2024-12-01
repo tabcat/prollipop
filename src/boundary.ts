@@ -1,5 +1,5 @@
 /**
- * implements similar boundary resolution as okra-js but only considering keys
+ * implements similar boundary resolution as okra-js but only considers keys
  * https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114
  *
  */
@@ -7,6 +7,7 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import type { Entry, Tuple } from "./interface.js";
+import { isPositiveInteger } from "./utils.js";
 
 /**
  * Returns true if digest falls below limit, false otherwise.
@@ -39,21 +40,9 @@ export const createIsBoundary: CreateIsBoundary = (
   average: number,
   level: number,
 ): IsBoundary => {
-  if (average < 1) {
+  if (!isPositiveInteger(average)) {
     throw new TypeError(
-      `Average parameter must be greater than or equal to 1. Received average: ${average}`,
-    );
-  }
-
-  if (average > MAX_UINT32) {
-    throw new TypeError(
-      `Average parameter must be less than max uint32. Received average: ${average}`,
-    );
-  }
-
-  if (average % 1 !== 0) {
-    throw new TypeError(
-      `Average parameter must be a whole number. Received average: ${average}`,
+      `Average parameter must be a positive integer. Received average: ${average}`,
     );
   }
 

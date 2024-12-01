@@ -135,7 +135,11 @@ export async function getUpdatee(
 
   if (level > cursor.rootLevel()) {
     const { average } = cursor.currentBucket();
-    return [createBucket(average, level, []), true, true];
+    return [
+      createBucket(average, level, [], { isHead: true, isRoot: true }),
+      true,
+      true,
+    ];
   } else {
     await cursor.jumpTo(tuple, level);
     return [cursor.currentBucket(), cursor.isAtTail(), cursor.isAtHead()];
@@ -214,8 +218,15 @@ export interface State {
  * @param entries - Entries of the new bucket.
  * @returns A bucket with the given entries.
  */
-export const getBucket = (original: Bucket, entries: Entry[]) => {
-  const bucket = createBucket(original.average, original.level, entries);
+export const getBucket = (
+  original: Bucket,
+  entries: Entry[],
+  noBoundaryOrEmpty: boolean,
+) => {
+  const bucket = createBucket(original.average, original.level, entries, {
+    isHead: noBoundaryOrEmpty,
+    isRoot: noBoundaryOrEmpty,
+  });
 
   // can probably compare entryDiffs.length and entries.length with original.entries.length
   // this is safer
@@ -275,7 +286,7 @@ export function rebuildBucket(
     if (entry != null) {
       entries.push(entry);
       if (isBoundary(entry)) {
-        buckets.push(getBucket(bucket, entries));
+        buckets.push(getBucket(bucket, entries, false));
         entries = [];
         bucketsRebuilt++;
       }
@@ -284,7 +295,7 @@ export function rebuildBucket(
 
   // only create another bucket if isHead and there are entries or no buckets were rebuilt for the level yet.
   if (isHead && (entries.length > 0 || bucketsRebuilt === 0)) {
-    buckets.push(getBucket(bucket, entries));
+    buckets.push(getBucket(bucket, entries, true));
     entries = [];
     bucketsRebuilt++;
   }

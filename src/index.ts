@@ -5,7 +5,7 @@ import { compareTuples } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Entry, Prefix, ProllyTree, Tuple } from "./interface.js";
+import { Entry, ProllyTree, Tuple } from "./interface.js";
 import { mutate } from "./mutate.js";
 import {
   Await,
@@ -27,16 +27,27 @@ export { mutate };
 export function createEmptyTree(options?: { average: number }): ProllyTree {
   const average = options?.average ?? 32;
 
-  return new DefaultProllyTree(createBucket(average, 0, []));
+  return new DefaultProllyTree(
+    createBucket(average, 0, [], { isHead: true, isRoot: true }),
+  );
 }
 
+/**
+ * Loads a prolly-tree from the provided blockstore.
+ *
+ * @param blockstore
+ * @param cid
+ * @returns
+ */
 export async function loadTree(
   blockstore: Blockstore,
   cid: CID,
-  expectedPrefix?: Prefix,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
-    await loadBucket(blockstore, bucketCidToDigest(cid), expectedPrefix),
+    await loadBucket(blockstore, bucketCidToDigest(cid), {
+      isHead: true,
+      isRoot: true,
+    }),
   );
 }
 
@@ -92,8 +103,10 @@ export async function* search(
 }
 
 /**
- * Merge a source prolly-tree into target. If a key does not exist in target then it is added from source into target.
- * If both trees have a entry at the same tuple and a `choose` function was provided, then the entry from the source tree may also be added to target.
+ * Merge a source prolly-tree into target.
+ * If a key does not exist in target then it is added from source into target.
+ * If both trees have an entry at the same tuple and a `choose` function was provided,
+ * then the entry from the source tree may also be added to target.
  *
  * @param blockstore - target blockstore
  * @param target - Prolly-tree to merge source into
@@ -139,7 +152,7 @@ export async function* merge(
  * Syncs the target with the source.
  * Any changes in target but not in source will be removed.
  * Any changes in source but not in target will be added.
- * Useful for fetching all the remote buckets and adding them to the blockstore.
+ * Under the hood it uses the `diff` function to fetch all the remote buckets.
  *
  * @param blockstore
  * @param target

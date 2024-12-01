@@ -81,6 +81,15 @@ export const validateEntryRelation = (
   }
 };
 
+/**
+ * Encodes entries and replaces their seq with a delta encoded value.
+ *
+ * @param entries
+ * @param isHead
+ * @param isBoundary
+ * @param range
+ * @returns
+ */
 export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
@@ -115,6 +124,16 @@ export function encodeEntries(
   return [encodedEntries, base];
 }
 
+/**
+ * Decodes entries and replaces their delta encoded seq with the original value.
+ *
+ * @param encodedEntries
+ * @param base
+ * @param isHead
+ * @param isBoundary
+ * @param range
+ * @returns
+ */
 export function decodeEntries(
   encodedEntries: EncodedEntry[],
   base: number,
@@ -151,13 +170,24 @@ export function decodeEntries(
 }
 
 export interface CodecPredicates {
-  /** used to check if bucket must end in boundary */
+  /**
+   * Used to check if bucket must end in boundary.
+   */
   isHead: boolean;
-  /** used to check if bucket can be empty */
+
+  /**
+   * Used to check if bucket can be empty.
+   */
   isRoot: boolean;
-  /** used to check if entries fall inside of range */
+
+  /**
+   * Used to check if entries fall inside of range.
+   */
   range?: TupleRange;
-  /** used to check if fetched prefix matches expected prefix */
+
+  /**
+   * Used to check if fetched prefix matches expected prefix.
+   */
   expectedPrefix?: Prefix;
 }
 
@@ -173,6 +203,15 @@ export interface TupleRange {
   1: Tuple;
 }
 
+/**
+ * Safely encodes bucket prefix and entries into a CBOR encoded byte array.
+ *
+ * @param average
+ * @param level
+ * @param entries
+ * @param predicates
+ * @returns
+ */
 export function encodeBucket(
   average: number,
   level: number,
@@ -200,6 +239,13 @@ export function encodeBucket(
   });
 }
 
+/**
+ * Safely decodes a CBOR encoded byte array into a bucket.
+ *
+ * @param bytes
+ * @param predicates
+ * @returns
+ */
 export function decodeBucket(
   bytes: Uint8Array,
   { isHead, isRoot, range, expectedPrefix }: CodecPredicates,

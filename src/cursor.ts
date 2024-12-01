@@ -3,7 +3,7 @@ import type { Blockstore } from "interface-blockstore";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
-import { bucketToPrefix, loadBucket } from "./utils.js";
+import { bucketToPrefix, loadBucket, tupleRangeOfChild } from "./utils.js";
 
 interface CursorState {
   blockstore: Blockstore;
@@ -13,31 +13,15 @@ interface CursorState {
   isLocked: boolean;
 }
 
-const FailedToCreateCursorState = "Failed to create cursor state: ";
-
 const createCursorState = (
   blockstore: Blockstore,
   tree: ProllyTree,
-  currentBuckets?: Bucket[],
-  currentIndex?: number,
 ): CursorState => {
-  currentBuckets = currentBuckets ?? [tree.root];
-  currentIndex =
-    currentIndex ?? Math.min(0, lastElement(currentBuckets).entries.length - 1);
-
-  if (currentBuckets.length === 0) {
-    throw new Error(`${FailedToCreateCursorState}currentBuckets.length === 0`);
-  }
-
-  if (currentIndex >= lastElement(currentBuckets).entries.length) {
-    throw new Error(
-      `${FailedToCreateCursorState}currentIndex >= bucket.entries.length`,
-    );
-  }
-
-  if (currentIndex < -1) {
-    throw new Error(`${FailedToCreateCursorState}currentIndex > -1`);
-  }
+  const currentBuckets = [tree.root];
+  const currentIndex = Math.min(
+    0,
+    lastElement(currentBuckets).entries.length - 1,
+  );
 
   return {
     blockstore,
@@ -77,19 +61,19 @@ export interface Cursor {
   currentBucket(): Bucket;
 
   /**
-   * Increments the cursor to the next tuple on the current level.
+   * Moves the cursor to the next tuple on the current level.
    */
   next(level?: number): Promise<void>;
 
   /**
-   * Increments the cursor to the beginning of the next bucket on the current level.
+   * Moves the cursor to the beginning of the next bucket on the current level.
    */
   nextBucket(level?: number): Promise<void>;
 
   nextTuple(tuple: Tuple, level?: number): Promise<void>;
 
   /**
-   * Moves the cursor from root to the tuple or parent tuple at level.
+   * Jumps the cursor from root to the tuple or parent tuple at level. This is not a move operation.
    *
    * @param tuple
    * @param level
@@ -120,40 +104,6 @@ export interface Cursor {
   clone(): Cursor;
 }
 
-const pw = async (
-  level: number,
-  state: CursorState,
-  writer: (level: number, state: CursorState) => Promise<void>,
-) => {
-  if (state.isDone) {
-    return;
-  }
-
-  if (state.isLocked) {
-    throw new Error("Failed to acquire cursor lock.");
-  }
-
-  const stateClone = cloneCursorState(state);
-  state.isLocked = true;
-
-  await writer(level, stateClone);
-
-  Object.assign(state, stateClone);
-};
-
-const pm = (
-  level: number,
-  state: CursorState,
-  mover: (level: number, state: CursorState) => Promise<void>,
-) => {
-  if (level > rootLevelOf(state)) {
-    state.isDone = true;
-    return Promise.resolve();
-  }
-
-  return pw(level, state, mover);
-};
-
 function createCursorFromState(state: CursorState): Cursor {
   return {
     level: () => levelOf(state),
@@ -168,11 +118,9 @@ function createCursorFromState(state: CursorState): Cursor {
     next(level?: number) {
       return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, false));
     },
-
     nextBucket(level?: number) {
       return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, true));
     },
-
     nextTuple(tuple: Tuple, level?: number) {
       return pm(
         level ?? levelOf(state),
@@ -198,6 +146,42 @@ function createCursorFromState(state: CursorState): Cursor {
     done: () => state.isDone,
   };
 }
+
+/** pre-write */
+const pw = async (
+  level: number,
+  state: CursorState,
+  writer: (level: number, state: CursorState) => Promise<void>,
+) => {
+  if (state.isDone) {
+    return;
+  }
+
+  if (state.isLocked) {
+    throw new Error("Failed to acquire cursor lock.");
+  }
+
+  const stateClone = cloneCursorState(state);
+  state.isLocked = true;
+
+  await writer(level, stateClone);
+
+  Object.assign(state, stateClone);
+};
+
+/** pre-move */
+const pm = (
+  level: number,
+  state: CursorState,
+  mover: (level: number, state: CursorState) => Promise<void>,
+) => {
+  if (level > rootLevelOf(state)) {
+    state.isDone = true;
+    return Promise.resolve();
+  }
+
+  return pw(level, state, mover);
+};
 
 /**
  * Create a cursor for the given tree.
@@ -278,25 +262,17 @@ const guideByTuple =
 const moveToLevel = async (
   state: CursorState,
   level: number,
-  _guide?: (entries: Entry[]) => number,
+  guide?: (entries: Entry[]) => number,
 ): Promise<void> => {
-  if (level === levelOf(state)) {
-    throw new Error("Level to move to cannot be same as current level.");
-  }
-
-  if (level < 0) {
-    throw new Error("Level to move to cannot be less than 0.");
-  }
-
-  if (level > rootLevelOf(state)) {
-    throw new Error("Level to move to cannot exceed height of root level.");
+  if (level === levelOf(state) || level < 0 || level > rootLevelOf(state)) {
+    throw new Error(
+      "Cannot move to the current level or outside the root level.",
+    );
   }
 
   // guides currentIndex during traversal
-  const guide: (entries: Entry[]) => number =
-    _guide ??
-    // 0 index when descending, current tuple when ascending
-    (level < levelOf(state) ? () => 0 : guideByTuple(entryOf(state)));
+  guide =
+    guide ?? (level < levelOf(state) ? () => 0 : guideByTuple(entryOf(state)));
 
   while (level !== levelOf(state)) {
     if (level > levelOf(state)) {
@@ -306,18 +282,16 @@ const moveToLevel = async (
       state.currentBuckets.splice(difference, -difference);
     } else {
       // walk down to lower level
-      const digest = entryOf(state).val;
-      const bucket = await loadBucket(state.blockstore, digest, {
-        ...bucketToPrefix(bucketOf(state)),
-        level: levelOf(state) - 1,
-        base: entryOf(state).seq,
+      const bucket = await loadBucket(state.blockstore, entryOf(state).val, {
+        isHead: overflows(state) && getIsAtHead(state),
+        isRoot: false,
+        range: tupleRangeOfChild(bucketOf(state).entries, state.currentIndex),
+        expectedPrefix: {
+          ...bucketToPrefix(bucketOf(state)),
+          level: levelOf(state) - 1,
+          base: entryOf(state).seq,
+        },
       });
-
-      if (bucket.entries.length === 0) {
-        throw new Error(
-          "Malformed tree: fetched a child bucket with empty entry set.",
-        );
-      }
 
       state.currentBuckets.push(bucket);
     }
@@ -378,6 +352,7 @@ const nextAtLevel = async (
     if (bucket) {
       state.currentIndex = bucketOf(state).entries.length - 1;
     }
+
     await moveSideways(state);
   }
 };
@@ -396,6 +371,7 @@ const nextTupleAtLevel = async (
       state.isDone = true;
       break;
     }
+
     await moveToLevel(state, levelOf(state) + 1);
   }
 

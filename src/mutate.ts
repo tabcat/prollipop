@@ -527,8 +527,8 @@ export async function* mutate(
 
   const cursor = createCursor(blockstore, tree);
 
-  // using 100 as max level, could be based on average and level
-  while (state.newRoot == null && level < 10000) {
+  // using 30 as max level. could be based on average, level, and/or observed entries/updates.
+  while (state.newRoot == null && level < 30) {
     yield* rebuildLevel(cursor, updts, state, level, createIsBoundary);
 
     level++;

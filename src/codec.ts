@@ -1,11 +1,10 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import { lastElement } from "@tabcat/ith-element";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareEntries, compareTuples, minTuple } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
-import { isPositiveInteger } from "./utils.js";
+import { isPositiveInteger, tupleRangeOfEntries } from "./utils.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
@@ -26,12 +25,13 @@ export const isValidEncodedEntry = (e: any): e is EncodedEntry =>
   e[1] instanceof Uint8Array &&
   e[2] instanceof Uint8Array;
 
-export const isValidPrefix = <P extends Prefix>(p: any): p is P =>
-  typeof p === "object" &&
-  p !== null &&
-  isPositiveInteger(p.average) &&
-  isPositiveInteger(p.level) &&
-  isPositiveInteger(p.base);
+export const isValidEncodedBucket = (b: any): b is EncodedBucket =>
+  typeof b === "object" &&
+  b !== null &&
+  isPositiveInteger(b.average) &&
+  isPositiveInteger(b.level) &&
+  isPositiveInteger(b.base) &&
+  Array.isArray(b.entries); // check that entries are valid later
 
 /**
  * Ensures that entries are sorted and non-duplicative.
@@ -48,7 +48,7 @@ export const validateEntryRelation = (
   next: Entry | undefined,
   isHead: boolean,
   isBoundary: IsBoundary,
-  range: TupleRange,
+  range?: TupleRange,
 ): void => {
   if (next == null) {
     // entry is last entry of bucket
@@ -58,7 +58,7 @@ export const validateEntryRelation = (
       );
     }
 
-    if (compareTuples(entry, range[1]) !== 0) {
+    if (range != null && compareTuples(entry, range[1]) !== 0) {
       throw new TypeError("Last entry must equal max tuple range.");
     }
   } else {
@@ -71,7 +71,7 @@ export const validateEntryRelation = (
       throw new TypeError("Buckets can have only one boundary.");
     }
 
-    if (compareTuples(entry, range[0]) > 0) {
+    if (range != null && compareTuples(entry, range[0]) > 0) {
       throw new TypeError("Entry must be greater than min tuple range.");
     }
   }
@@ -81,7 +81,7 @@ export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-  range: TupleRange,
+  range?: TupleRange,
 ): [EncodedEntry[], number] {
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
   let base = 0;
@@ -113,9 +113,10 @@ export function encodeEntries(
 
 export function decodeEntries(
   encodedEntries: EncodedEntry[],
+  base: number,
   isHead: boolean,
   isBoundary: IsBoundary,
-  range: TupleRange,
+  range?: TupleRange,
 ): Entry[] {
   const entries: Entry[] = new Array(encodedEntries.length);
 
@@ -133,7 +134,7 @@ export function decodeEntries(
 
     const next = entries[i + 1]!;
 
-    const seq = (next?.seq ?? range[1].seq) - delta;
+    const seq = (next?.seq ?? base) - delta;
 
     const entry = new DefaultEntry(seq, key, val);
 
@@ -151,7 +152,7 @@ export interface CodecPredicates {
   /** used to check if bucket can be empty */
   isRoot: boolean;
   /** used to check if entries fall inside of range */
-  range: TupleRange;
+  range?: TupleRange;
   /** used to check if fetched prefix matches expected prefix */
   expectedPrefix?: Prefix;
 }
@@ -186,7 +187,7 @@ export function encodeBucket(
     entries,
     isHead,
     isBoundary,
-    range,
+    range ?? tupleRangeOfEntries(entries),
   );
 
   return encode({
@@ -203,8 +204,12 @@ export function decodeBucket(
 ): Bucket {
   const decoded = decode(bytes);
 
-  if (!isValidPrefix(decoded)) {
-    throw new TypeError("invalid prefix.");
+  if (!isValidEncodedBucket(decoded)) {
+    throw new TypeError("invalid bucket.");
+  }
+
+  if (!isRoot && decoded.entries.length === 0) {
+    throw new TypeError("empty non-root bucket.");
   }
 
   if (
@@ -216,21 +221,15 @@ export function decodeBucket(
     throw new TypeError("prefix mismatch.");
   }
 
-  if (!("entries" in decoded) || !Array.isArray(decoded.entries)) {
-    throw new TypeError("invalid entries.");
-  }
-
-  if (!isRoot && decoded.entries.length === 0) {
-    throw new TypeError("empty non-root bucket.");
-  }
-
   const isBoundary = createIsBoundary(decoded.average, decoded.level);
 
-  range = range ?? [
-    minTuple,
-    decoded.entries.length > 0 ? lastElement(decoded.entries) : minTuple,
-  ];
-  const entries = decodeEntries(decoded.entries, isHead, isBoundary, range);
+  const entries = decodeEntries(
+    decoded.entries,
+    decoded.base,
+    isHead,
+    isBoundary,
+    range,
+  );
 
   return new DefaultBucket(
     decoded.average,

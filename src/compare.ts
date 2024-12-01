@@ -6,7 +6,12 @@ export { compareBytes };
 
 export const compareSeq = (a: number, b: number): number => a - b;
 
-export const minTuple = { seq: 0, key: new Uint8Array(0) };
+/**
+ * A tuple that is less than all other tuples.
+ * Normally a tuple seq is a positive integer.
+ * This is not valid for an entry but can be used for comparisons and Tuple Ranges.
+ */
+export const minTuple = { seq: -1, key: new Uint8Array(0) };
 
 /**
  * Compare two tuples.

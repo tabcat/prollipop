@@ -1,7 +1,11 @@
+/**
+ * Safely encodes and decodes buckets with context of the tree structure.
+ */
+
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
-import { compareEntries, compareTuples, minTuple } from "./compare.js";
+import { compareEntries, compareTuples } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
 import { isPositiveInteger, tupleRangeOfEntries } from "./utils.js";
@@ -168,8 +172,6 @@ export interface TupleRange {
    */
   1: Tuple;
 }
-
-export const emptyTupleRange: TupleRange = [minTuple, minTuple];
 
 export function encodeBucket(
   average: number,

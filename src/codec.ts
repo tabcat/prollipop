@@ -13,20 +13,6 @@ export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
 }
 
-export interface TupleRange {
-  /**
-   * Exclusive lower bound.
-   */
-  0: Tuple;
-
-  /**
-   * Inclusive upper bound.
-   */
-  1: Tuple;
-}
-
-export const emptyTupleRange: TupleRange = [minTuple, minTuple];
-
 export const isValidEntry = (e: Partial<Entry>): e is Entry =>
   typeof e === "object" &&
   e !== null &&
@@ -62,7 +48,7 @@ export const validateEntryRelation = (
   next: Entry | undefined,
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
+  range: TupleRange,
 ): void => {
   if (next == null) {
     // entry is last entry of bucket
@@ -72,7 +58,7 @@ export const validateEntryRelation = (
       );
     }
 
-    if (range != null && compareTuples(entry, range[1]) !== 0) {
+    if (compareTuples(entry, range[1]) !== 0) {
       throw new TypeError("Last entry must equal max tuple range.");
     }
   } else {
@@ -85,7 +71,7 @@ export const validateEntryRelation = (
       throw new TypeError("Buckets can have only one boundary.");
     }
 
-    if (range != null && compareTuples(entry, range[0]) > 0) {
+    if (compareTuples(entry, range[0]) > 0) {
       throw new TypeError("Entry must be greater than min tuple range.");
     }
   }
@@ -95,7 +81,7 @@ export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
+  range: TupleRange,
 ): [EncodedEntry[], number] {
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
   let base = 0;
@@ -118,6 +104,7 @@ export function encodeEntries(
 
     // entry seq is delta encoded
     const delta = (next?.seq ?? base) - entry.seq;
+
     encodedEntries[i] = [delta, entry.key, entry.val];
   }
 
@@ -158,20 +145,48 @@ export function decodeEntries(
   return entries;
 }
 
+export interface CodecPredicates {
+  /** used to check if bucket must end in boundary */
+  isHead: boolean;
+  /** used to check if bucket can be empty */
+  isRoot: boolean;
+  /** used to check if entries fall inside of range */
+  range: TupleRange;
+  /** used to check if fetched prefix matches expected prefix */
+  expectedPrefix?: Prefix;
+}
+
+export interface TupleRange {
+  /**
+   * Exclusive lower bound.
+   */
+  0: Tuple;
+
+  /**
+   * Inclusive upper bound.
+   */
+  1: Tuple;
+}
+
+export const emptyTupleRange: TupleRange = [minTuple, minTuple];
+
 export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-  isHead: boolean,
-  range?: TupleRange,
+  { isRoot, isHead, range }: CodecPredicates,
 ): Uint8Array {
+  if (!isRoot && entries.length === 0) {
+    throw new TypeError("empty non-root bucket.");
+  }
+
   const isBoundary = createIsBoundary(average, level);
 
   const [encodedEntries, base] = encodeEntries(
     entries,
     isHead,
     isBoundary,
-    range ?? emptyTupleRange,
+    range,
   );
 
   return encode({
@@ -184,9 +199,7 @@ export function encodeBucket(
 
 export function decodeBucket(
   bytes: Uint8Array,
-  isHead: boolean,
-  range?: TupleRange,
-  expectedPrefix?: Prefix,
+  { isHead, isRoot, range, expectedPrefix }: CodecPredicates,
 ): Bucket {
   const decoded = decode(bytes);
 
@@ -205,6 +218,10 @@ export function decodeBucket(
 
   if (!("entries" in decoded) || !Array.isArray(decoded.entries)) {
     throw new TypeError("invalid entries.");
+  }
+
+  if (!isRoot && decoded.entries.length === 0) {
+    throw new TypeError("empty non-root bucket.");
   }
 
   const isBoundary = createIsBoundary(decoded.average, decoded.level);

@@ -1,6 +1,5 @@
 import { code as cborCode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import { lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
@@ -54,9 +53,6 @@ export const bucketToPrefix = ({ average, level, base }: Prefix): Prefix => ({
   level,
   base,
 });
-
-export const entriesToDeltaBase = (entries: Entry[]): number =>
-  entries.length > 0 ? lastElement(entries).seq : 0;
 
 /**
  * Creates a new bucket from the provided entries. Does not handle boundary creation.

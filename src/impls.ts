@@ -1,9 +1,13 @@
+import { lastElement } from "@tabcat/ith-element";
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { Bucket, Entry, ProllyTree } from "./interface.js";
-import { bucketDigestToCid, entriesToDeltaBase } from "./utils.js";
+import { bucketDigestToCid } from "./utils.js";
 
 const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
+
+export const entriesToDeltaBase = (entries: Entry[]): number =>
+  entries.length > 0 ? lastElement(entries).seq : 0;
 
 export class DefaultEntry implements Entry {
   constructor(

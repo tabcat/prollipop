@@ -1,5 +1,5 @@
-import { diff as orderedDiff } from "@tabcat/ordered-sets/difference";
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import { diff as orderedDiff } from "@tabcat/sorted-sets/difference";
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { describe, expect, it } from "vitest";
 import { compareBuckets, compareBytes, compareTuples } from "../src/compare.js";
 import { BucketDiff, EntryDiff, diff } from "../src/diff.js";

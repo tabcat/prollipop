@@ -17,9 +17,9 @@ importers:
       '@tabcat/ith-element':
         specifier: ^1.0.1
         version: 1.0.1
-      '@tabcat/ordered-sets':
-        specifier: ^4.1.2
-        version: 4.1.2
+      '@tabcat/sorted-sets':
+        specifier: ^4.2.0
+        version: 4.2.0
       interface-blockstore:
         specifier: ^5.2.10
         version: 5.2.10
@@ -335,8 +335,8 @@ packages:
   '@tabcat/ith-element@1.0.1':
     resolution: {integrity: sha512-nJnHRcU/k+hsl4AI4xGBsHqjrJTJaSUwN2qHV0r+68Vq7wbYOslfel8Vrl5suY3ui5YnHlXcVIoK+TriOBJM8g==}
 
-  '@tabcat/ordered-sets@4.1.2':
-    resolution: {integrity: sha512-NyvkSMDjkEVbKJJT8csvSjE2XJAkSrcrUn4Q7lLZv6/mzlaHRrrEHw2CyQDJ+Y6pyBcQ89Z6YdiO53BKE85jJQ==}
+  '@tabcat/sorted-sets@4.2.0':
+    resolution: {integrity: sha512-iT70wyGACbCHhvgK2zu0YEu1eQw7FO1+BWDapxgenFhTApORo3BpRjnNXQ+GS0f0r4iywQZvNbFMtyuvoOnFiQ==}
     engines: {node: '>=20'}
 
   '@types/dns-packet@5.6.5':
@@ -1283,7 +1283,7 @@ snapshots:
     dependencies:
       code-err: 3.1.0
 
-  '@tabcat/ordered-sets@4.1.2': {}
+  '@tabcat/sorted-sets@4.2.0': {}
 
   '@types/dns-packet@5.6.5':
     dependencies:

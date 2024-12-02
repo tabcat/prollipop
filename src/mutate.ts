@@ -1,6 +1,6 @@
 import { firstElement, lastElement } from "@tabcat/ith-element";
-import { union } from "@tabcat/ordered-sets/union";
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import { union } from "@tabcat/sorted-sets/union";
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { CreateIsBoundary, IsBoundary, createIsBoundary } from "./boundary.js";

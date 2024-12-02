@@ -19,9 +19,9 @@ import {
   Diff,
   ExclusiveDiff,
   diff as orderedDiff,
-} from "@tabcat/ordered-sets/difference";
-import { union } from "@tabcat/ordered-sets/union";
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+} from "@tabcat/sorted-sets/difference";
+import { union } from "@tabcat/sorted-sets/union";
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import {
   compareBucketDiffs,

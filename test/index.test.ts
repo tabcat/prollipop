@@ -1,4 +1,4 @@
-import { pairwiseTraversal } from "@tabcat/ordered-sets/util";
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it } from "vitest";
 import { compareTuples } from "../src/compare.js";

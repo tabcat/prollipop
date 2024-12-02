@@ -1,46 +1,19 @@
 import { code as cborCode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import { ithElement, lastElement } from "@tabcat/ith-element";
+import { lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { compare as compareBytes } from "uint8arrays";
-import {
-  CodecPredicates,
-  TupleRange,
-  decodeBucket,
-  encodeBucket,
-} from "./codec.js";
-import { minTuple } from "./compare.js";
+import { CodecPredicates, decodeBucket, encodeBucket } from "./codec.js";
+import { minTuple } from "./constants.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
 
 export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
-
-export const isPositiveInteger = (n: unknown): n is number =>
-  typeof n === "number" && n >= 0 && Number.isInteger(n);
-
-export const tupleRangeOfEntries = (entries: Entry[]): TupleRange => [
-  minTuple,
-  entries.length > 0 ? lastElement(entries) : minTuple,
-];
-
-export const tupleRangeOfChild = (
-  entries: Entry[],
-  index: number,
-): TupleRange => {
-  if (entries.length === 0) {
-    return [minTuple, minTuple];
-  }
-
-  return [
-    index === 0 ? minTuple : ithElement(entries, index - 1),
-    ithElement(entries, index),
-  ];
-};
 
 /**
  * Returns the CID for a given bucket digest.

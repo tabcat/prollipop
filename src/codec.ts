@@ -6,6 +6,7 @@ import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareEntries, compareTuples } from "./compare.js";
+import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
 import { isPositiveInteger, tupleRangeOfEntries } from "./utils.js";
@@ -33,7 +34,9 @@ export const isValidEncodedBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
   isPositiveInteger(b.average) &&
+  b.average < Number(MAX_UINT32) &&
   isPositiveInteger(b.level) &&
+  b.level <= MAX_LEVEL &&
   isPositiveInteger(b.base) &&
   Array.isArray(b.entries); // check that entries are valid later
 

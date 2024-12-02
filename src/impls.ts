@@ -75,7 +75,7 @@ export class DefaultBucket implements Bucket {
   }
 
   toString() {
-    return `B:a:${this.average}:l:${this.level}:h:${base32.encode(this.#digest)}`;
+    return `B:a:${this.average}:l:${this.level}:b:${this.base}:h:${base32.encode(this.#digest)}`;
   }
 }
 

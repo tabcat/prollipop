@@ -178,12 +178,12 @@ export interface CodecPredicates {
   /**
    * Used to check if bucket may end without boundary.
    */
-  isHead: boolean;
+  isHead?: boolean;
 
   /**
    * Used to check if bucket may be empty.
    */
-  isRoot: boolean;
+  isRoot?: boolean;
 
   /**
    * Used to check if entries fall inside of range.
@@ -221,9 +221,9 @@ export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-  { isHead, isRoot, range }: CodecPredicates,
+  { isHead, isRoot, range }: CodecPredicates = {},
 ): Uint8Array {
-  if (!isRoot && entries.length === 0) {
+  if (isRoot != null && !isRoot && entries.length === 0) {
     throw new TypeError("empty non-root bucket.");
   }
 
@@ -231,7 +231,7 @@ export function encodeBucket(
 
   const [encodedEntries, base] = encodeEntries(
     entries,
-    isHead,
+    isHead ?? true,
     isBoundary,
     range ?? [
       minTuple,
@@ -256,7 +256,7 @@ export function encodeBucket(
  */
 export function decodeBucket(
   bytes: Uint8Array,
-  { isHead, isRoot, range, expectedPrefix }: CodecPredicates,
+  { isHead, isRoot, range, expectedPrefix }: CodecPredicates = {},
 ): Bucket {
   const decoded = decode(bytes);
 
@@ -264,7 +264,7 @@ export function decodeBucket(
     throw new TypeError("invalid bucket.");
   }
 
-  if (!isRoot && decoded.entries.length === 0) {
+  if (isRoot != null && !isRoot && decoded.entries.length === 0) {
     throw new TypeError("empty non-root bucket.");
   }
 
@@ -282,7 +282,7 @@ export function decodeBucket(
   const entries = decodeEntries(
     decoded.entries,
     decoded.base,
-    isHead,
+    isHead ?? true,
     isBoundary,
     range,
   );

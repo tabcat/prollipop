@@ -67,7 +67,7 @@ export const createBucket = (
   average: number,
   level: number,
   entries: Entry[],
-  predicates: CodecPredicates,
+  predicates?: CodecPredicates,
 ): Bucket => {
   const bytes = encodeBucket(average, level, entries, predicates);
   return new DefaultBucket(average, level, entries, bytes, sha256(bytes));

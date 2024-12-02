@@ -2,8 +2,8 @@ import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import { createIsBoundary } from "../src/boundary.js";
+import { MAX_UINT32 } from "../src/constants.js";
 
-const MAX_UINT32 = (1n << 32n) - 1n;
 const average = 2;
 const level = 0;
 const limit = MAX_UINT32 / BigInt(average);
@@ -12,22 +12,8 @@ const filled = new Uint8Array(4).fill(255);
 
 describe("boundary", () => {
   describe("createIsBoundary", () => {
-    it("throws if average is less than 1", () => {
-      expect(() => createIsBoundary(0.0001, 0))
-        .to.throw()
-        .to.satisfy((e: TypeError) => e instanceof TypeError);
-    });
-
-    it("throws if average is greater than max uint32", () => {
-      expect(() => createIsBoundary(Number(MAX_UINT32 + 1n), 0))
-        .to.throw()
-        .to.satisfy((e: TypeError) => e instanceof TypeError);
-    });
-
-    it("throws if average is not a whole number", () => {
-      expect(() => createIsBoundary(3.14, 0))
-        .to.throw()
-        .to.satisfy((e: TypeError) => e instanceof TypeError);
+    it("returns a function", () => {
+      expect(createIsBoundary(average, level)).toBeInstanceOf(Function);
     });
 
     describe("isBoundary", () => {

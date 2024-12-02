@@ -8,7 +8,6 @@ import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { MAX_UINT32 } from "./constants.js";
 import type { Entry, Tuple } from "./interface.js";
-import { isPositiveInteger } from "./utils.js";
 
 /**
  * Returns true if digest falls below limit, false otherwise.
@@ -35,16 +34,18 @@ export interface IsBoundary {
   (entry: Entry): boolean;
 }
 
+/**
+ * Returns a function that determines if an entry is a boundary.
+ * Expects average to be a positive integer under 2^32 - 1.
+ *
+ * @param average
+ * @param level
+ * @returns
+ */
 export const createIsBoundary: CreateIsBoundary = (
   average: number,
   level: number,
 ): IsBoundary => {
-  if (!isPositiveInteger(average) || average > MAX_UINT32) {
-    throw new TypeError(
-      `Average parameter must be a positive integer under 2^32 - 1. Received average: ${average}`,
-    );
-  }
-
   const limit = Number(MAX_UINT32 / BigInt(average));
 
   return ({ seq, key }: Tuple) =>

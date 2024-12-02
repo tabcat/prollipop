@@ -40,9 +40,9 @@ export const createIsBoundary: CreateIsBoundary = (
   average: number,
   level: number,
 ): IsBoundary => {
-  if (!isPositiveInteger(average)) {
+  if (!isPositiveInteger(average) || average > MAX_UINT32) {
     throw new TypeError(
-      `Average parameter must be a positive integer. Received average: ${average}`,
+      `Average parameter must be a positive integer under 2^32 - 1. Received average: ${average}`,
     );
   }
 

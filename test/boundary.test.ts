@@ -3,10 +3,10 @@ import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import { createIsBoundary } from "../src/boundary.js";
 
-const MAX_UINT32 = 1n << 32n;
+const MAX_UINT32 = (1n << 32n) - 1n;
 const average = 2;
 const level = 0;
-const limit = Number(MAX_UINT32) / average;
+const limit = MAX_UINT32 / BigInt(average);
 const empty = new Uint8Array(4);
 const filled = new Uint8Array(4).fill(255);
 

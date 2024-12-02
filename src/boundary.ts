@@ -6,6 +6,7 @@
 
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
+import { MAX_UINT32 } from "./constants.js";
 import type { Entry, Tuple } from "./interface.js";
 import { isPositiveInteger } from "./utils.js";
 
@@ -26,8 +27,6 @@ function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
 
   return new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit;
 }
-
-const MAX_UINT32 = (1n << 32n) - 1n;
 
 export interface CreateIsBoundary {
   (average: number, level: number): IsBoundary;

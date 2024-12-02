@@ -6,16 +6,18 @@ import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareEntries, compareTuples } from "./compare.js";
-import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
+import { MAX_LEVEL, MAX_UINT32, minTuple } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
-import { isPositiveInteger, tupleRangeOfEntries } from "./utils.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
 export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
 }
+
+const isPositiveInteger = (n: unknown): n is number =>
+  typeof n === "number" && n >= 0 && Number.isInteger(n);
 
 export const isValidEntry = (e: any): e is Entry =>
   typeof e === "object" &&
@@ -231,7 +233,10 @@ export function encodeBucket(
     entries,
     isHead,
     isBoundary,
-    range ?? tupleRangeOfEntries(entries),
+    range ?? [
+      minTuple,
+      entries.length === 0 ? minTuple : entries[entries.length - 1]!,
+    ],
   );
 
   return encode({

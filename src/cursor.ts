@@ -257,7 +257,7 @@ const guideByTuple =
  *
  * @param state
  * @param level
- * @param _guide
+ * @param guide
  */
 const moveToLevel = async (
   state: CursorState,

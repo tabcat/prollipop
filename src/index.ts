@@ -1,3 +1,4 @@
+import { ensureSortedSetAsync } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { asyncMap } from "iter-tools-es";
 import { CID } from "multiformats/cid";
@@ -81,7 +82,7 @@ export async function* search(
   const cursor = createCursor(blockstore, tree);
 
   let lastTuple: Tuple | null = null;
-  for await (const tuple of tuples) {
+  for await (const tuple of ensureSortedSetAsync(tuples, compareTuples)) {
     if (lastTuple != null && compareTuples(tuple, lastTuple) <= 0) {
       throw new Error("Tuples must be ordered and non-repeating");
     }

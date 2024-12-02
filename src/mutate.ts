@@ -1,6 +1,6 @@
 import { firstElement, lastElement } from "@tabcat/ith-element";
 import { union } from "@tabcat/sorted-sets/union";
-import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
+import { ensureSortedSet, pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { CreateIsBoundary, IsBoundary, createIsBoundary } from "./boundary.js";
@@ -503,14 +503,45 @@ export async function* rebuildLevel(
   }
 }
 
+/**
+ * Ensures the updates are sorted and non-duplicative. Also skips empty update arrays.
+ *
+ * @param updates - The updates to be sorted and deduplicated.
+ * @returns An async iterable of sorted and deduplicated updates.
+ */
+export async function* ensureSortedUpdates(
+  updates: AwaitIterable<Update | Update[]>,
+): AsyncIterable<Update | Update[]> {
+  let firstUpdate: Update | null = null;
+  let lastUpdate: Update | null = null;
+
+  for await (const u of updates) {
+    if (Array.isArray(u)) {
+      if (u.length === 0) continue; // skip empty updates
+
+      for (const _ of ensureSortedSet(u, compareTuples));
+
+      firstUpdate = u[0]!;
+    } else {
+      firstUpdate = u;
+    }
+
+    if (lastUpdate != null && compareTuples(lastUpdate, firstUpdate) >= 0) {
+      throw new Error("updates are unsorted or duplicates.");
+    }
+
+    lastUpdate = Array.isArray(u) ? u[u.length - 1]! : u;
+
+    yield u;
+  }
+}
+
 export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
   updates: AwaitIterable<Update | Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
-  if (Array.isArray(updates)) {
-    updates = updates[Symbol.iterator]();
-  }
+  updates = ensureSortedUpdates(updates);
 
   let updts: Updts = {
     user: updates,

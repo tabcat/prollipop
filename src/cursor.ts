@@ -3,7 +3,7 @@ import type { Blockstore } from "interface-blockstore";
 import { compare } from "uint8arrays";
 import { compareTuples } from "./compare.js";
 import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
-import { bucketToPrefix, loadBucket, tupleRangeOfChild } from "./utils.js";
+import { loadBucket } from "./utils.js";
 
 interface CursorState {
   blockstore: Blockstore;
@@ -282,16 +282,12 @@ const moveToLevel = async (
       state.currentBuckets.splice(difference, -difference);
     } else {
       // walk down to lower level
-      const bucket = await loadBucket(state.blockstore, entryOf(state).val, {
-        isHead: overflows(state) && getIsAtHead(state),
-        isRoot: false,
-        range: tupleRangeOfChild(bucketOf(state).entries, state.currentIndex),
-        expectedPrefix: {
-          ...bucketToPrefix(bucketOf(state)),
-          level: levelOf(state) - 1,
-          base: entryOf(state).seq,
-        },
-      });
+      const bucket = await loadBucket(
+        state.blockstore,
+        entryOf(state).val,
+        overflows(state) && getIsAtHead(state),
+        { parent: bucketOf(state), child: state.currentIndex },
+      );
 
       state.currentBuckets.push(bucket);
     }

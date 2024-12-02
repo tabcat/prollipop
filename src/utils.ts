@@ -115,7 +115,11 @@ export const createBucket = (
 export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
-  predicates: CodecPredicates,
+  isHead: boolean,
+  relation?: {
+    parent: Bucket;
+    child: number;
+  },
 ): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
@@ -126,6 +130,27 @@ export async function loadBucket(
     } else {
       throw new Error("Unable to fetch bucket from blockstore.", { cause: e });
     }
+  }
+
+  const predicates: CodecPredicates = {
+    isHead,
+    isRoot: true,
+  };
+
+  if (relation != null) {
+    const { parent, child } = relation;
+    predicates.isRoot = false;
+
+    predicates.range = [
+      child === 0 ? minTuple : entryToTuple(parent.entries[child - 1]!),
+      entryToTuple(parent.entries[child]!),
+    ];
+
+    predicates.expectedPrefix = {
+      average: parent.average,
+      level: parent.level - 1,
+      base: parent.entries[child]!.seq,
+    };
   }
 
   const bucket: Bucket = decodeBucket(bytes, predicates);

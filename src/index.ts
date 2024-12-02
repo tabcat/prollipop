@@ -45,10 +45,7 @@ export async function loadTree(
   cid: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
-    await loadBucket(blockstore, bucketCidToDigest(cid), {
-      isHead: true,
-      isRoot: true,
-    }),
+    await loadBucket(blockstore, bucketCidToDigest(cid), true),
   );
 }
 

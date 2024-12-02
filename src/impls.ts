@@ -25,7 +25,7 @@ export class DefaultEntry implements Entry {
   }
 
   toString() {
-    return `N:t:${this.seq}:h:${base32.encode(this.key)}:m:${base32.encode(this.val)}`;
+    return `N:s:${this.seq}:k:${base32.encode(this.key)}:v:${base32.encode(this.val)}`;
   }
 }
 

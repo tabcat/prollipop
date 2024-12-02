@@ -10,6 +10,7 @@ import {
   compareBuckets,
   compareTuples,
 } from "./compare.js";
+import { MAX_LEVEL } from "./constants.js";
 import { Cursor, createCursor } from "./cursor.js";
 import {
   BucketDiff,
@@ -558,8 +559,7 @@ export async function* mutate(
 
   const cursor = createCursor(blockstore, tree);
 
-  // using 30 as max level. could be based on average, level, and/or observed entries/updates.
-  while (state.newRoot == null && level < 30) {
+  while (state.newRoot == null && level < MAX_LEVEL) {
     yield* rebuildLevel(cursor, updts, state, level, createIsBoundary);
 
     level++;

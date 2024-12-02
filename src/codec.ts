@@ -176,12 +176,12 @@ export function decodeEntries(
 
 export interface CodecPredicates {
   /**
-   * Used to check if bucket must end in boundary.
+   * Used to check if bucket may end without boundary.
    */
   isHead: boolean;
 
   /**
-   * Used to check if bucket can be empty.
+   * Used to check if bucket may be empty.
    */
   isRoot: boolean;
 

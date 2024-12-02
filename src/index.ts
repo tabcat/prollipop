@@ -3,6 +3,7 @@ import { Blockstore } from "interface-blockstore";
 import { asyncMap } from "iter-tools-es";
 import { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
+import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
@@ -26,7 +27,7 @@ export { mutate };
  * @returns
  */
 export function createEmptyTree(options?: { average: number }): ProllyTree {
-  const average = options?.average ?? 32;
+  const average = options?.average ?? DEFAULT_AVERAGE;
 
   return new DefaultProllyTree(
     createBucket(average, 0, [], { isHead: true, isRoot: true }),

@@ -221,7 +221,7 @@ export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-  { isRoot, isHead, range }: CodecPredicates,
+  { isHead, isRoot, range }: CodecPredicates,
 ): Uint8Array {
   if (!isRoot && entries.length === 0) {
     throw new TypeError("empty non-root bucket.");

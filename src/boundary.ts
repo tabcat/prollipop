@@ -9,24 +9,6 @@ import { sha256 } from "@noble/hashes/sha256";
 import { MAX_UINT32 } from "./constants.js";
 import type { Entry, Tuple } from "./interface.js";
 
-/**
- * Returns true if digest falls below limit, false otherwise.
- * Checks first 2 bytes of digest
- *
- * @param digest
- * @param limit
- * @returns
- */
-function isBoundaryHash(digest: Uint8Array, limit: number): boolean {
-  if (digest.length < 4) {
-    throw new TypeError(
-      `Hash parameter must have a byte length greater than or equal to 4. Received key byte length: ${digest.length}`,
-    );
-  }
-
-  return new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit;
-}
-
 export interface CreateIsBoundary {
   (average: number, level: number): IsBoundary;
 }
@@ -48,7 +30,12 @@ export const createIsBoundary: CreateIsBoundary = (
 ): IsBoundary => {
   const limit = Number(MAX_UINT32 / BigInt(average));
 
-  return ({ seq, key }: Tuple) =>
-    // value does not determine boundary
-    isBoundaryHash(sha256(encode([level, seq, key])), limit);
+  return ({ seq, key }: Tuple) => {
+    // boundary is determined by the level and tuple
+    // this keeps boundaries consistent across different values
+    const digest = sha256(encode([level, seq, key]));
+    return (
+      new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit
+    );
+  };
 };

@@ -22,12 +22,14 @@ const isPositiveInteger = (n: unknown): n is number =>
 export const isValidEntry = (e: any): e is Entry =>
   typeof e === "object" &&
   e !== null &&
+  Object.keys(e).length === 3 &&
   isPositiveInteger(e.seq) &&
   e.key instanceof Uint8Array &&
   e.val instanceof Uint8Array;
 
 export const isValidEncodedEntry = (e: any): e is EncodedEntry =>
   Array.isArray(e) &&
+  e.length === 3 &&
   isPositiveInteger(e[0]) &&
   e[1] instanceof Uint8Array &&
   e[2] instanceof Uint8Array;
@@ -35,6 +37,7 @@ export const isValidEncodedEntry = (e: any): e is EncodedEntry =>
 export const isValidEncodedBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
+  Object.keys(b).length === 4 &&
   isPositiveInteger(b.average) &&
   b.average < Number(MAX_UINT32) &&
   isPositiveInteger(b.level) &&

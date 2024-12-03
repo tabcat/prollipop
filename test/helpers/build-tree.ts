@@ -2,23 +2,42 @@ import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
-import { createIsBoundary } from "../../src/boundary.js";
+import { CreateIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
 import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
 import type { Bucket, Entry } from "../../src/interface.js";
+
+/**
+ * Creates a function that takes an array of [seq, level] tuples to use as boundaries up to levels.
+ *
+ * @param boundaries - Array of [seq, level] tuples
+ * @returns A function that takes an entry and a level and returns true if the entry is a boundary at the given level.
+ */
+export const chooseBoundaries =
+  (boundaries: [number, number][]): CreateIsBoundary =>
+  (_: number, level: number) => {
+    return ({ seq }: Entry) => {
+      return (
+        boundaries.find((b) => b[0] === seq && b[1] >= level) !== undefined
+      );
+    };
+  };
 
 const levelOfEntries = (
   average: number,
   level: number,
   entries: Entry[],
+  createIsBoundary: CreateIsBoundary,
 ): Entry[][] => {
   const entryLevel: Entry[][] = [[]];
+  const isBoundary = createIsBoundary(average, level);
+
   for (const entry of entries) {
     lastElement(entryLevel).push(
       new DefaultEntry(entry.seq, entry.key, entry.val),
     );
 
-    if (createIsBoundary(average, level)(entry)) {
+    if (isBoundary(entry)) {
       entryLevel.push([]);
     }
   }
@@ -58,9 +77,10 @@ export const buildProllyTreeState = (
   blockstore: Blockstore,
   average: number,
   entries: Entry[],
+  createIsBoundary: CreateIsBoundary,
 ): Bucket[][] => {
   let level: number = 0;
-  let entryLevel = levelOfEntries(average, level, entries);
+  let entryLevel = levelOfEntries(average, level, entries, createIsBoundary);
   let bucketLevel = levelOfBuckets(average, level, entryLevel);
   bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
 
@@ -72,7 +92,12 @@ export const buildProllyTreeState = (
       throw new Error("e");
     }
     level++;
-    entryLevel = levelOfEntries(average, level, nextLevelEntries(bucketLevel));
+    entryLevel = levelOfEntries(
+      average,
+      level,
+      nextLevelEntries(bucketLevel),
+      createIsBoundary,
+    );
     bucketLevel = levelOfBuckets(average, level, entryLevel);
     bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
     treeState.push(bucketLevel);

@@ -31,32 +31,34 @@ export const level = 0;
 export const base = 0;
 export const prefix = { average, level, base };
 export const entries = [entry];
-export const encodedBucket = encode({
+export const encodedBucket = {
   average,
   level,
   base,
   entries: [[seq, key, val]],
-});
-export const bucketDigest = sha256(encodedBucket);
+};
+export const encodedBucketBytes = encode(encodedBucket);
+export const bucketDigest = sha256(encodedBucketBytes);
 export const bucket = new DefaultBucket(
   average,
   level,
   entries,
-  encodedBucket,
+  encodedBucketBytes,
   bucketDigest,
 );
-export const encodedEmptyBucket = encode({
+export const encodedEmptyBucket = {
   average,
   level,
   base: 0,
   entries: [],
-});
+};
+export const encodedEmptyBucketBytes = encode(encodedEmptyBucket);
 export const emptyBucket = new DefaultBucket(
   average,
   level,
   [],
-  encodedEmptyBucket,
-  sha256(encodedEmptyBucket),
+  encodedEmptyBucketBytes,
+  sha256(encodedEmptyBucketBytes),
 );
 
 export const tree = new DefaultProllyTree(bucket);

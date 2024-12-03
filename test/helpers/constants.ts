@@ -4,6 +4,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { MemoryBlockstore } from "blockstore-core/memory";
 // import { createIsBoundary } from "../../src/boundary.js";
 // import { compareBuckets } from "../../src/compare.js";
+import { EncodedEntry } from "../../src/codec.js";
 import {
   DefaultBucket,
   DefaultEntry,
@@ -17,6 +18,11 @@ declare global {
 }
 
 export const createEntry = (seq: number) => new DefaultEntry(seq, bytes, bytes);
+export const createEncodedEntry = (delta: number): EncodedEntry => [
+  delta,
+  bytes,
+  bytes,
+];
 
 export const bytes = new Uint8Array();
 
@@ -25,17 +31,19 @@ export const key = bytes;
 export const val = bytes;
 export const tuple = { seq, key };
 export const entry = createEntry(seq);
+export const encodedEntry = createEncodedEntry(seq);
 
 export const average = 32;
 export const level = 0;
 export const base = 0;
 export const prefix = { average, level, base };
 export const entries = [entry];
+export const encodedEntries: EncodedEntry[] = [encodedEntry];
 export const encodedBucket = {
   average,
   level,
   base,
-  entries: [[seq, key, val]],
+  entries: encodedEntries,
 };
 export const encodedBucketBytes = encode(encodedBucket);
 export const bucketDigest = sha256(encodedBucketBytes);

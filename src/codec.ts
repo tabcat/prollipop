@@ -5,7 +5,7 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
-import { compareEntries, compareTuples } from "./compare.js";
+import { compareTuples } from "./compare.js";
 import { MAX_LEVEL, MAX_UINT32, minTuple } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
@@ -77,7 +77,7 @@ export const validateEntryRelation = (
   } else {
     // entry is not last entry of bucket
 
-    if (compareEntries(entry, next) >= 0) {
+    if (compareTuples(entry, next) >= 0) {
       throw new TypeError("Entries must be sorted and non-duplicative.");
     }
 

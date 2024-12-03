@@ -1,15 +1,16 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import { firstElement } from "@tabcat/ith-element";
+// import { firstElement } from "@tabcat/ith-element";
 import { MemoryBlockstore } from "blockstore-core/memory";
-import { compareBuckets } from "../../src/compare.js";
+// import { createIsBoundary } from "../../src/boundary.js";
+// import { compareBuckets } from "../../src/compare.js";
 import {
   DefaultBucket,
   DefaultEntry,
   DefaultProllyTree,
 } from "../../src/impls.js";
-import { Bucket, Entry, ProllyTree } from "../../src/interface.js";
-import { buildProllyTreeState, createProllyTreeEntries } from "./build-tree.js";
+// import { Bucket, Entry, ProllyTree } from "../../src/interface.js";
+// import { buildProllyTreeState, createProllyTreeEntries } from "./build-tree.js";
 
 declare global {
   var TREE_ENTRIES_MAX: string;
@@ -62,70 +63,75 @@ export const tree = new DefaultProllyTree(bucket);
 
 export const blockstore = new MemoryBlockstore();
 
-export const treeEntriesMax = Number.parseInt(TREE_ENTRIES_MAX);
-export const treeEntriesHalf = Math.floor(treeEntriesMax / 2);
-export const treeEntriesThird = Math.floor(treeEntriesMax / 3);
+// export const treeEntriesMax = Number.parseInt(TREE_ENTRIES_MAX);
+// export const treeEntriesHalf = Math.floor(treeEntriesMax / 2);
+// export const treeEntriesThird = Math.floor(treeEntriesMax / 3);
 
-export const emptyTreeIds: number[] = [];
-export const superTreeIds = Array(treeEntriesMax)
-  .fill(0)
-  .map((_, i) => i);
-export const subTreeIds = Array(treeEntriesThird)
-  .fill(0)
-  .map((_, i) => i + treeEntriesThird);
-export const lowerTreeIds = Array(treeEntriesThird)
-  .fill(0)
-  .map((_, i) => i);
-export const upperTreeIds = Array(treeEntriesHalf)
-  .fill(0)
-  .map((_, i) => i + treeEntriesHalf);
-export const randomTreeIds = Array(treeEntriesMax)
-  .fill(0)
-  .map((_, i) => i)
-  .filter(() => Math.random() >= 0.5);
+// export const emptyTreeIds: number[] = [];
+// export const superTreeIds = Array(treeEntriesMax)
+//   .fill(0)
+//   .map((_, i) => i);
+// export const subTreeIds = Array(treeEntriesThird)
+//   .fill(0)
+//   .map((_, i) => i + treeEntriesThird);
+// export const lowerTreeIds = Array(treeEntriesThird)
+//   .fill(0)
+//   .map((_, i) => i);
+// export const upperTreeIds = Array(treeEntriesHalf)
+//   .fill(0)
+//   .map((_, i) => i + treeEntriesHalf);
+// export const randomTreeIds = Array(treeEntriesMax)
+//   .fill(0)
+//   .map((_, i) => i)
+//   .filter(() => Math.random() >= 0.5);
 
-const idsOfTrees = [
-  emptyTreeIds,
-  superTreeIds,
-  subTreeIds,
-  lowerTreeIds,
-  upperTreeIds,
-  randomTreeIds,
-];
+// const idsOfTrees = [
+//   emptyTreeIds,
+//   superTreeIds,
+//   subTreeIds,
+//   lowerTreeIds,
+//   upperTreeIds,
+//   randomTreeIds,
+// ];
 
-const idsToNames: WeakMap<number[], string> = new WeakMap();
-idsToNames.set(emptyTreeIds, "empty");
-idsToNames.set(superTreeIds, "super");
-idsToNames.set(subTreeIds, "sub");
-idsToNames.set(lowerTreeIds, "lower");
-idsToNames.set(upperTreeIds, "upper");
-idsToNames.set(randomTreeIds, "random");
+// const idsToNames: WeakMap<number[], string> = new WeakMap();
+// idsToNames.set(emptyTreeIds, "empty");
+// idsToNames.set(superTreeIds, "super");
+// idsToNames.set(subTreeIds, "sub");
+// idsToNames.set(lowerTreeIds, "lower");
+// idsToNames.set(upperTreeIds, "upper");
+// idsToNames.set(randomTreeIds, "random");
 
-export const trees: ProllyTree[] = [];
+// export const trees: ProllyTree[] = [];
 
-export const treesToStates: WeakMap<
-  ProllyTree,
-  {
-    state: Bucket[][];
-    buckets: Bucket[];
-    entries: Entry[];
-    ids: number[];
-    name: string;
-  }
-> = new WeakMap();
+// export const treesToStates: WeakMap<
+//   ProllyTree,
+//   {
+//     state: Bucket[][];
+//     buckets: Bucket[];
+//     entries: Entry[];
+//     ids: number[];
+//     name: string;
+//   }
+// > = new WeakMap();
 
-for (const ids of idsOfTrees) {
-  const entries = createProllyTreeEntries(ids);
-  const state = buildProllyTreeState(blockstore, average, entries);
-  const tree = new DefaultProllyTree(firstElement(firstElement(state)));
-  const buckets = state.flat().sort(compareBuckets);
+// for (const ids of idsOfTrees) {
+//   const entries = createProllyTreeEntries(ids);
+//   const state = buildProllyTreeState(
+//     blockstore,
+//     average,
+//     entries,
+//     createIsBoundary,
+//   );
+//   const tree = new DefaultProllyTree(firstElement(firstElement(state)));
+//   const buckets = state.flat().sort(compareBuckets);
 
-  trees.push(tree);
-  treesToStates.set(tree, {
-    state,
-    buckets,
-    entries,
-    ids,
-    name: idsToNames.get(ids)!,
-  });
-}
+//   trees.push(tree);
+//   treesToStates.set(tree, {
+//     state,
+//     buckets,
+//     entries,
+//     ids,
+//     name: idsToNames.get(ids)!,
+//   });
+// }

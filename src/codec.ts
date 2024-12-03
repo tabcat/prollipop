@@ -1,5 +1,5 @@
 /**
- * Safely encodes and decodes buckets with context of the tree structure.
+ * Safely encodes and decodes buckets using context of the tree structure.
  */
 
 import { decode, encode } from "@ipld/dag-cbor";

@@ -64,6 +64,7 @@ export const validateEntryRelation = (
 ): void => {
   if (next == null) {
     // entry is last entry of bucket
+
     if (!isHead && !isBoundary(entry)) {
       throw new TypeError(
         "Last entry must be a boundary unless inside a head bucket.",
@@ -75,16 +76,13 @@ export const validateEntryRelation = (
     }
   } else {
     // entry is not last entry of bucket
+
     if (compareEntries(entry, next) >= 0) {
       throw new TypeError("Entries must be sorted and non-duplicative.");
     }
 
     if (isBoundary(entry)) {
-      throw new TypeError("Buckets can have only one boundary.");
-    }
-
-    if (range != null && compareTuples(entry, range[0]) > 0) {
-      throw new TypeError("Entry must be greater than min tuple range.");
+      throw new TypeError("Only the last entry of a bucket can be a boundary.");
     }
   }
 };
@@ -104,6 +102,14 @@ export function encodeEntries(
   isBoundary: IsBoundary,
   range?: TupleRange,
 ): [EncodedEntry[], number] {
+  if (
+    range != null &&
+    entries[0] != null &&
+    compareTuples(range[0], entries[0]) >= 0
+  ) {
+    throw new TypeError("First entry must be greater than min tuple range.");
+  }
+
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
   let base = 0;
 
@@ -172,6 +178,14 @@ export function decodeEntries(
     validateEntryRelation(entry, next, isHead, isBoundary, range);
 
     entries[i] = entry;
+  }
+
+  if (
+    range != null &&
+    entries[0] != null &&
+    compareTuples(range[0], entries[0]) >= 0
+  ) {
+    throw new TypeError("Entry must be greater than min tuple range.");
   }
 
   return entries;

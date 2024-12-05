@@ -18,7 +18,8 @@ export interface IsBoundary {
 
 /**
  * Returns a function that determines if an entry is a boundary.
- * Expects average to be a positive integer under 2^32 - 1.
+ * Expects average to be a positive integer under 2^32 - 1;
+ * more realistically around 30 as it represents the desired number of keys per bucket.
  *
  * @param average
  * @param level

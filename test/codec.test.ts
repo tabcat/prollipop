@@ -70,6 +70,9 @@ describe("codec", () => {
       expect(isValidEncodedBucket({ ...encodedBucket, oneMore: "field" })).toBe(
         false,
       );
+      expect(isValidEncodedBucket({ ...encodedBucket, average: 1 })).toBe(
+        false,
+      );
     });
   });
 

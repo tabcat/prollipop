@@ -38,7 +38,8 @@ export const isValidEncodedBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
   Object.keys(b).length === 4 &&
-  isPositiveInteger(b.average) &&
+  Number.isInteger(b.average) &&
+  b.average > 1 &&
   b.average < Number(MAX_UINT32) &&
   isPositiveInteger(b.level) &&
   b.level <= MAX_LEVEL &&

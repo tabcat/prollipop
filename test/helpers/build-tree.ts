@@ -2,114 +2,87 @@ import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
-import { CreateIsBoundary } from "../../src/boundary.js";
+import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
-import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
-import type { Bucket, Entry } from "../../src/interface.js";
-
-/**
- * Creates a function that takes an array of [seq, level] tuples to use as boundaries up to levels.
- *
- * @param boundaries - Array of [seq, level] tuples
- * @returns A function that takes an entry and a level and returns true if the entry is a boundary at the given level.
- */
-export const chooseBoundaries =
-  (boundaries: [number, number][]): CreateIsBoundary =>
-  (_: number, level: number) => {
-    return ({ seq }: Entry) => {
-      return (
-        boundaries.find((b) => b[0] === seq && b[1] >= level) !== undefined
-      );
-    };
-  };
-
-const levelOfEntries = (
-  average: number,
-  level: number,
-  entries: Entry[],
-  createIsBoundary: CreateIsBoundary,
-): Entry[][] => {
-  const entryLevel: Entry[][] = [[]];
-  const isBoundary = createIsBoundary(average, level);
-
-  for (const entry of entries) {
-    lastElement(entryLevel).push(
-      new DefaultEntry(entry.seq, entry.key, entry.val),
-    );
-
-    if (isBoundary(entry)) {
-      entryLevel.push([]);
-    }
-  }
-
-  if (lastElement(entryLevel).length === 0) {
-    entryLevel.pop();
-  }
-
-  return entryLevel;
-};
+import {
+  DefaultBucket,
+  DefaultEntry,
+  DefaultProllyTree,
+} from "../../src/impls.js";
+import type { Bucket, Entry, ProllyTree } from "../../src/interface.js";
 
 const levelOfBuckets = (
   average: number,
   level: number,
-  entryLevel: Entry[][],
+  entries: Entry[],
 ): Bucket[] => {
-  if (entryLevel.length === 0) {
-    entryLevel.push([]);
+  const isBoundary = createIsBoundary(average, level);
+  const buckets: Bucket[] = [];
+  let bucketEntries: Entry[] = [];
+
+  for (const entry of entries) {
+    bucketEntries.push(new DefaultEntry(entry.seq, entry.key, entry.val));
+
+    if (isBoundary(entry)) {
+      const bytes = encodeBucket(average, level, bucketEntries);
+      buckets.push(
+        new DefaultBucket(average, level, bucketEntries, bytes, sha256(bytes)),
+      );
+      bucketEntries = [];
+    }
   }
 
-  return entryLevel.map((entries) => {
-    const bytes = encodeBucket(average, level, entries);
-    return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
-  });
-};
+  const bytes = encodeBucket(average, level, bucketEntries);
+  buckets.push(
+    new DefaultBucket(average, level, bucketEntries, bytes, sha256(bytes)),
+  );
 
-const nextLevelEntries = (buckets: Bucket[]): Entry[] => {
-  const entries: Entry[] = [];
-  for (const bucket of buckets) {
-    // should never get empty bucket here as there would not be another level
-    entries.push({ ...bucket.getBoundary()!, val: bucket.getDigest() });
+  if (buckets.length > 1 && lastElement(buckets).entries.length === 0) {
+    buckets.pop();
   }
-  return entries;
+
+  return buckets;
 };
 
-export const buildProllyTreeState = (
+export const buildProllyTree = (
   blockstore: Blockstore,
   average: number,
   entries: Entry[],
-  createIsBoundary: CreateIsBoundary,
-): Bucket[][] => {
+): ProllyTree => {
   let level: number = 0;
-  let entryLevel = levelOfEntries(average, level, entries, createIsBoundary);
-  let bucketLevel = levelOfBuckets(average, level, entryLevel);
-  bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
-
-  const treeState: Bucket[][] = [bucketLevel];
+  let newRoot: Bucket | null = null;
 
   // tree has higher levels
-  while (bucketLevel.length > 1) {
-    if (level >= 4) {
-      throw new Error("e");
+  while (true && level < 100) {
+    const buckets = levelOfBuckets(average, level, entries);
+    buckets.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
+
+    if (buckets.length === 1) {
+      newRoot = buckets[0]!;
+      break;
     }
+
+    entries = buckets.map((b) => b.getParentEntry()!);
     level++;
-    entryLevel = levelOfEntries(
-      average,
-      level,
-      nextLevelEntries(bucketLevel),
-      createIsBoundary,
-    );
-    bucketLevel = levelOfBuckets(average, level, entryLevel);
-    bucketLevel.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
-    treeState.push(bucketLevel);
   }
 
-  return treeState.reverse(); // root to base
+  if (newRoot == null) {
+    throw new Error("Failed to build tree");
+  }
+
+  return new DefaultProllyTree(newRoot);
+};
+
+export const createProllyTreeEntry = (
+  id: number,
+  _: number,
+  ids: number[],
+): Entry => {
+  const key = sha256(new Uint8Array(Array(id).fill(id)));
+  // make val unique to tree
+  const val = encode(id + -firstElement(ids) + lastElement(ids));
+  return new DefaultEntry(id, key, val);
 };
 
 export const createProllyTreeEntries = (ids: number[]): Entry[] =>
-  ids.map((id) => {
-    const key = sha256(new Uint8Array(Array(id).fill(id)));
-    // make val unique to tree
-    const val = encode(id + -firstElement(ids) + lastElement(ids));
-    return new DefaultEntry(id, key, val);
-  });
+  ids.map(createProllyTreeEntry);

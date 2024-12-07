@@ -4,7 +4,8 @@
   "description": "modded prolly-tree with (number, uint8array) tuples for keys",
   "type": "module",
   "files": [
-    "./dist/src"
+    "./dist/src",
+    "!**/__mocks__"
   ],
   "exports": {
     ".": {

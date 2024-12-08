@@ -5,7 +5,7 @@ A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) im
 ## Features
 
 - **Async-iterable mutator** - changes can be applied as a stream :o
-- **Efficient diff** - yields node and bucket diffs!
+- **Efficient diff** - yields entry and bucket diffs!
 - **Powerful cursor api** - climb 🌳s like a pro
 
 ## Project Status
@@ -24,7 +24,7 @@ mods:
 
 - (number, uint8array) tuples for keys
 - right-side backbone
-- key-defined, normalized boundaries instead of rolling-hash
+- key-defined boundaries instead of rolling-hash
 
 ## Install
 

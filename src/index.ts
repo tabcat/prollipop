@@ -79,13 +79,7 @@ export async function* search(
 ): AsyncIterable<Entry | Tuple> {
   const cursor = createCursor(blockstore, tree);
 
-  let lastTuple: Tuple | null = null;
   for await (const tuple of ensureSortedSetAsync(tuples, compareTuples)) {
-    if (lastTuple != null && compareTuples(tuple, lastTuple) <= 0) {
-      throw new Error("Tuples must be ordered and non-repeating");
-    }
-    lastTuple = tuple;
-
     if (cursor.done()) {
       yield entryToTuple(tuple);
       continue;

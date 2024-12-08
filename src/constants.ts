@@ -1,6 +1,6 @@
 export const DEFAULT_AVERAGE = 32;
 export const MAX_UINT32 = (1n << 32n) - 1n;
-export const MAX_LEVEL = 30;
+export const MAX_LEVEL = 10;
 
 /**
  * A tuple that is less than all other tuples.

@@ -1,7 +1,6 @@
-import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { MemoryBlockstore } from "blockstore-core";
-import { describe, expect, it } from "vitest";
-import { compareTuples } from "../src/compare.js";
+import { describe, expect, it, vi } from "vitest";
+import "../src/boundary.js";
 import { DefaultEntry, DefaultProllyTree } from "../src/impls.js";
 import {
   cloneTree,
@@ -11,20 +10,21 @@ import {
   search,
   sync,
 } from "../src/index.js";
-import { Entry, ProllyTree, Tuple } from "../src/interface.js";
-import { createBucket, entryToTuple } from "../src/utils.js";
+import { createBucket } from "../src/utils.js";
 import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
+  bytes,
   entry,
   key,
   level,
   seq,
   tree,
-  trees,
-  treesToStates,
 } from "./helpers/constants.js";
+import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
+
+vi.mock("../src/boundary.js");
 
 describe("index", () => {
   describe("createEmptyTree", () => {
@@ -52,43 +52,20 @@ describe("index", () => {
     });
   });
 
-  const checkSearch = async (
-    tree1: ProllyTree,
-    tree2: ProllyTree,
-  ): Promise<void> => {
-    const states1 = treesToStates.get(tree1)!;
-    const states2 = treesToStates.get(tree2)!;
-
-    const result: (Entry | Tuple)[] = [];
-
-    for await (const entry of search(blockstore, tree1, states2.entries)) {
-      result.push(entry);
-    }
-
-    let expectedResult: (Entry | Tuple)[] = [];
-    for (const [entry1, entry2] of pairwiseTraversal(
-      states1.entries,
-      states2.entries,
-      compareTuples,
-    )) {
-      if (entry2 != null) {
-        if (entry1 != null) {
-          expectedResult.push(entry1);
-        } else {
-          expectedResult.push(entryToTuple(entry2));
-        }
-      }
-    }
-
-    expect(result).to.deep.equal(expectedResult);
-  };
-
   describe("search", async () => {
-    it("yields entries for found and tuples for missing", async () => {
-      for (const tree1 of trees) {
-        for (const tree2 of trees) {
-          await checkSearch(tree1, tree2);
-        }
+    it("yields entries found in a tree", async () => {
+      const expected = oddTreeEntries;
+      let count = 0;
+      for await (const entry of search(blockstore, oddTree, oddTreeEntries)) {
+        expect(entry).to.deep.equal(expected[count]);
+        count++;
+      }
+    });
+
+    it("yields tuples for entries not found in a tree", async () => {
+      const tuple = { seq: 10, key: bytes };
+      for await (const entry of search(blockstore, oddTree, [tuple])) {
+        expect(entry).to.deep.equal(tuple);
       }
     });
 

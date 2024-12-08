@@ -568,7 +568,7 @@ export async function* mutate(
   }
 
   if (state.newRoot == null) {
-    throw new Error("Processed all updates without finding a new root.");
+    throw new Error("Reached max level without finding a new root.");
   }
 
   tree.root = state.newRoot;

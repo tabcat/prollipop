@@ -178,13 +178,10 @@ export async function collectUpdates(
   }
 
   for await (const u of updts.user) {
-    const updates: Update[] = handleArray(u);
+    if (u.length === 0) continue;
 
-    if (updates.length > 0) {
-      updts.current.push(...updates);
-
-      if (stop()) break;
-    }
+    updts.current.push(...u);
+    if (stop()) break;
   }
 }
 
@@ -192,7 +189,7 @@ export interface Updts {
   /**
    * The user provided updates. Applied to level 0.
    */
-  user: AwaitIterable<Update | Update[]>;
+  user: AwaitIterable<Update[]>;
 
   /**
    * The updates to be applied to the current level.
@@ -519,7 +516,7 @@ export async function* rebuildLevel(
 export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
-  updates: AwaitIterable<Update | Update[]>,
+  updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
   let updts: Updts = {
     user: createReusableAwaitIterable(updates),

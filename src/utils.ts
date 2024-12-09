@@ -119,8 +119,8 @@ export const createBucket = (
 export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
-  isHead: boolean,
   relation?: {
+    parentIsHead: boolean;
     parent: Bucket;
     child: number;
   },
@@ -137,7 +137,7 @@ export async function loadBucket(
   }
 
   const predicates: CodecPredicates = {
-    isHead,
+    isHead: relation?.parentIsHead ?? true,
     isRoot: true,
   };
 

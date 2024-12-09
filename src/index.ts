@@ -1,4 +1,3 @@
-import { ensureSortedSetAsync } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { asyncMap } from "iter-tools-es";
 import { CID } from "multiformats/cid";
@@ -14,6 +13,7 @@ import {
   AwaitIterable,
   bucketCidToDigest,
   createBucket,
+  ensureSortedTuples,
   entryToTuple,
   loadBucket,
 } from "./utils.js";
@@ -75,23 +75,34 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
 export async function* search(
   blockstore: Blockstore,
   tree: ProllyTree,
-  tuples: AwaitIterable<Tuple>,
-): AsyncIterable<Entry | Tuple> {
+  tuples: AwaitIterable<Tuple[]>,
+): AsyncIterable<(Entry | Tuple)[]> {
   const cursor = createCursor(blockstore, tree);
 
-  for await (const tuple of ensureSortedSetAsync(tuples, compareTuples)) {
+  let previous: Tuple | null = null;
+
+  for await (const t of tuples) {
+    if (t.length === 0) continue;
+
+    ensureSortedTuples(t, previous);
+    previous = t[t.length - 1]!;
+
     if (cursor.done()) {
-      yield entryToTuple(tuple);
+      yield t.map(entryToTuple);
       continue;
     }
 
-    await cursor.nextTuple(tuple, 0);
+    const results: (Entry | Tuple)[] = [];
+    for (const tuple of t) {
+      await cursor.nextTuple(tuple, 0);
 
-    if (compareTuples(tuple, cursor.current()) === 0) {
-      yield cursor.current();
-    } else {
-      yield entryToTuple(tuple);
+      if (compareTuples(tuple, cursor.current()) === 0) {
+        results.push(cursor.current());
+      } else {
+        results.push(entryToTuple(tuple));
+      }
     }
+    yield results;
   }
 }
 

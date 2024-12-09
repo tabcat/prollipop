@@ -457,7 +457,8 @@ export async function* rebuildLevel(
 
       // only yield mid level when there are buckets built without leftovers
       // these are clean breaks
-      if (buckets.length > 0 && leftovers.length === 0) {
+      // dont yield on isHead, yield after while loop
+      if (buckets.length > 0 && leftovers.length === 0 && !isHead) {
         d.buckets.sort(compareBucketDiffs);
         yield d;
         d = createProllyTreeDiff();

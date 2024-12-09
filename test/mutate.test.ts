@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { Cursor } from "../src/cursor.js";
+import { describe, expect, it, vi } from "vitest";
+import "../src/boundary.js"; // for the mock
+import { createIsBoundary } from "../src/boundary.js";
+import { Cursor, createCursor } from "../src/cursor.js";
+import { ProllyTreeDiff } from "../src/diff.js";
+import { cloneTree } from "../src/index.js";
 import { Entry } from "../src/interface.js";
 import {
-  Update,
+  State,
   Updts,
   applyUpdate,
   collectUpdates,
@@ -11,16 +15,24 @@ import {
   getCurrentUpdateTuple,
   getUpdatee,
   handleArray,
+  mutate,
   rebuildBucket,
+  rebuildLevel,
 } from "../src/mutate.js";
-import { createBucket, entryToTuple } from "../src/utils.js";
+import { createBucket, entryToTuple, loadBucket } from "../src/utils.js";
 import {
   average,
+  blockstore,
   bucket,
   createEntry,
+  emptyBucket,
+  emptyTree,
   entry,
   tuple,
 } from "./helpers/constants.js";
+import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
+
+vi.mock("../src/boundary.js");
 
 describe("mutate", () => {
   describe("exclusiveMax", () => {
@@ -121,10 +133,9 @@ describe("mutate", () => {
       const level = 0;
 
       it("returns the current tuple from updts.current if non-empty", async () => {
-        const user: Update[] = [{ seq: 1, key: new Uint8Array() }];
         const updts: Updts = {
           current: [tuple],
-          user: user[Symbol.iterator](),
+          user: [[{ seq: 1, key: new Uint8Array() }]],
           next: [],
         };
 
@@ -137,10 +148,9 @@ describe("mutate", () => {
       });
 
       it("adds the first tuple from updts.user to updts.current and returns the current tuple", async () => {
-        const user = [tuple];
         const updts: Updts = {
           current: [],
-          user: user[Symbol.iterator](),
+          user: [[tuple]],
           next: [],
         };
 
@@ -169,10 +179,9 @@ describe("mutate", () => {
       const level = 1;
 
       it("returns the current tuple from updts.current if non-empty", async () => {
-        const user: Update[] = [{ seq: 1, key: new Uint8Array() }];
         const updts: Updts = {
           current: [tuple],
-          user: user[Symbol.iterator](),
+          user: [[{ seq: 1, key: new Uint8Array() }]],
           next: [],
         };
 
@@ -187,7 +196,7 @@ describe("mutate", () => {
       it("returns null if updts.current is empty", async () => {
         const updts: Updts = {
           current: [],
-          user: [tuple],
+          user: [[tuple]],
           next: [tuple],
         };
 
@@ -268,7 +277,7 @@ describe("mutate", () => {
       const boundary = entries[0]!;
       const updts: Updts = {
         current: entries.slice(0, 1),
-        user: entries.slice(1)[Symbol.iterator](),
+        user: [entries.slice(1)],
         next: [],
       };
 
@@ -281,7 +290,7 @@ describe("mutate", () => {
       const boundary = entries[0]!;
       const updts: Updts = {
         current: entries.slice(0, 2),
-        user: entries.slice(2)[Symbol.iterator](),
+        user: [entries.slice(2)],
         next: [],
       };
 
@@ -294,7 +303,7 @@ describe("mutate", () => {
       const boundary = entries[1]!;
       const updts: Updts = {
         current: entries.slice(0, 1),
-        user: entries.slice(1)[Symbol.iterator](),
+        user: entries.slice(1).map((e) => [e]),
         next: [],
       };
 
@@ -307,7 +316,7 @@ describe("mutate", () => {
       const boundary = entries[1]!;
       const updts: Updts = {
         current: entries.slice(0, 1),
-        user: entries.slice(2)[Symbol.iterator](),
+        user: entries.slice(2).map((e) => [e]),
         next: [],
       };
 
@@ -322,7 +331,7 @@ describe("mutate", () => {
       const boundary = entries[0]!;
       const updts: Updts = {
         current: [entries[0]!],
-        user: entries.slice(1)[Symbol.iterator](),
+        user: entries.slice(1).map((e) => [e]),
         next: [],
       };
 
@@ -334,29 +343,22 @@ describe("mutate", () => {
 
   describe("getBucket", () => {
     it("returns the original bucket if digests match", () => {
-      expect(getBucket(bucket, bucket.entries)).to.equal(bucket);
+      expect(getBucket(bucket, bucket.entries, true)).to.equal(bucket);
     });
 
     it("returns a new bucket if digests differ", () => {
-      expect(getBucket(bucket, [])).to.not.equal(bucket);
+      expect(getBucket(bucket, [], true)).to.not.equal(bucket);
     });
   });
 
   describe("rebuildBucket", () => {
-    it("throws if non-head bucket doesn't end in boundary", () => {
-      const bucket = createBucket(average, 0, [createEntry(1)]);
-      expect(() =>
-        rebuildBucket(bucket, [], [], false, 0, () => false),
-      ).toThrowError("malformed tree.");
-    });
+    const isBoundary = (e: Entry) => e.seq % 2 === 1;
 
     describe("basic operations", () => {
-      const isBoundary = (e: Entry) => e.seq === 2;
-
       it("returns original bucket when no changes needed", () => {
         const bucket = createBucket(average, 0, [
+          createEntry(0),
           createEntry(1),
-          createEntry(2),
         ]);
         const [buckets, leftover, diff] = rebuildBucket(
           bucket,
@@ -373,8 +375,8 @@ describe("mutate", () => {
       });
 
       it("processes leftovers correctly", () => {
-        const bucket = createBucket(average, 0, [createEntry(2)]);
-        const leftovers = [createEntry(1)];
+        const bucket = createBucket(average, 0, [createEntry(1)]);
+        const leftovers = [createEntry(0)];
 
         const [buckets, leftover, diff] = rebuildBucket(
           bucket,
@@ -386,28 +388,26 @@ describe("mutate", () => {
         );
 
         expect(buckets[0]!.entries).to.deep.equal([
+          createEntry(0),
           createEntry(1),
-          createEntry(2),
         ]);
         expect(leftover).to.deep.equal([]);
         expect(diff).to.deep.equal([]);
       });
 
       it("handles head bucket without boundary", () => {
-        const bucket = createBucket(average, 0, [createEntry(1)]);
+        const bucket = createBucket(average, 0, [createEntry(0)]);
         const [buckets] = rebuildBucket(bucket, [], [], true, 0, () => false);
 
         expect(buckets).to.have.length(1);
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(1)]);
+        expect(buckets[0]!.entries).to.deep.equal([createEntry(0)]);
       });
     });
 
     describe("updates", () => {
-      const isBoundary = (e: Entry) => e.seq % 2 === 0;
-
       it("handles add updates", () => {
-        const bucket = createBucket(average, 0, [createEntry(2)]);
-        const updates = [createEntry(1)];
+        const bucket = createBucket(average, 0, [createEntry(1)]);
+        const updates = [createEntry(0)];
 
         const [buckets, _, diff] = rebuildBucket(
           bucket,
@@ -419,14 +419,14 @@ describe("mutate", () => {
         );
 
         expect(buckets[0]!.entries).to.deep.equal([
+          createEntry(0),
           createEntry(1),
-          createEntry(2),
         ]);
-        expect(diff).to.deep.equal([[null, createEntry(1)]]);
+        expect(diff).to.deep.equal([[null, createEntry(0)]]);
       });
 
       it("handles remove updates", () => {
-        const entries = [createEntry(1), createEntry(2)];
+        const entries = [createEntry(0), createEntry(1)];
         const bucket = createBucket(average, 0, entries);
         const updates = [entryToTuple(entries[0]!)];
 
@@ -439,12 +439,12 @@ describe("mutate", () => {
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(2)]);
+        expect(buckets[0]!.entries).to.deep.equal([createEntry(1)]);
         expect(diff).to.deep.equal([[entries[0], null]]);
       });
 
       it("handles strict remove updates", () => {
-        const entries = [createEntry(1), createEntry(2)];
+        const entries = [createEntry(0), createEntry(1)];
         const bucket = createBucket(average, 0, entries);
         const updates = [{ ...entries[0]!, strict: true }];
 
@@ -457,40 +457,42 @@ describe("mutate", () => {
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(2)]);
+        expect(buckets[0]!.entries).to.deep.equal([createEntry(1)]);
         expect(diff).to.deep.equal([[entries[0], null]]);
       });
     });
 
     // Boundary handling tests
     describe("boundary handling", () => {
-      const isBoundary = (e: Entry) => e.seq % 2 === 0;
-
       it("splits bucket at boundaries", () => {
         const bucket = createBucket(average, 0, [
-          createEntry(1),
+          createEntry(0),
           createEntry(2),
           createEntry(3),
-          createEntry(4),
         ]);
 
-        const [buckets] = rebuildBucket(bucket, [], [], false, 0, isBoundary);
+        const [buckets] = rebuildBucket(
+          bucket,
+          [],
+          [createEntry(1)],
+          false,
+          0,
+          isBoundary,
+        );
 
         expect(buckets).to.have.length(2);
         expect(buckets[0]!.entries).to.deep.equal([
+          createEntry(0),
           createEntry(1),
-          createEntry(2),
         ]);
         expect(buckets[1]!.entries).to.deep.equal([
+          createEntry(2),
           createEntry(3),
-          createEntry(4),
         ]);
       });
     });
 
     describe("edge cases", () => {
-      const isBoundary = (e: Entry) => e.seq % 2 === 0;
-
       it("handles empty bucket", () => {
         const bucket = createBucket(average, 0, []);
         const [buckets] = rebuildBucket(bucket, [], [], true, 0, isBoundary);
@@ -500,7 +502,7 @@ describe("mutate", () => {
       });
 
       it("handles complete removal of entries", () => {
-        const entries = [createEntry(1), createEntry(2)];
+        const entries = [createEntry(0), createEntry(1)];
         const bucket = createBucket(average, 0, entries);
         const updates = entries.map(entryToTuple);
 
@@ -519,7 +521,7 @@ describe("mutate", () => {
       });
 
       it("handles complete removal with isHead=true and bucketsRebuilt=1", () => {
-        const entries = [createEntry(1), createEntry(2)];
+        const entries = [createEntry(0), createEntry(1)];
         const bucket = createBucket(average, 0, entries);
         const updates = entries.map(entryToTuple);
         const bucketsRebuilt = 1;
@@ -541,17 +543,229 @@ describe("mutate", () => {
   });
 
   describe("rebuildLevel", () => {
-    it("returns the same tree if updates empty", () => {});
+    it("sets state.newRoot to current root and returns if no updates", async () => {
+      const cursor = createCursor(blockstore, oddTree);
+      const updts: Updts = {
+        current: [],
+        user: [],
+        next: [],
+      };
+      const state: State = {
+        newRoot: null,
+        removedBuckets: [],
+      };
+      const level = 0;
+
+      for await (const _ of rebuildLevel(
+        cursor,
+        updts,
+        state,
+        level,
+        createIsBoundary,
+      )) {
+        expect.fail();
+      }
+
+      expect(state.newRoot).to.equal(oddTree.root);
+    });
+
+    it("rebuilds a single bucket level into a multi-bucket level", async () => {
+      const cursor = createCursor(blockstore, emptyTree);
+      const updts: Updts = {
+        current: oddTreeEntries.slice(),
+        user: [],
+        next: [],
+      };
+      const state: State = {
+        newRoot: null,
+        removedBuckets: [],
+      };
+      const level = 0;
+
+      const expected: ProllyTreeDiff[] = [
+        {
+          entries: oddTreeEntries.map((e) => [null, e]),
+          buckets: [
+            [emptyBucket, null],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[0]!.val, false),
+            ],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[1]!.val, false),
+            ],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[2]!.val, true),
+            ],
+          ],
+        },
+      ];
+
+      let count = 0;
+      for await (const { entries, buckets } of rebuildLevel(
+        cursor,
+        updts,
+        state,
+        level,
+        createIsBoundary,
+      )) {
+        expect(entries).to.deep.equal(expected[count]?.entries);
+        expect(buckets).to.deep.equal(expected[count]?.buckets);
+        count++;
+      }
+
+      expect(state.newRoot).to.equal(null);
+      expect(state.removedBuckets).to.deep.equal([]);
+      expect(updts.next).to.deep.equal(oddTree.root.entries);
+    });
+
+    it("rebuilds a multi-bucket level into a single bucket level", async () => {
+      const cursor = createCursor(blockstore, oddTree);
+      const updts: Updts = {
+        current: oddTreeEntries.map(entryToTuple),
+        user: [],
+        next: [],
+      };
+      const state: State = {
+        newRoot: null,
+        removedBuckets: [],
+      };
+      const level = 0;
+
+      const expected: ProllyTreeDiff[] = [
+        {
+          entries: oddTreeEntries.map((e) => [e, null]),
+          buckets: [
+            [null, emptyBucket],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[0]!.val, false),
+              null,
+            ],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[1]!.val, false),
+              null,
+            ],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[2]!.val, true),
+              null,
+            ],
+            [oddTree.root, null],
+          ],
+        },
+      ];
+
+      let count = 0;
+      for await (const { entries, buckets } of rebuildLevel(
+        cursor,
+        updts,
+        state,
+        level,
+        createIsBoundary,
+      )) {
+        expect(entries).to.deep.equal(expected[count]?.entries);
+        expect(buckets).to.deep.equal(expected[count]?.buckets);
+        count++;
+      }
+
+      expect(state.newRoot).to.deep.equal(emptyTree.root);
+      expect(state.removedBuckets).to.deep.equal([]);
+    });
   });
 
   describe("mutate", () => {
-    it("returns the same tree", () => {});
-    it("adds entry to emtpy tree", async () => {});
-    it("removes all the entries from a single level tree", async () => {});
-    it("removes all the entries from a multiple level tree", async () => {});
-    it("causes a new level to be created", async () => {});
-    it("causes level to be removed", async () => {});
-    it("does nothing if updates are empty", async () => {});
-    it("does nothing if updates do nothing", async () => {});
+    it("returns the same tree", async () => {
+      const oddTreeCopy = cloneTree(oddTree);
+
+      for await (const _ of mutate(blockstore, oddTreeCopy, [])) {
+        expect.fail();
+      }
+
+      expect(oddTreeCopy.root).to.deep.equal(oddTree.root);
+    });
+
+    it("adds entries to empty tree", async () => {
+      const emptyTreeCopy = cloneTree(emptyTree);
+      const updates = [oddTreeEntries];
+
+      const expected: ProllyTreeDiff[] = [
+        {
+          entries: oddTreeEntries.map((e) => [null, e]),
+          buckets: [
+            [emptyBucket, null],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[0]!.val, false),
+            ],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[1]!.val, false),
+            ],
+            [
+              null,
+              await loadBucket(blockstore, oddTree.root.entries[2]!.val, true),
+            ],
+          ],
+        },
+        {
+          entries: [],
+          buckets: [[null, oddTree.root]],
+        },
+      ];
+
+      let count = 0;
+      for await (const { entries, buckets } of mutate(
+        blockstore,
+        emptyTreeCopy,
+        updates,
+      )) {
+        expect(entries).to.deep.equal(expected[count]?.entries);
+        expect(buckets).to.deep.equal(expected[count]?.buckets);
+        count++;
+      }
+
+      expect(emptyTreeCopy.root).to.deep.equal(oddTree.root);
+    });
+
+    it("removes all entries from a tree", async () => {
+      const oddTreeCopy = cloneTree(oddTree);
+      const updates = [oddTreeEntries.map(entryToTuple)];
+
+      const expected: ProllyTreeDiff[] = [
+        {
+          entries: oddTreeEntries.map((e) => [e, null]),
+          buckets: [
+            [null, emptyBucket],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[0]!.val, false),
+              null,
+            ],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[1]!.val, false),
+              null,
+            ],
+            [
+              await loadBucket(blockstore, oddTree.root.entries[2]!.val, true),
+              null,
+            ],
+            [oddTree.root, null],
+          ],
+        },
+      ];
+
+      let count = 0;
+      for await (const { entries, buckets } of mutate(
+        blockstore,
+        oddTreeCopy,
+        updates,
+      )) {
+        expect(entries).to.deep.equal(expected[count]?.entries);
+        expect(buckets).to.deep.equal(expected[count]?.buckets);
+        count++;
+      }
+
+      expect(oddTreeCopy.root).to.deep.equal(emptyTree.root);
+    });
   });
 });

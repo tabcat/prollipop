@@ -24,6 +24,31 @@ export function ensureSortedTuples(t: Tuple[], previous: Tuple | null): void {
   }
 }
 
+export function createReusableAwaitIterable<T>(
+  it: AwaitIterable<T>,
+): AwaitIterable<T> {
+  // prefer sync iterator
+  if (Symbol.iterator in it) {
+    const iterator = it[Symbol.iterator]();
+    return {
+      [Symbol.iterator]() {
+        return iterator;
+      },
+    };
+  }
+
+  if (Symbol.asyncIterator in it) {
+    const iterator = it[Symbol.asyncIterator]();
+    return {
+      [Symbol.asyncIterator]() {
+        return iterator;
+      },
+    };
+  }
+
+  throw new Error("Iterable does not support iterator methods.");
+}
+
 /**
  * Returns the CID for a given bucket digest.
  *

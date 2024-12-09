@@ -1,6 +1,6 @@
 import { firstElement, lastElement } from "@tabcat/ith-element";
 import { union } from "@tabcat/sorted-sets/union";
-import { ensureSortedSet, pairwiseTraversal } from "@tabcat/sorted-sets/util";
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { CreateIsBoundary, IsBoundary, createIsBoundary } from "./boundary.js";
@@ -20,7 +20,13 @@ import {
 } from "./diff.js";
 import { DefaultEntry } from "./impls.js";
 import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
-import { AwaitIterable, createBucket, entryToTuple } from "./utils.js";
+import {
+  AwaitIterable,
+  createBucket,
+  createReusableAwaitIterable,
+  ensureSortedTuples,
+  entryToTuple,
+} from "./utils.js";
 
 /**
  * An update is made of a Tuple, an Entry, or an Entry with a `strict: true` property.
@@ -330,6 +336,7 @@ export async function* rebuildLevel(
 ): AsyncIterable<ProllyTreeDiff> {
   let leftovers: Entry[] = [];
 
+  let lastTuple: Tuple | null = null;
   const tuple = await getCurrentUpdateTuple(updts, level);
   let [updatee, isTail, isHead] = await getUpdatee(
     cursor,
@@ -365,6 +372,10 @@ export async function* rebuildLevel(
         ? updts.current.length
         : exclusiveMax(updts.current, updatee.getBoundary()!, compareTuples),
     );
+
+    // ensure sorted
+    ensureSortedTuples(updates, lastTuple);
+    lastTuple = updates[updates.length - 1]!;
 
     const [buckets, entries, entryDiffs] = rebuildBucket(
       updatee,
@@ -504,48 +515,13 @@ export async function* rebuildLevel(
   }
 }
 
-/**
- * Ensures the updates are sorted and non-duplicative. Also skips empty update arrays.
- *
- * @param updates - The updates to be sorted and deduplicated.
- * @returns An async iterable of sorted and deduplicated updates.
- */
-export async function* ensureSortedUpdates(
-  updates: AwaitIterable<Update | Update[]>,
-): AsyncIterable<Update | Update[]> {
-  let firstUpdate: Update | null = null;
-  let lastUpdate: Update | null = null;
-
-  for await (const u of updates) {
-    if (Array.isArray(u)) {
-      if (u.length === 0) continue; // skip empty updates
-
-      for (const _ of ensureSortedSet(u, compareTuples));
-
-      firstUpdate = u[0]!;
-    } else {
-      firstUpdate = u;
-    }
-
-    if (lastUpdate != null && compareTuples(lastUpdate, firstUpdate) >= 0) {
-      throw new Error("updates are unsorted or duplicates.");
-    }
-
-    lastUpdate = Array.isArray(u) ? u[u.length - 1]! : u;
-
-    yield u;
-  }
-}
-
 export async function* mutate(
   blockstore: Blockstore,
   tree: ProllyTree,
   updates: AwaitIterable<Update | Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
-  updates = ensureSortedUpdates(updates);
-
   let updts: Updts = {
-    user: updates,
+    user: createReusableAwaitIterable(updates),
     current: [],
     next: [],
   };

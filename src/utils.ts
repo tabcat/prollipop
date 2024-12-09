@@ -1,11 +1,13 @@
 import { code as cborCode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
+import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { compare as compareBytes } from "uint8arrays";
 import { CodecPredicates, decodeBucket, encodeBucket } from "./codec.js";
+import { compareTuples } from "./compare.js";
 import { minTuple } from "./constants.js";
 import { DefaultBucket } from "./impls.js";
 import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
@@ -13,6 +15,14 @@ import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
 export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
+
+export function ensureSortedTuples(t: Tuple[], previous: Tuple | null): void {
+  for (const _ of ensureSortedSet(t, compareTuples));
+
+  if (previous != null && compareTuples(previous, t[0]!) >= 0) {
+    throw new Error("tuples are unsorted or duplicate.");
+  }
+}
 
 /**
  * Returns the CID for a given bucket digest.

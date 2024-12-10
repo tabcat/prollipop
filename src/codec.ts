@@ -241,8 +241,8 @@ export function encodeBucket(
   entries: Entry[],
   { isHead, isRoot, range }: CodecPredicates = {},
 ): Uint8Array {
-  if (isRoot != null && !isRoot && entries.length === 0) {
-    throw new TypeError("empty non-root bucket.");
+  if (isRoot != null && !isRoot && entries.length < 2) {
+    throw new TypeError("non-root bucket must have at least two entries.");
   }
 
   const isBoundary = createIsBoundary(average, level);
@@ -282,8 +282,8 @@ export function decodeBucket(
     throw new TypeError("invalid bucket.");
   }
 
-  if (isRoot != null && !isRoot && decoded.entries.length === 0) {
-    throw new TypeError("empty non-root bucket.");
+  if (isRoot != null && !isRoot && decoded.entries.length < 2) {
+    throw new TypeError("non-root bucket must have at least two entries.");
   }
 
   if (

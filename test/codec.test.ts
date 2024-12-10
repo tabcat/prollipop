@@ -263,10 +263,10 @@ describe("codec", () => {
       expect(encodedBucket).toEqual(encodedBucket);
     });
 
-    it("throws when empty non-root bucket", () => {
-      expect(() => encodeBucket(average, level, [], { isRoot: false })).toThrow(
-        "empty non-root bucket.",
-      );
+    it("throws when non-root bucket has less than two entries", () => {
+      expect(() =>
+        encodeBucket(average, level, [entry], { isRoot: false }),
+      ).toThrow("non-root bucket must have at least two entries.");
     });
   });
 
@@ -313,10 +313,10 @@ describe("codec", () => {
       expect(() => decodeBucket(new Uint8Array(1))).toThrow("invalid bucket.");
     });
 
-    it("throws when empty non-root bucket", () => {
+    it("throws when non-root bucket has less than two entries", () => {
       expect(() =>
         decodeBucket(encodedEmptyBucketBytes, { isRoot: false }),
-      ).toThrow("empty non-root bucket.");
+      ).toThrow("non-root bucket must have at least two entries.");
     });
 
     it("throws when prefix mismatch", () => {

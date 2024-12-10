@@ -4,12 +4,8 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
-import {
-  DefaultBucket,
-  DefaultEntry,
-  DefaultProllyTree,
-} from "../../src/impls.js";
-import type { Bucket, Entry, ProllyTree } from "../../src/interface.js";
+import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
+import type { Bucket, Entry } from "../../src/interface.js";
 
 const levelOfBuckets = (
   average: number,
@@ -48,13 +44,16 @@ export const buildProllyTree = (
   blockstore: Blockstore,
   average: number,
   entries: Entry[],
-): ProllyTree => {
+): Bucket[][] => {
   let level: number = 0;
   let newRoot: Bucket | null = null;
+
+  const treeState: Bucket[][] = [];
 
   // tree has higher levels
   while (true && level < 100) {
     const buckets = levelOfBuckets(average, level, entries);
+    treeState.push(buckets);
     buckets.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
 
     if (buckets.length === 1) {
@@ -70,7 +69,7 @@ export const buildProllyTree = (
     throw new Error("Failed to build tree");
   }
 
-  return new DefaultProllyTree(newRoot);
+  return treeState.reverse();
 };
 
 export const createProllyTreeEntry = (

@@ -19,7 +19,7 @@ export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 export function ensureSortedTuples(t: Tuple[], previous: Tuple | null): void {
   for (const _ of ensureSortedSet(t, compareTuples));
 
-  if (previous != null && compareTuples(previous, t[0]!) >= 0) {
+  if (t[0] != null && previous != null && compareTuples(previous, t[0]) >= 0) {
     throw new Error("tuples are unsorted or duplicate.");
   }
 }

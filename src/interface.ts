@@ -42,19 +42,14 @@ export interface AddressedBucket extends Bucket {
   addressed: Addressed;
 }
 
-export interface Context<I extends "root" | null = null> {
-  readonly isTail: I extends "root" ? true : boolean;
-  readonly isHead: I extends "root" ? true : boolean;
-
-  /**
-   * If parentIndex is null then the bucket is a root bucket which means isTail and isHead are true.
-   */
-  readonly parentIndex: I extends "root" ? null : number;
+export interface Context {
+  readonly isTail: boolean;
+  readonly isHead: boolean;
+  readonly parentIndex: number | null;
 }
 
-export interface CommittedBucket<I extends "root" | null = null>
-  extends AddressedBucket {
-  readonly context: Context<I>;
+export interface CommittedBucket extends AddressedBucket {
+  readonly context: Context;
 }
 
 export type TypedBucket<

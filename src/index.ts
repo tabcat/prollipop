@@ -12,7 +12,8 @@ import {
   Await,
   AwaitIterable,
   bucketCidToDigest,
-  createBucket,
+  bucketDigestToCid,
+  createEmptyBucket,
   ensureSortedTuples,
   entryToTuple,
   loadBucket,
@@ -27,10 +28,12 @@ export { mutate };
  * @returns
  */
 export function createEmptyTree(options?: { average: number }): ProllyTree {
-  const average = options?.average ?? DEFAULT_AVERAGE;
-
   return new DefaultProllyTree(
-    createBucket(average, 0, [], { isHead: true, isRoot: true }),
+    createEmptyBucket(options?.average ?? DEFAULT_AVERAGE, 0, {
+      isTail: true,
+      isHead: true,
+      parentIndex: null,
+    }),
   );
 }
 
@@ -46,7 +49,11 @@ export async function loadTree(
   cid: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
-    await loadBucket(blockstore, bucketCidToDigest(cid), true),
+    await loadBucket(blockstore, bucketCidToDigest(cid), {
+      isTail: true,
+      isHead: true,
+      parentIndex: null,
+    }),
   );
 }
 
@@ -180,9 +187,12 @@ export async function* sync(
   )) {
     const promises: Await<CID>[] = [];
 
-    for (const [_t, s] of buckets) {
-      if (s != null && !blockstore.has(s.getCID())) {
-        promises.push(blockstore.put(s.getCID(), s.getBytes()));
+    for (const [_, s] of buckets) {
+      if (s != null) {
+        const cid = bucketDigestToCid(s.addressed.digest);
+        if (!blockstore.has(cid)) {
+          promises.push(blockstore.put(cid, s.addressed.bytes));
+        }
       }
     }
 

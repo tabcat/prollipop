@@ -1,16 +1,28 @@
 import { code as cborCode } from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
 import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
-import { compare as compareBytes } from "uint8arrays";
-import { CodecPredicates, decodeBucket, encodeBucket } from "./codec.js";
+import { decodeBucket, encodeBucket, Expected } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import { minTuple } from "./constants.js";
-import { DefaultBucket } from "./impls.js";
-import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
+import {
+  DefaultAddressedBucket,
+  DefaultBucket,
+  DefaultCommittedBucket,
+  DefaultEntry,
+} from "./impls.js";
+import {
+  Addressed,
+  AddressedBucket,
+  Bucket,
+  CommittedBucket,
+  Context,
+  Entry,
+  Prefix,
+  Tuple,
+  TypedBucket,
+} from "./interface.js";
 
 export type Await<T> = Promise<T> | T;
 
@@ -66,6 +78,21 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
  */
 export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
 
+export const getBucketBoundary = (bucket: Bucket): Tuple | null =>
+  bucket.entries.length > 0
+    ? entryToTuple(bucket.entries[bucket.entries.length - 1]!)
+    : null;
+
+export const getParentBucket = (bucket: AddressedBucket): Entry | null => {
+  const boundary = getBucketBoundary(bucket);
+
+  if (boundary == null) {
+    return null;
+  }
+
+  return new DefaultEntry(boundary.seq, boundary.key, bucket.addressed.digest);
+};
+
 /**
  * Returns a new tuple for the provided entry or tuple.
  *
@@ -98,14 +125,39 @@ export const bucketToPrefix = ({ average, level, base }: Prefix): Prefix => ({
  * @param entries
  * @returns
  */
-export const createBucket = (
+export const createBucket = <
+  A extends Addressed | undefined,
+  C extends Context | undefined,
+>(
   average: number,
   level: number,
   entries: Entry[],
-  predicates?: CodecPredicates,
-): Bucket => {
-  const bytes = encodeBucket(average, level, entries, predicates);
-  return new DefaultBucket(average, level, entries, bytes, sha256(bytes));
+  addressed?: A,
+  context?: C,
+): TypedBucket<A, C> =>
+  addressed == undefined
+    ? (new DefaultBucket(average, level, entries) as TypedBucket<A, C>)
+    : context == undefined
+      ? (new DefaultAddressedBucket(
+          average,
+          level,
+          entries,
+          addressed,
+        ) as TypedBucket<A, C>)
+      : new DefaultCommittedBucket(average, level, entries, addressed, context);
+
+export const createEmptyBucket = (
+  average: number,
+  level: number,
+  context: Context,
+): CommittedBucket => {
+  return new DefaultCommittedBucket(
+    average,
+    level,
+    [],
+    encodeBucket(average, level, [], context),
+    context,
+  );
 };
 
 /**
@@ -119,14 +171,12 @@ export const createBucket = (
 export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
-  relation?: {
-    parentIsHead: boolean;
-    parent: Bucket;
-    child: number;
-  },
-): Promise<Bucket> {
+  context: Context,
+  expected?: Expected,
+): Promise<TypedBucket<Addressed, typeof context>> {
   let bytes: Uint8Array;
   try {
+    // expect the blockstore to check the digest
     bytes = await blockstore.get(bucketDigestToCid(digest));
   } catch (e) {
     if (e instanceof Error && e.message === "Not Found") {
@@ -136,32 +186,7 @@ export async function loadBucket(
     }
   }
 
-  const predicates: CodecPredicates = {
-    isHead: relation?.parentIsHead ?? true,
-    isRoot: true,
-  };
-
-  if (relation != null) {
-    const { parent, child } = relation;
-    predicates.isRoot = false;
-
-    predicates.range = [
-      child === 0 ? minTuple : entryToTuple(parent.entries[child - 1]!),
-      entryToTuple(parent.entries[child]!),
-    ];
-
-    predicates.expectedPrefix = {
-      average: parent.average,
-      level: parent.level - 1,
-      base: parent.entries[child]!.seq,
-    };
-  }
-
-  const bucket: Bucket = decodeBucket(bytes, predicates);
-
-  if (compareBytes(digest, bucket.getDigest()) !== 0) {
-    throw new Error("Unexpected bucket digest.");
-  }
+  const bucket = decodeBucket({ bytes, digest }, context, expected);
 
   return bucket;
 }

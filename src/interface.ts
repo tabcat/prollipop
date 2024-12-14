@@ -1,5 +1,3 @@
-import { CID } from "multiformats/cid";
-
 export interface Tuple {
   readonly seq: number;
   readonly key: Uint8Array;
@@ -29,18 +27,45 @@ export interface Prefix {
 }
 
 export interface Bucket extends Prefix {
-  readonly entries: Entry[];
-  getBytes(): Uint8Array;
-  getCID(): CID;
-  getDigest(): Uint8Array;
-
   /**
-   * Null if the bucket is empty.
+   * Array of Entry that is sorted and non-duplicate by Tuple.
    */
-  getBoundary(): Entry | null;
-  getParentEntry(): Entry | null;
+  readonly entries: Entry[];
 }
 
+export interface Addressed {
+  readonly bytes: Uint8Array;
+  readonly digest: Uint8Array;
+}
+
+export interface AddressedBucket extends Bucket {
+  addressed: Addressed;
+}
+
+export interface Context<I extends "root" | null = null> {
+  readonly isTail: I extends "root" ? true : boolean;
+  readonly isHead: I extends "root" ? true : boolean;
+
+  /**
+   * If parentIndex is null then the bucket is a root bucket which means isTail and isHead are true.
+   */
+  readonly parentIndex: I extends "root" ? null : number;
+}
+
+export interface CommittedBucket<I extends "root" | null = null>
+  extends AddressedBucket {
+  readonly context: Context<I>;
+}
+
+export type TypedBucket<
+  A extends Addressed | undefined,
+  C extends Context | undefined,
+> = A extends undefined
+  ? Bucket
+  : C extends undefined
+    ? AddressedBucket
+    : CommittedBucket;
+
 export interface ProllyTree {
-  root: Bucket;
+  root: CommittedBucket;
 }

@@ -6,9 +6,17 @@ import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareTuples } from "./compare.js";
-import { MAX_LEVEL, MAX_UINT32, minTuple } from "./constants.js";
-import { DefaultBucket, DefaultEntry } from "./impls.js";
-import { Bucket, Entry, Prefix, Tuple } from "./interface.js";
+import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
+import { DefaultEntry } from "./impls.js";
+import {
+  Addressed,
+  CommittedBucket,
+  Context,
+  Entry,
+  Prefix,
+  Tuple,
+} from "./interface.js";
+import { createBucket } from "./utils.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
@@ -19,7 +27,7 @@ export interface EncodedBucket extends Prefix {
 const isPositiveInteger = (n: unknown): n is number =>
   typeof n === "number" && n >= 0 && Number.isInteger(n);
 
-export const isValidEntry = (e: any): e is Entry =>
+export const isEntry = (e: any): e is Entry =>
   typeof e === "object" &&
   e !== null &&
   Object.keys(e).length === 3 &&
@@ -27,14 +35,14 @@ export const isValidEntry = (e: any): e is Entry =>
   e.key instanceof Uint8Array &&
   e.val instanceof Uint8Array;
 
-export const isValidEncodedEntry = (e: any): e is EncodedEntry =>
+export const isEncodedEntry = (e: any): e is EncodedEntry =>
   Array.isArray(e) &&
   e.length === 3 &&
   isPositiveInteger(e[0]) &&
   e[1] instanceof Uint8Array &&
   e[2] instanceof Uint8Array;
 
-export const isValidEncodedBucket = (b: any): b is EncodedBucket =>
+export const isEncodedBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
   Object.keys(b).length === 4 &&
@@ -88,6 +96,37 @@ export const validateEntryRelation = (
   }
 };
 
+export const validatePrefixExpected = (
+  prefix: Prefix,
+  expected: Prefix,
+): void => {
+  if (
+    prefix.average !== expected.average ||
+    prefix.level !== expected.level ||
+    prefix.base !== expected.base
+  ) {
+    throw new TypeError("prefix mismatch.");
+  }
+};
+
+export const validateEntriesLength = (
+  length: number,
+  level: number,
+  isRoot: boolean,
+): void => {
+  // only root buckets on level 0 can have 0 entries
+
+  if (!isRoot && length < 1) {
+    throw new TypeError("non-root bucket must have at least one entry.");
+  }
+
+  if (isRoot && level > 0 && length < 2) {
+    throw new TypeError(
+      "root bucket on level > 0 must have at least two entries.",
+    );
+  }
+};
+
 /**
  * Encodes entries and replaces their seq with a delta encoded value.
  *
@@ -120,7 +159,7 @@ export function encodeEntries(
 
     const entry = entries[i]!;
 
-    if (!isValidEntry(entry)) {
+    if (!isEntry(entry)) {
       throw new TypeError("invalid entry.");
     }
 
@@ -164,7 +203,7 @@ export function decodeEntries(
 
     const encodedEntry = encodedEntries[i];
 
-    if (!isValidEncodedEntry(encodedEntry)) {
+    if (!isEncodedEntry(encodedEntry)) {
       throw new TypeError("invalid encoded entry.");
     }
 
@@ -192,26 +231,9 @@ export function decodeEntries(
   return entries;
 }
 
-export interface CodecPredicates {
-  /**
-   * Used to check if bucket may end without boundary.
-   */
-  isHead?: boolean;
-
-  /**
-   * Used to check if bucket may be empty.
-   */
-  isRoot?: boolean;
-
-  /**
-   * Used to check if entries fall inside of range.
-   */
+export interface Expected {
+  prefix?: Prefix;
   range?: TupleRange;
-
-  /**
-   * Used to check if fetched prefix matches expected prefix.
-   */
-  expectedPrefix?: Prefix;
 }
 
 export interface TupleRange {
@@ -239,30 +261,33 @@ export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-  { isHead, isRoot, range }: CodecPredicates = {},
-): Uint8Array {
-  if (isRoot != null && !isRoot && entries.length < 2) {
-    throw new TypeError("non-root bucket must have at least two entries.");
-  }
-
-  const isBoundary = createIsBoundary(average, level);
+  context: Context,
+  expected?: Expected,
+): Addressed {
+  validateEntriesLength(
+    entries.length,
+    level,
+    context.isTail && context.isHead,
+  );
 
   const [encodedEntries, base] = encodeEntries(
     entries,
-    isHead ?? true,
-    isBoundary,
-    range ?? [
-      minTuple,
-      entries.length === 0 ? minTuple : entries[entries.length - 1]!,
-    ],
+    context.isHead,
+    createIsBoundary(average, level),
+    expected?.range,
   );
 
-  return encode({
+  const bytes = encode({
     average,
     level,
     base,
     entries: encodedEntries,
   });
+
+  return {
+    bytes,
+    digest: sha256(bytes),
+  };
 }
 
 /**
@@ -273,43 +298,39 @@ export function encodeBucket(
  * @returns
  */
 export function decodeBucket(
-  bytes: Uint8Array,
-  { isHead, isRoot, range, expectedPrefix }: CodecPredicates = {},
-): Bucket {
-  const decoded = decode(bytes);
+  addressed: Addressed,
+  context: Context,
+  expected?: Expected,
+): CommittedBucket {
+  const decoded = decode(addressed.bytes);
 
-  if (!isValidEncodedBucket(decoded)) {
+  if (!isEncodedBucket(decoded)) {
     throw new TypeError("invalid bucket.");
   }
 
-  if (isRoot != null && !isRoot && decoded.entries.length < 2) {
-    throw new TypeError("non-root bucket must have at least two entries.");
+  if (expected?.prefix != null) {
+    validatePrefixExpected(decoded, expected.prefix);
   }
 
-  if (
-    expectedPrefix != null &&
-    (decoded.average !== expectedPrefix.average ||
-      decoded.level !== expectedPrefix.level ||
-      decoded.base !== expectedPrefix.base)
-  ) {
-    throw new TypeError("prefix mismatch.");
-  }
-
-  const isBoundary = createIsBoundary(decoded.average, decoded.level);
+  validateEntriesLength(
+    decoded.entries.length,
+    decoded.level,
+    context.isTail && context.isHead,
+  );
 
   const entries = decodeEntries(
     decoded.entries,
     decoded.base,
-    isHead ?? true,
-    isBoundary,
-    range,
+    context.isHead,
+    createIsBoundary(decoded.average, decoded.level),
+    expected?.range,
   );
 
-  return new DefaultBucket(
+  return createBucket(
     decoded.average,
     decoded.level,
     entries,
-    bytes,
-    sha256(bytes),
+    addressed,
+    context,
   );
 }

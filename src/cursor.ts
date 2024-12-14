@@ -1,13 +1,14 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
-import { compare } from "uint8arrays";
+import { TupleRange } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
+import { minTuple } from "./constants.js";
+import { CommittedBucket, Entry, ProllyTree, Tuple } from "./interface.js";
 import { loadBucket } from "./utils.js";
 
 interface CursorState {
   blockstore: Blockstore;
-  currentBuckets: Bucket[];
+  currentBuckets: CommittedBucket[];
   currentIndex: number;
   isDone: boolean;
   isLocked: boolean;
@@ -54,11 +55,11 @@ export interface Cursor {
   /**
    * Returns an array of buckets from root to current level.
    */
-  buckets(): Bucket[];
+  buckets(): CommittedBucket[];
   /**
    * Returns the current bucket. The last bucket in the array returned by the buckets() method.
    */
-  currentBucket(): Bucket;
+  currentBucket(): CommittedBucket;
 
   /**
    * Moves the cursor to the next tuple on the current level.
@@ -137,8 +138,8 @@ function createCursorFromState(state: CursorState): Cursor {
       );
     },
 
-    isAtTail: () => getIsAtTail(state),
-    isAtHead: () => getIsAtHead(state),
+    isAtTail: () => bucketOf(state).context.isTail,
+    isAtHead: () => bucketOf(state).context.isHead,
 
     clone: () => createCursorFromState(cloneCursorState(state)),
 
@@ -200,7 +201,7 @@ export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
 const cloneCursorState = (state: CursorState): CursorState =>
   Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
 
-const bucketOf = (state: CursorState): Bucket =>
+const bucketOf = (state: CursorState): CommittedBucket =>
   lastElement(state.currentBuckets);
 
 const entryOf = (state: CursorState): Entry => {
@@ -216,33 +217,6 @@ const levelOf = (state: CursorState): number => bucketOf(state).level;
 const rootLevelOf = (state: CursorState): number =>
   firstElement(state.currentBuckets).level;
 
-const getIsExtremity = (
-  state: CursorState,
-  findExtemity: (entries: Entry[]) => Entry,
-): boolean => {
-  let i = 0;
-
-  // length - 1 because we are accessing i + 1
-  while (i < state.currentBuckets.length - 1) {
-    const parent = ithElement(state.currentBuckets, i);
-    const child = ithElement(state.currentBuckets, i + 1);
-
-    // check if the extreme entry of the parent matches the current child all the way down from root
-    if (compare(findExtemity(parent.entries).val, child.getDigest()) !== 0) {
-      return false;
-    }
-
-    i++;
-  }
-
-  return true;
-};
-
-const getIsAtTail = (state: CursorState): boolean =>
-  getIsExtremity(state, firstElement);
-const getIsAtHead = (state: CursorState): boolean =>
-  getIsExtremity(state, lastElement);
-
 const guideByTuple =
   (target: Tuple) =>
   (entries: Entry[]): number => {
@@ -251,9 +225,32 @@ const guideByTuple =
     return index === -1 ? entries.length - 1 : index;
   };
 
+const getRange = (state: CursorState): TupleRange => {
+  let min: Tuple = minTuple;
+  let childIndex = state.currentIndex;
+
+  let i = state.currentBuckets.length;
+  while (i > 0) {
+    i--;
+
+    if (!underflows(state)) {
+      min = ithElement(
+        ithElement(state.currentBuckets, i).entries,
+        childIndex - 1,
+      );
+      break;
+    }
+
+    // this will only be null if the `i` bucket is root
+    childIndex = ithElement(state.currentBuckets, i).context.parentIndex!;
+  }
+
+  return [min, entryOf(state)];
+};
+
 /**
- * Moves the cursor vertically.
- * Never causes the cursor to increment without a provided _guide parameter.
+ * Elevates or de-elevates the cursor along the path to the given level.
+ * Never causes the cursor to increment without a provided guide parameter.
  *
  * @param state
  * @param level
@@ -272,7 +269,10 @@ const moveToLevel = async (
 
   // guides currentIndex during traversal
   guide =
-    guide ?? (level < levelOf(state) ? () => 0 : guideByTuple(entryOf(state)));
+    guide ??
+    (level < levelOf(state)
+      ? () => 0 // guide to first entry if moving down
+      : guideByTuple(entryOf(state)));
 
   while (level !== levelOf(state)) {
     if (level > levelOf(state)) {
@@ -281,18 +281,26 @@ const moveToLevel = async (
 
       state.currentBuckets.splice(difference, -difference);
     } else {
+      const { average, level } = bucketOf(state);
       // walk down to lower level
       const bucket = await loadBucket(
         state.blockstore,
         entryOf(state).val,
-        overflows(state) && getIsAtHead(state),
-        { parent: bucketOf(state), child: state.currentIndex },
+        {
+          isTail: underflows(state) && bucketOf(state).context.isTail,
+          isHead: overflows(state) && bucketOf(state).context.isHead,
+          parentIndex: state.currentIndex,
+        },
+        {
+          prefix: { average, level: level - 1, base: entryOf(state).seq },
+          range: getRange(state),
+        },
       );
 
       state.currentBuckets.push(bucket);
     }
 
-    // set to guided index
+    // set to guided index in new bucket
     state.currentIndex = guide(bucketOf(state).entries);
   }
 };
@@ -306,6 +314,8 @@ const moveToLevel = async (
 const overflows = (state: CursorState): boolean =>
   state.currentIndex === lastElement(state.currentBuckets).entries.length - 1;
 
+const underflows = (state: CursorState): boolean => state.currentIndex === 0;
+
 /**
  * Increments the cursor by one on the same level. Handles traversing buckets if necessary.
  *
@@ -313,7 +323,7 @@ const overflows = (state: CursorState): boolean =>
  * @returns
  */
 const moveSideways = async (state: CursorState): Promise<void> => {
-  if (overflows(state) && getIsAtHead(state)) {
+  if (overflows(state) && bucketOf(state).context.isHead) {
     state.isDone = true;
     return;
   }

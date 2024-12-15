@@ -4,37 +4,48 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
-import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
-import type { Bucket, Entry } from "../../src/interface.js";
+import { DefaultCommittedBucket, DefaultEntry } from "../../src/impls.js";
+import type { CommittedBucket, Entry } from "../../src/interface.js";
+import { bucketDigestToCid, getBucketEntry } from "../../src/utils.js";
 
 const levelOfBuckets = (
   average: number,
   level: number,
-  entries: Entry[],
-): Bucket[] => {
+  _entries: Entry[],
+): CommittedBucket[] => {
   const isBoundary = createIsBoundary(average, level);
-  const buckets: Bucket[] = [];
-  let bucketEntries: Entry[] = [];
+  let entries: Entry[] = [];
+  const bucketEntries: Entry[][] = [];
 
-  for (const entry of entries) {
-    bucketEntries.push(new DefaultEntry(entry.seq, entry.key, entry.val));
+  for (const entry of _entries) {
+    entries.push(entry);
 
     if (isBoundary(entry)) {
-      const bytes = encodeBucket(average, level, bucketEntries);
-      buckets.push(
-        new DefaultBucket(average, level, bucketEntries, bytes, sha256(bytes)),
-      );
-      bucketEntries = [];
+      bucketEntries.push(entries);
+      entries = [];
     }
   }
 
-  const bytes = encodeBucket(average, level, bucketEntries);
-  buckets.push(
-    new DefaultBucket(average, level, bucketEntries, bytes, sha256(bytes)),
-  );
+  if (entries.length > 0) {
+    bucketEntries.push(entries);
+  }
 
-  if (buckets.length > 1 && lastElement(buckets).entries.length === 0) {
-    buckets.pop();
+  const isNewRoot = bucketEntries.length === 1;
+
+  const buckets: CommittedBucket[] = new Array(bucketEntries.length);
+  for (const [i, entries] of bucketEntries.entries()) {
+    const last = i === bucketEntries.length - 1;
+    const context = {
+      isTail: last && isNewRoot,
+      isHead: last,
+    };
+    buckets[i] = new DefaultCommittedBucket(
+      average,
+      level,
+      entries,
+      encodeBucket(average, level, entries, context),
+      context,
+    );
   }
 
   return buckets;
@@ -44,24 +55,26 @@ export const buildProllyTree = (
   blockstore: Blockstore,
   average: number,
   entries: Entry[],
-): Bucket[][] => {
+): CommittedBucket[][] => {
   let level: number = 0;
-  let newRoot: Bucket | null = null;
+  let newRoot: CommittedBucket | null = null;
 
-  const treeState: Bucket[][] = [];
+  const treeState: CommittedBucket[][] = [];
 
   // tree has higher levels
   while (true && level < 100) {
     const buckets = levelOfBuckets(average, level, entries);
+    buckets.forEach((b) =>
+      blockstore.put(bucketDigestToCid(b.addressed.digest), b.addressed.bytes),
+    );
     treeState.push(buckets);
-    buckets.forEach((b) => blockstore.put(b.getCID(), b.getBytes()));
 
     if (buckets.length === 1) {
       newRoot = buckets[0]!;
       break;
     }
 
-    entries = buckets.map((b) => b.getParentEntry()!);
+    entries = buckets.map((b) => getBucketEntry(b)!);
     level++;
   }
 

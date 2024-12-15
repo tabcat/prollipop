@@ -45,7 +45,6 @@ export interface AddressedBucket extends Bucket {
 export interface Context {
   readonly isTail: boolean;
   readonly isHead: boolean;
-  readonly parentIndex: number | null;
 }
 
 export interface CommittedBucket extends AddressedBucket {

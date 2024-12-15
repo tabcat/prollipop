@@ -226,26 +226,25 @@ const guideByTuple =
   };
 
 const getRange = (state: CursorState): TupleRange => {
-  let min: Tuple = minTuple;
-  let childIndex = state.currentIndex;
-
-  let i = state.currentBuckets.length;
-  while (i > 0) {
-    i--;
-
-    if (!underflows(state)) {
-      min = ithElement(
-        ithElement(state.currentBuckets, i).entries,
-        childIndex - 1,
-      );
-      break;
-    }
-
-    // this will only be null if the `i` bucket is root
-    childIndex = ithElement(state.currentBuckets, i).context.parentIndex!;
+  const clone = cloneCursorState(state);
+  while (underflows(clone) && levelOf(clone) < rootLevelOf(clone)) {
+    moveUpOne(clone);
   }
 
-  return [min, entryOf(state)];
+  const min = bucketOf(clone).entries[clone.currentIndex - 1];
+
+  return [min ?? minTuple, entryOf(state)];
+};
+
+const moveUpOne = (state: CursorState) => {
+  if (rootLevelOf(state) === levelOf(state)) {
+    throw new Error("Cannot move up one from root.");
+  }
+
+  const guide = guideByTuple(entryOf(state));
+
+  state.currentBuckets.pop();
+  state.currentIndex = guide(bucketOf(state).entries);
 };
 
 /**
@@ -289,7 +288,6 @@ const moveToLevel = async (
         {
           isTail: underflows(state) && bucketOf(state).context.isTail,
           isHead: overflows(state) && bucketOf(state).context.isHead,
-          parentIndex: state.currentIndex,
         },
         {
           prefix: { average, level: level - 1, base: entryOf(state).seq },
@@ -332,7 +330,7 @@ const moveSideways = async (state: CursorState): Promise<void> => {
 
   // find a higher level which allows increasing currentIndex
   while (overflows(state)) {
-    await moveToLevel(state, levelOf(state) + 1);
+    moveUpOne(state);
   }
 
   state.currentIndex += 1;

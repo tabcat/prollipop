@@ -261,7 +261,7 @@ export function encodeBucket(
   average: number,
   level: number,
   entries: Entry[],
-  context: Omit<Context, "parentIndex">, // parentIndex is not relevant to encoding
+  context: Context,
   expected?: Expected,
 ): Addressed {
   validateEntriesLength(

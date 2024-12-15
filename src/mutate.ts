@@ -3,7 +3,8 @@ import { union } from "@tabcat/sorted-sets/union";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
-import { CreateIsBoundary, IsBoundary, createIsBoundary } from "./boundary.js";
+import { IsBoundary, createIsBoundary } from "./boundary.js";
+import { encodeBucket } from "./codec.js";
 import {
   compareBoundaries,
   compareBucketDiffs,
@@ -18,14 +19,21 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { DefaultEntry } from "./impls.js";
-import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
+import { DefaultCommittedBucket, DefaultEntry } from "./impls.js";
+import {
+  CommittedBucket,
+  Context,
+  Entry,
+  ProllyTree,
+  Tuple,
+} from "./interface.js";
 import {
   AwaitIterable,
   createBucket,
   createReusableAwaitIterable,
-  ensureSortedTuples,
-  entryToTuple,
+  ensureSortedTuplesIterable,
+  getBucketBoundary,
+  getBucketEntry,
 } from "./utils.js";
 
 /**
@@ -47,11 +55,8 @@ export const exclusiveMax = <T>(
   return index === -1 ? array.length : index;
 };
 
-export const handleArray = <T>(t: T | T[]): T[] => (Array.isArray(t) ? t : [t]);
-
 /**
- * Takes a entry and update of equal tuples and returns whether a change must be made.
- * The entry may be null but the update will always be defined.
+ * Takes an entry and update of equal tuples and returns whether a change must be made.
  *
  * @param entry
  * @param update
@@ -92,24 +97,14 @@ export const applyUpdate = (
   }
 };
 
-export async function getCurrentUpdateTuple(
+export async function getUserUpdateTuple(
   updts: Updts,
   level: number,
 ): Promise<Tuple | null> {
-  if (updts.current[0] != null) {
-    return updts.current[0];
-  }
-
   if (level === 0) {
     for await (const u of updts.user) {
-      const updates: Update[] = handleArray(u);
-
-      if (updates.length === 0) {
-        continue;
-      }
-
-      updts.current.push(...updates);
-      return firstElement(updates);
+      updts.current.push(...u);
+      return firstElement(u);
     }
   }
 
@@ -118,6 +113,7 @@ export async function getCurrentUpdateTuple(
 
 /**
  * Returns the updatee for the leftovers or tuple, also returns whether the updatee is a tail or head bucket.
+ * Returns a null updatee if the level is greater than the cursor's root level.
  *
  * @param cursor
  * @param leftovers
@@ -128,28 +124,34 @@ export async function getCurrentUpdateTuple(
 export async function getUpdatee(
   cursor: Cursor,
   leftovers: Entry[],
-  tuple: Tuple | null,
+  tuple: Tuple,
+  average: number,
   level: number,
-): Promise<[Bucket | null, boolean, boolean]> {
+): Promise<CommittedBucket> {
   if (leftovers[0] != null) {
     await cursor.nextBucket();
-    return [cursor.currentBucket(), false, cursor.isAtHead()];
-  }
-
-  if (tuple == null) {
-    return [null, false, false];
+    return cursor.currentBucket();
   }
 
   if (level > cursor.rootLevel()) {
-    const { average } = cursor.currentBucket();
-    return [
-      createBucket(average, level, [], { isHead: true, isRoot: true }),
-      true,
-      true,
-    ];
+    // fake root bucket for levels above the root of the original tree
+    return new DefaultCommittedBucket(
+      average,
+      level,
+      [],
+      {
+        bytes: new Uint8Array(0),
+        digest: new Uint8Array(0),
+      },
+      {
+        isTail: cursor.isAtTail(),
+        isHead: cursor.isAtHead(),
+      },
+    );
   } else {
+    // do cursor.moveTo if same level of cursor?
     await cursor.jumpTo(tuple, level);
-    return [cursor.currentBucket(), cursor.isAtTail(), cursor.isAtHead()];
+    return cursor.currentBucket();
   }
 }
 
@@ -163,14 +165,15 @@ export async function getUpdatee(
  * @returns
  */
 export async function collectUpdates(
-  boundary: Tuple,
+  boundary: Tuple | null,
   updts: Updts,
   isHead: boolean,
 ): Promise<void> {
   // only stop collecting updates if isHead is false and
   // the last current update is gte to updatee boundary
   const stop = () =>
-    !isHead && compareTuples(lastElement(updts.current), boundary) >= 0;
+    // boundary only null if isHead === true
+    !isHead && compareTuples(lastElement(updts.current), boundary!) >= 0;
 
   if (stop()) {
     // already have enough updates
@@ -178,8 +181,6 @@ export async function collectUpdates(
   }
 
   for await (const u of updts.user) {
-    if (u.length === 0) continue;
-
     updts.current.push(...u);
     if (stop()) break;
   }
@@ -206,12 +207,12 @@ export interface State {
   /**
    * Tracks new root of the tree.
    */
-  newRoot: Bucket | null;
+  newRoot: CommittedBucket | null;
 
   /**
    * Tracks removed buckets.
    */
-  removedBuckets: Bucket[];
+  removedBuckets: CommittedBucket[];
 }
 
 /**
@@ -223,23 +224,20 @@ export interface State {
  * @returns A bucket with the given entries.
  */
 export const getBucket = (
-  original: Bucket,
+  original: CommittedBucket,
   entries: Entry[],
-  noBoundaryOrEmpty: boolean,
-) => {
-  const bucket = createBucket(original.average, original.level, entries, {
-    isHead: noBoundaryOrEmpty,
-    isRoot: noBoundaryOrEmpty,
-  });
+  context: Context,
+): CommittedBucket => {
+  const { average, level } = original;
+  const addressed = encodeBucket(average, level, entries, context);
+  const bucket = createBucket(average, level, entries, addressed, context);
 
   // can probably compare entryDiffs.length and entries.length with original.entries.length
   // this is safer
-  return compareBytes(bucket.getDigest(), original.getDigest()) === 0
+  return compareBytes(bucket.addressed.digest, original.addressed.digest) === 0
     ? original
     : bucket;
 };
-
-export const getRemovedBuckets = () => {};
 
 /**
  * Rebuilds a bucket from the given updates.
@@ -262,21 +260,17 @@ export const getRemovedBuckets = () => {};
  * @returns A tuple containing the rebuilt buckets, leftover entries, and entry differences.
  */
 export function rebuildBucket(
-  bucket: Bucket,
+  bucket: CommittedBucket,
   leftovers: Entry[],
   updates: Update[],
   isHead: boolean,
+  visitedLevelTail: boolean,
   bucketsRebuilt: number,
   isBoundary: IsBoundary,
-): [Bucket[], Entry[], EntryDiff[]] {
-  const buckets: Bucket[] = [];
+): [CommittedBucket[], Entry[], EntryDiff[], boolean] {
+  const bucketEntries: Entry[][] = [];
   let entries: Entry[] = leftovers;
   const diffs: EntryDiff[] = [];
-
-  const boundary = bucket.getBoundary();
-  if (!isHead && (boundary == null || !isBoundary(boundary))) {
-    throw new Error("malformed tree.");
-  }
 
   for (const [e, u] of pairwiseTraversal(
     bucket.entries,
@@ -290,7 +284,7 @@ export function rebuildBucket(
     if (entry != null) {
       entries.push(entry);
       if (isBoundary(entry)) {
-        buckets.push(getBucket(bucket, entries, false));
+        bucketEntries.push(entries);
         entries = [];
         bucketsRebuilt++;
       }
@@ -299,12 +293,21 @@ export function rebuildBucket(
 
   // only create another bucket if isHead and there are entries or no buckets were rebuilt for the level yet.
   if (isHead && (entries.length > 0 || bucketsRebuilt === 0)) {
-    buckets.push(getBucket(bucket, entries, true));
-    entries = [];
-    bucketsRebuilt++;
+    bucketEntries.push(entries);
   }
 
-  return [buckets, entries, diffs];
+  const isNewRoot = bucketsRebuilt === 1 && visitedLevelTail && isHead;
+
+  const buckets: CommittedBucket[] = [];
+  for (const [i, entries] of bucketEntries.entries()) {
+    const last = i === bucketEntries.length - 1;
+    buckets[i] = getBucket(bucket, entries, {
+      isTail: last && isNewRoot,
+      isHead: last && isHead,
+    });
+  }
+
+  return [buckets, entries, diffs, isNewRoot];
 }
 
 /**
@@ -328,62 +331,53 @@ export async function* rebuildLevel(
   cursor: Cursor,
   updts: Updts,
   state: State,
+  average: number,
   level: number,
-  createIsBoundary: CreateIsBoundary,
 ): AsyncIterable<ProllyTreeDiff> {
   let leftovers: Entry[] = [];
+  const isBoundary = createIsBoundary(average, level);
 
-  let lastTuple: Tuple | null = null;
-  const tuple = await getCurrentUpdateTuple(updts, level);
-  let [updatee, isTail, isHead] = await getUpdatee(
-    cursor,
-    leftovers,
-    tuple,
-    level,
-  );
-
-  // only first updatee of level could be isTail
-  const visitedLevelTail: boolean = isTail;
-  let visitedLevelHead: boolean = isHead;
-
-  let potentialRoot: Bucket | null = null;
+  let visitedLevelTail: boolean = false;
   let bucketsRebuilt: number = 0;
   let updatedLevel: boolean = false;
 
   let d = createProllyTreeDiff();
 
-  while (updatee != null) {
-    const boundary = updatee.getBoundary();
-    const isBoundary = createIsBoundary(updatee.average, updatee.level);
+  let tuple = updts.current[0] ?? (await getUserUpdateTuple(updts, level));
+
+  while (tuple != null) {
+    const updatee = await getUpdatee(cursor, leftovers, tuple, average, level);
+    const { isTail, isHead } = updatee.context;
+    const boundary = getBucketBoundary(updatee);
+
+    visitedLevelTail = visitedLevelTail ?? isTail;
 
     if (level === 0) {
-      // boundary! because collectUpdates checks isHead before using boundary
-      await collectUpdates(boundary!, updts, isHead);
+      // boundary will never be used if isHead is true and will never be null otherwise
+      await collectUpdates(boundary, updts, isHead);
     }
 
-    // could edit updates in rebuildBucket instead of splice
-    const updates = updts.current.splice(
-      0,
-      // empty bucket is always isHead so updatee.getBoundary()! should be fine
-      isHead
-        ? updts.current.length
-        : exclusiveMax(updts.current, updatee.getBoundary()!, compareTuples),
-    );
+    let index = updts.current.length;
+    if (!isHead) {
+      index = exclusiveMax(updts.current, boundary!, compareTuples);
+    }
+    const updates = updts.current.splice(0, index);
 
-    // ensure sorted
-    ensureSortedTuples(updates, lastTuple);
-    lastTuple = updates[updates.length - 1]!;
-
-    const [buckets, entries, entryDiffs] = rebuildBucket(
+    const [buckets, entries, entryDiffs, isNewRoot] = rebuildBucket(
       updatee,
       leftovers,
       updates,
       isHead,
+      visitedLevelTail,
       bucketsRebuilt,
       isBoundary,
     );
     bucketsRebuilt += buckets.length;
     leftovers = entries;
+
+    if (isNewRoot) {
+      state.newRoot = buckets[0]!;
+    }
 
     // there were changes
     if (buckets[0] !== updatee) {
@@ -405,20 +399,14 @@ export async function* rebuildLevel(
 
       // append updates for next level to updts.next
       for (const [rm, add] of pairwiseTraversal(
-        [updatee],
+        updatee ? [updatee] : [],
         buckets,
         compareBoundaries,
       )) {
         // prioritize add updates
-        if (add != null) {
-          const parentEntry = add.getParentEntry();
-
-          parentEntry && updts.next.push(parentEntry);
-        } else {
-          const parentEntry = rm.getParentEntry();
-
-          parentEntry && updts.next.push(entryToTuple(parentEntry));
-        }
+        const b = add ?? rm;
+        const parentEntry = getBucketEntry(b);
+        parentEntry && updts.next.push(parentEntry);
       }
 
       // just up to last bucket
@@ -462,17 +450,7 @@ export async function* rebuildLevel(
       }
     }
 
-    // keep the last rebuilt bucket
-    potentialRoot = buckets[0] ?? potentialRoot;
-
-    const tuple = await getCurrentUpdateTuple(updts, level);
-    [updatee, isTail, isHead] = await getUpdatee(
-      cursor,
-      leftovers,
-      tuple,
-      level,
-    );
-    visitedLevelHead = visitedLevelHead || isHead;
+    tuple = updts.current[0] ?? (await getUserUpdateTuple(updts, level));
   }
 
   // no updates to level
@@ -481,32 +459,17 @@ export async function* rebuildLevel(
     return;
   }
 
-  let i = 0;
-  for (const b of state.removedBuckets) {
-    if (b.level !== level) break;
-    i++;
-  }
-  // add removed buckets on the same level to diff
-  d.buckets.push(
-    ...state.removedBuckets.splice(0, i).map<BucketDiff>((b) => [b, null]),
-  );
-
-  // new root found!
-  if (bucketsRebuilt === 1 && visitedLevelTail && visitedLevelHead) {
-    if (potentialRoot == null) {
-      throw new Error("potentialRoot should not be null");
-    }
-
-    // add the rest of the removedBuckets to the diff
-    d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
-    state.removedBuckets = [];
-    state.newRoot = potentialRoot;
-  }
-
   // sort updates for next level, may be safely removed at some point when the tests are better
   updts.next.sort(compareTuples);
 
-  // this is a bit similar to how rebuildBucket works, e.g. on head catching the rest of the bucket diffs for the level
+  // add removed buckets on the same level to diff
+  const index = state.removedBuckets.findIndex((b) => b.level !== level);
+  d.buckets.push(
+    ...state.removedBuckets
+      .splice(0, index === -1 ? state.removedBuckets.length : index)
+      .map<BucketDiff>((b) => [b, null]),
+  );
+
   if (d.buckets.length > 0) {
     d.buckets.sort(compareBucketDiffs);
     yield d;
@@ -519,7 +482,7 @@ export async function* mutate(
   updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
   let updts: Updts = {
-    user: createReusableAwaitIterable(updates),
+    user: createReusableAwaitIterable(ensureSortedTuplesIterable(updates)),
     current: [],
     next: [],
   };
@@ -532,9 +495,10 @@ export async function* mutate(
   let level: number = 0;
 
   const cursor = createCursor(blockstore, tree);
+  const { average } = cursor.currentBucket();
 
   while (state.newRoot == null && level < MAX_LEVEL) {
-    yield* rebuildLevel(cursor, updts, state, level, createIsBoundary);
+    yield* rebuildLevel(cursor, updts, state, average, level);
 
     level++;
     updts.current = updts.next;
@@ -543,6 +507,14 @@ export async function* mutate(
 
   if (state.newRoot == null) {
     throw new Error("Reached max level without finding a new root.");
+  }
+
+  // yield any removed buckets from higher levels
+  if (state.removedBuckets.length > 0) {
+    const d = createProllyTreeDiff();
+    d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
+
+    yield d;
   }
 
   tree.root = state.newRoot;

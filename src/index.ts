@@ -14,7 +14,7 @@ import {
   bucketCidToDigest,
   bucketDigestToCid,
   createEmptyBucket,
-  ensureSortedTuples,
+  ensureSortedTuplesIterable,
   entryToTuple,
   loadBucket,
 } from "./utils.js";
@@ -84,14 +84,7 @@ export async function* search(
 ): AsyncIterable<(Entry | Tuple)[]> {
   const cursor = createCursor(blockstore, tree);
 
-  let previous: Tuple | null = null;
-
-  for await (const t of tuples) {
-    if (t.length === 0) continue;
-
-    ensureSortedTuples(t, previous);
-    previous = t[t.length - 1]!;
-
+  for await (const t of ensureSortedTuplesIterable(tuples)) {
     if (cursor.done()) {
       yield t.map(entryToTuple);
       continue;

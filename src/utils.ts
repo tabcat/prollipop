@@ -98,7 +98,7 @@ export const getBucketBoundary = (bucket: Bucket): Tuple | null =>
     ? entryToTuple(bucket.entries[bucket.entries.length - 1]!)
     : null;
 
-export const getParentBucket = (bucket: AddressedBucket): Entry | null => {
+export const getBucketEntry = (bucket: AddressedBucket): Entry | null => {
   const boundary = getBucketBoundary(bucket);
 
   if (boundary == null) {

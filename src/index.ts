@@ -32,7 +32,6 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
     createEmptyBucket(options?.average ?? DEFAULT_AVERAGE, 0, {
       isTail: true,
       isHead: true,
-      parentIndex: null,
     }),
   );
 }
@@ -52,7 +51,6 @@ export async function loadTree(
     await loadBucket(blockstore, bucketCidToDigest(cid), {
       isTail: true,
       isHead: true,
-      parentIndex: null,
     }),
   );
 }

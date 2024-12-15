@@ -36,6 +36,21 @@ export function ensureSortedTuples(t: Tuple[], previous: Tuple | null): void {
   }
 }
 
+export async function* ensureSortedTuplesIterable(
+  tuples: AwaitIterable<Tuple[]>,
+) {
+  let previous: Tuple | null = null;
+
+  for await (const t of tuples) {
+    if (t.length === 0) continue;
+
+    ensureSortedTuples(t, previous);
+    previous = t[t.length - 1]!;
+
+    yield t;
+  }
+}
+
 export function createReusableAwaitIterable<T>(
   it: AwaitIterable<T>,
 ): AwaitIterable<T> {

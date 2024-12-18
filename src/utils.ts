@@ -6,23 +6,8 @@ import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { decodeBucket, encodeBucket, Expected } from "./codec.js";
 import { compareTuples } from "./compare.js";
-import {
-  DefaultAddressedBucket,
-  DefaultBucket,
-  DefaultCommittedBucket,
-  DefaultEntry,
-} from "./impls.js";
-import {
-  Addressed,
-  AddressedBucket,
-  Bucket,
-  CommittedBucket,
-  Context,
-  Entry,
-  Prefix,
-  Tuple,
-  TypedBucket,
-} from "./interface.js";
+import { DefaultBucket, DefaultEntry } from "./impls.js";
+import { Bucket, Context, Entry, Prefix, Tuple } from "./interface.js";
 
 export type Await<T> = Promise<T> | T;
 
@@ -98,7 +83,7 @@ export const getBucketBoundary = (bucket: Bucket): Tuple | null =>
     ? entryToTuple(bucket.entries[bucket.entries.length - 1]!)
     : null;
 
-export const getBucketEntry = (bucket: AddressedBucket): Entry | null => {
+export const getBucketEntry = (bucket: Bucket): Entry | null => {
   const boundary = getBucketBoundary(bucket);
 
   if (boundary == null) {
@@ -135,54 +120,14 @@ export const bucketToPrefix = ({ average, level, base }: Prefix): Prefix => ({
   base,
 });
 
-/**
- * Creates a new bucket from the provided entries. Does not handle boundary creation.
- * This is a low level function and is easy to use incorrectly.
- *
- * @param average
- * @param level
- * @param entries
- * @returns
- */
-export const createBucket = <
-  A extends Addressed | undefined,
-  C extends Context | undefined,
->(
-  average: number,
-  level: number,
-  entries: Entry[],
-  addressed?: A,
-  context?: C,
-): TypedBucket<A, C> =>
-  addressed == undefined
-    ? (new DefaultBucket(average, level, entries) as TypedBucket<A, C>)
-    : context == undefined
-      ? (new DefaultAddressedBucket(
-          average,
-          level,
-          entries,
-          addressed as Addressed,
-        ) as TypedBucket<A, C>)
-      : (new DefaultCommittedBucket(
-          average,
-          level,
-          entries,
-          addressed,
-          context,
-        ) as TypedBucket<A, C>);
-
 export const createEmptyBucket = (
   average: number,
   level: number,
   context: Context,
-): CommittedBucket => {
-  return new DefaultCommittedBucket(
-    average,
-    level,
-    [],
-    encodeBucket(average, level, [], context),
-    context,
-  );
+): Bucket => {
+  const entries: Entry[] = [];
+  const addressed = encodeBucket(average, level, entries, context);
+  return new DefaultBucket(average, level, entries, addressed, context);
 };
 
 /**
@@ -198,7 +143,7 @@ export async function loadBucket(
   digest: Uint8Array,
   context: Context,
   expected?: Expected,
-): Promise<TypedBucket<Addressed, typeof context>> {
+): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
     // expect the blockstore to check the digest

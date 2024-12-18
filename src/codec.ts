@@ -7,16 +7,15 @@ import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareTuples } from "./compare.js";
 import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
-import { DefaultEntry } from "./impls.js";
+import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
   Addressed,
-  CommittedBucket,
+  Bucket,
   Context,
   Entry,
   Prefix,
   Tuple,
 } from "./interface.js";
-import { createBucket } from "./utils.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
@@ -290,7 +289,7 @@ export function decodeBucket(
   addressed: Addressed,
   context: Context,
   expected?: Expected,
-): CommittedBucket {
+): Bucket {
   const decoded = decode(addressed.bytes);
 
   if (!isEncodedBucket(decoded)) {
@@ -315,7 +314,7 @@ export function decodeBucket(
     expected?.range,
   );
 
-  return createBucket(
+  return new DefaultBucket(
     decoded.average,
     decoded.level,
     entries,

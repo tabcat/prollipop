@@ -1,6 +1,6 @@
 import { compare as compareBytes } from "uint8arrays";
 import { BucketDiff } from "./diff.js";
-import { AddressedBucket, Bucket, Entry, Tuple } from "./interface.js";
+import { Bucket, Entry, Tuple } from "./interface.js";
 import { getBucketBoundary } from "./utils.js";
 
 export { compareBytes };
@@ -48,10 +48,8 @@ export const compareEntries = (a: Entry, b: Entry): number => {
  * @param b
  * @returns
  */
-export const compareBucketDigests = (
-  a: AddressedBucket,
-  b: AddressedBucket,
-): number => compareBytes(a.getAddressed().digest, b.getAddressed().digest);
+export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
+  compareBytes(a.getAddressed().digest, b.getAddressed().digest);
 
 /**
  * Compare two buckets by their boundaries.
@@ -91,10 +89,7 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
  * @param b
  * @returns
  */
-export const compareBuckets = (
-  a: AddressedBucket,
-  b: AddressedBucket,
-): number => {
+export const compareBuckets = (a: Bucket, b: Bucket): number => {
   const boundaryComparison = compareBoundaries(a, b);
 
   if (boundaryComparison !== 0) {

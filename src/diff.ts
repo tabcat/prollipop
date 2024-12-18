@@ -32,10 +32,10 @@ import {
   compareTuples,
 } from "./compare.js";
 import { createCursor, type Cursor } from "./cursor.js";
-import { CommittedBucket, Entry, ProllyTree } from "./interface.js";
+import { Bucket, Entry, ProllyTree } from "./interface.js";
 
 export type EntryDiff = Diff<Entry>;
-export type BucketDiff = ExclusiveDiff<CommittedBucket>;
+export type BucketDiff = ExclusiveDiff<Bucket>;
 
 export interface ProllyTreeDiff {
   entries: EntryDiff[];
@@ -129,10 +129,7 @@ export async function* diff(
 
   let bucketDiffs: BucketDiff[] = [];
 
-  const updateBucketDiffs = (
-    lbs: CommittedBucket[],
-    rbs: CommittedBucket[],
-  ) => {
+  const updateBucketDiffs = (lbs: Bucket[], rbs: Bucket[]) => {
     // sort by level
     lbs.reverse();
     rbs.reverse();

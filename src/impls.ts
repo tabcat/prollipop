@@ -1,14 +1,6 @@
 import { lastElement } from "@tabcat/ith-element";
 import { base32 } from "multiformats/bases/base32";
-import {
-  Addressed,
-  AddressedBucket,
-  Bucket,
-  CommittedBucket,
-  Context,
-  Entry,
-  ProllyTree,
-} from "./interface.js";
+import { Addressed, Bucket, Context, Entry, ProllyTree } from "./interface.js";
 
 const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
 
@@ -37,73 +29,30 @@ export class DefaultEntry implements Entry {
 
 export class DefaultBucket implements Bucket {
   readonly base: number;
+  #addressed: Addressed;
+  #context: Context;
 
   constructor(
     readonly average: number,
     readonly level: number,
     readonly entries: Entry[],
-  ) {
-    this.base = entriesToDeltaBase(entries);
-  }
-
-  getAddressed(): Addressed | undefined {
-    return undefined;
-  }
-
-  getContext(): Context | undefined {
-    return undefined;
-  }
-}
-
-export class DefaultAddressedBucket
-  extends DefaultBucket
-  implements AddressedBucket
-{
-  #addressed: Addressed;
-
-  constructor(
-    average: number,
-    level: number,
-    entries: Entry[],
-    addressed: Addressed,
-  ) {
-    super(average, level, entries);
-    this.#addressed = addressed;
-  }
-
-  override getAddressed(): Addressed {
-    return this.#addressed;
-  }
-}
-
-export class DefaultCommittedBucket
-  extends DefaultBucket
-  implements CommittedBucket
-{
-  #addressed: Addressed;
-  #context: Context;
-
-  constructor(
-    average: number,
-    level: number,
-    entries: Entry[],
     addressed: Addressed,
     context: Context,
   ) {
-    super(average, level, entries);
+    this.base = entriesToDeltaBase(entries);
     this.#addressed = addressed;
     this.#context = context;
   }
 
-  override getAddressed(): Addressed {
+  getAddressed(): Addressed {
     return this.#addressed;
   }
 
-  override getContext(): Context {
+  getContext(): Context {
     return this.#context;
   }
 }
 
 export class DefaultProllyTree implements ProllyTree {
-  constructor(public root: CommittedBucket) {}
+  constructor(public root: Bucket) {}
 }

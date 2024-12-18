@@ -3,12 +3,12 @@ import type { Blockstore } from "interface-blockstore";
 import { TupleRange } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { minTuple } from "./constants.js";
-import { CommittedBucket, Entry, ProllyTree, Tuple } from "./interface.js";
+import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
 import { loadBucket } from "./utils.js";
 
 interface CursorState {
   blockstore: Blockstore;
-  currentBuckets: CommittedBucket[];
+  currentBuckets: Bucket[];
   currentIndex: number;
   isDone: boolean;
   isLocked: boolean;
@@ -55,11 +55,11 @@ export interface Cursor {
   /**
    * Returns an array of buckets from root to current level.
    */
-  buckets(): CommittedBucket[];
+  buckets(): Bucket[];
   /**
    * Returns the current bucket. The last bucket in the array returned by the buckets() method.
    */
-  currentBucket(): CommittedBucket;
+  currentBucket(): Bucket;
 
   /**
    * Moves the cursor to the next tuple on the current level.
@@ -201,7 +201,7 @@ export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
 const cloneCursorState = (state: CursorState): CursorState =>
   Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
 
-const bucketOf = (state: CursorState): CommittedBucket =>
+const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);
 
 const entryOf = (state: CursorState): Entry => {

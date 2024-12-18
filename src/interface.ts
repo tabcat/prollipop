@@ -31,8 +31,9 @@ export interface Bucket extends Prefix {
    * Array of Entry that is sorted and non-duplicate by Tuple.
    */
   readonly entries: Entry[];
-  getContext(): Context | undefined;
-  getAddressed(): Addressed | undefined;
+
+  getAddressed(): Addressed;
+  getContext(): Context;
 }
 
 export interface Addressed {
@@ -40,28 +41,11 @@ export interface Addressed {
   readonly digest: Uint8Array;
 }
 
-export interface AddressedBucket extends Bucket {
-  getAddressed(): Addressed;
-}
-
 export interface Context {
   readonly isTail: boolean;
   readonly isHead: boolean;
 }
 
-export interface CommittedBucket extends AddressedBucket {
-  getContext(): Context;
-}
-
-export type TypedBucket<
-  A extends Addressed | undefined,
-  C extends Context | undefined,
-> = A extends undefined
-  ? Bucket
-  : C extends undefined
-    ? AddressedBucket
-    : CommittedBucket;
-
 export interface ProllyTree {
-  root: CommittedBucket;
+  root: Bucket;
 }

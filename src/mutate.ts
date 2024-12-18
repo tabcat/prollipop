@@ -19,17 +19,10 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { DefaultCommittedBucket, DefaultEntry } from "./impls.js";
-import {
-  CommittedBucket,
-  Context,
-  Entry,
-  ProllyTree,
-  Tuple,
-} from "./interface.js";
+import { DefaultBucket, DefaultEntry } from "./impls.js";
+import { Bucket, Context, Entry, ProllyTree, Tuple } from "./interface.js";
 import {
   AwaitIterable,
-  createBucket,
   createReusableAwaitIterable,
   ensureSortedTuplesIterable,
   getBucketBoundary,
@@ -127,7 +120,7 @@ export async function getUpdatee(
   tuple: Tuple,
   average: number,
   level: number,
-): Promise<CommittedBucket> {
+): Promise<Bucket> {
   if (leftovers[0] != null) {
     await cursor.nextBucket();
     return cursor.currentBucket();
@@ -135,7 +128,7 @@ export async function getUpdatee(
 
   if (level > cursor.rootLevel()) {
     // fake root bucket for levels above the root of the original tree
-    return new DefaultCommittedBucket(
+    return new DefaultBucket(
       average,
       level,
       [],
@@ -207,12 +200,12 @@ export interface State {
   /**
    * Tracks new root of the tree.
    */
-  newRoot: CommittedBucket | null;
+  newRoot: Bucket | null;
 
   /**
    * Tracks removed buckets.
    */
-  removedBuckets: CommittedBucket[];
+  removedBuckets: Bucket[];
 }
 
 /**
@@ -224,13 +217,13 @@ export interface State {
  * @returns A bucket with the given entries.
  */
 export const getBucket = (
-  original: CommittedBucket,
+  original: Bucket,
   entries: Entry[],
   context: Context,
-): CommittedBucket => {
+): Bucket => {
   const { average, level } = original;
   const addressed = encodeBucket(average, level, entries, context);
-  const bucket = createBucket(average, level, entries, addressed, context);
+  const bucket = new DefaultBucket(average, level, entries, addressed, context);
 
   // can probably compare entryDiffs.length and entries.length with original.entries.length
   // this is safer
@@ -263,14 +256,14 @@ export const getBucket = (
  * @returns A tuple containing the rebuilt buckets, leftover entries, and entry differences.
  */
 export function rebuildBucket(
-  bucket: CommittedBucket,
+  bucket: Bucket,
   leftovers: Entry[],
   updates: Update[],
   isHead: boolean,
   visitedLevelTail: boolean,
   bucketsRebuilt: number,
   isBoundary: IsBoundary,
-): [CommittedBucket[], Entry[], EntryDiff[], boolean] {
+): [Bucket[], Entry[], EntryDiff[], boolean] {
   const bucketEntries: Entry[][] = [];
   let entries: Entry[] = leftovers;
   const diffs: EntryDiff[] = [];
@@ -301,7 +294,7 @@ export function rebuildBucket(
 
   const isNewRoot = bucketsRebuilt === 1 && visitedLevelTail && isHead;
 
-  const buckets: CommittedBucket[] = [];
+  const buckets: Bucket[] = [];
   for (const [i, entries] of bucketEntries.entries()) {
     const last = i === bucketEntries.length - 1;
     buckets[i] = getBucket(bucket, entries, {

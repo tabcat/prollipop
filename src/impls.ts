@@ -77,9 +77,10 @@ export class DefaultAddressedBucket
 }
 
 export class DefaultCommittedBucket
-  extends DefaultAddressedBucket
+  extends DefaultBucket
   implements CommittedBucket
 {
+  #addressed: Addressed;
   #context: Context;
 
   constructor(
@@ -89,8 +90,13 @@ export class DefaultCommittedBucket
     addressed: Addressed,
     context: Context,
   ) {
-    super(average, level, entries, addressed);
+    super(average, level, entries);
+    this.#addressed = addressed;
     this.#context = context;
+  }
+
+  override getAddressed(): Addressed {
+    return this.#addressed;
   }
 
   override getContext(): Context {

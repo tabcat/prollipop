@@ -45,34 +45,56 @@ export class DefaultBucket implements Bucket {
   ) {
     this.base = entriesToDeltaBase(entries);
   }
+
+  getAddressed(): Addressed | undefined {
+    return undefined;
+  }
+
+  getContext(): Context | undefined {
+    return undefined;
+  }
 }
 
 export class DefaultAddressedBucket
   extends DefaultBucket
   implements AddressedBucket
 {
+  #addressed: Addressed;
+
   constructor(
     average: number,
     level: number,
     entries: Entry[],
-    readonly addressed: Addressed,
+    addressed: Addressed,
   ) {
     super(average, level, entries);
+    this.#addressed = addressed;
+  }
+
+  override getAddressed(): Addressed {
+    return this.#addressed;
   }
 }
 
 export class DefaultCommittedBucket
-  extends DefaultBucket
+  extends DefaultAddressedBucket
   implements CommittedBucket
 {
+  #context: Context;
+
   constructor(
     average: number,
     level: number,
     entries: Entry[],
-    readonly addressed: Addressed,
-    readonly context: Context,
+    addressed: Addressed,
+    context: Context,
   ) {
-    super(average, level, entries);
+    super(average, level, entries, addressed);
+    this.#context = context;
+  }
+
+  override getContext(): Context {
+    return this.#context;
   }
 }
 

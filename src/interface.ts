@@ -31,6 +31,8 @@ export interface Bucket extends Prefix {
    * Array of Entry that is sorted and non-duplicate by Tuple.
    */
   readonly entries: Entry[];
+  getContext(): Context | undefined;
+  getAddressed(): Addressed | undefined;
 }
 
 export interface Addressed {
@@ -39,7 +41,7 @@ export interface Addressed {
 }
 
 export interface AddressedBucket extends Bucket {
-  addressed: Addressed;
+  getAddressed(): Addressed;
 }
 
 export interface Context {
@@ -48,7 +50,7 @@ export interface Context {
 }
 
 export interface CommittedBucket extends AddressedBucket {
-  readonly context: Context;
+  getContext(): Context;
 }
 
 export type TypedBucket<

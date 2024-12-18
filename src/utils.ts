@@ -13,29 +13,6 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
-export function ensureSortedTuples(t: Tuple[], previous: Tuple | null): void {
-  for (const _ of ensureSortedSet(t, compareTuples));
-
-  if (t[0] != null && previous != null && compareTuples(previous, t[0]) >= 0) {
-    throw new Error("tuples are unsorted or duplicate.");
-  }
-}
-
-export async function* ensureSortedTuplesIterable(
-  tuples: AwaitIterable<Tuple[]>,
-) {
-  let previous: Tuple | null = null;
-
-  for await (const t of tuples) {
-    if (t.length === 0) continue;
-
-    ensureSortedTuples(t, previous);
-    previous = t[t.length - 1]!;
-
-    yield t;
-  }
-}
-
 export function createReusableAwaitIterable<T>(
   it: AwaitIterable<T>,
 ): AwaitIterable<T> {
@@ -59,6 +36,29 @@ export function createReusableAwaitIterable<T>(
   }
 
   throw new Error("Iterable does not support iterator methods.");
+}
+
+export async function* ensureSortedTuplesIterable(
+  tuples: AwaitIterable<Tuple[]>,
+) {
+  let previous: Tuple | null = null;
+
+  for await (const t of tuples) {
+    if (t.length === 0) continue;
+
+    for (const _ of ensureSortedSet(t, compareTuples));
+
+    if (
+      t[0] != null &&
+      previous != null &&
+      compareTuples(previous, t[0]) >= 0
+    ) {
+      throw new Error("tuples are unsorted or duplicate.");
+    }
+    previous = t[t.length - 1]!;
+
+    yield t;
+  }
 }
 
 /**

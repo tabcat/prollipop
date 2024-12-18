@@ -128,7 +128,7 @@ export const validateEntriesLength = (
 };
 
 /**
- * Encodes entries and replaces their seq with a delta encoded value.
+ * Encodes entries and delta encodes their seq value.
  *
  * @param entries
  * @param isHead
@@ -140,16 +140,7 @@ export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
 ): [EncodedEntry[], number] {
-  if (
-    range != null &&
-    entries[0] != null &&
-    compareTuples(range[0], entries[0]) >= 0
-  ) {
-    throw new TypeError("First entry must be greater than min tuple range.");
-  }
-
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
   let base = 0;
 
@@ -167,7 +158,7 @@ export function encodeEntries(
 
     const next = entries[i + 1];
 
-    validateEntryRelation(entry, next, isHead, isBoundary, range);
+    validateEntryRelation(entry, next, isHead, isBoundary);
 
     // entry seq is delta encoded
     const delta = (next?.seq ?? base) - entry.seq;
@@ -262,7 +253,6 @@ export function encodeBucket(
   level: number,
   entries: Entry[],
   context: Context,
-  expected?: Expected,
 ): Addressed {
   validateEntriesLength(
     entries.length,
@@ -274,7 +264,6 @@ export function encodeBucket(
     entries,
     context.isHead,
     createIsBoundary(average, level),
-    expected?.range,
   );
 
   const bytes = encode({

@@ -180,8 +180,8 @@ export function encodeEntries(
  * @returns
  */
 export function decodeEntries(
-  encodedEntries: EncodedEntry[],
   base: number,
+  encodedEntries: EncodedEntry[],
   isHead: boolean,
   isBoundary: IsBoundary,
   range?: TupleRange,
@@ -308,8 +308,8 @@ export function decodeBucket(
   );
 
   const entries = decodeEntries(
-    decoded.entries,
     decoded.base,
+    decoded.entries,
     context.isHead,
     createIsBoundary(decoded.average, decoded.level),
     expected?.range,

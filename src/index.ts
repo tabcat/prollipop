@@ -180,9 +180,9 @@ export async function* sync(
 
     for (const [_, s] of buckets) {
       if (s != null) {
-        const cid = bucketDigestToCid(s.addressed.digest);
+        const cid = bucketDigestToCid(s.getAddressed().digest);
         if (!blockstore.has(cid)) {
-          promises.push(blockstore.put(cid, s.addressed.bytes));
+          promises.push(blockstore.put(cid, s.getAddressed().bytes));
         }
       }
     }

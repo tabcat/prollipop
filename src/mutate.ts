@@ -234,7 +234,10 @@ export const getBucket = (
 
   // can probably compare entryDiffs.length and entries.length with original.entries.length
   // this is safer
-  return compareBytes(bucket.addressed.digest, original.addressed.digest) === 0
+  return compareBytes(
+    bucket.getAddressed().digest,
+    original.getAddressed().digest,
+  ) === 0
     ? original
     : bucket;
 };
@@ -347,7 +350,7 @@ export async function* rebuildLevel(
 
   while (tuple != null) {
     const updatee = await getUpdatee(cursor, leftovers, tuple, average, level);
-    const { isTail, isHead } = updatee.context;
+    const { isTail, isHead } = updatee.getContext();
     const boundary = getBucketBoundary(updatee);
 
     visitedLevelTail = visitedLevelTail ?? isTail;

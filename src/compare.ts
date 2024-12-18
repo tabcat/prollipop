@@ -51,7 +51,7 @@ export const compareEntries = (a: Entry, b: Entry): number => {
 export const compareBucketDigests = (
   a: AddressedBucket,
   b: AddressedBucket,
-): number => compareBytes(a.addressed.digest, b.addressed.digest);
+): number => compareBytes(a.getAddressed().digest, b.getAddressed().digest);
 
 /**
  * Compare two buckets by their boundaries.

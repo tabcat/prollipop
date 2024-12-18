@@ -138,8 +138,8 @@ function createCursorFromState(state: CursorState): Cursor {
       );
     },
 
-    isAtTail: () => bucketOf(state).context.isTail,
-    isAtHead: () => bucketOf(state).context.isHead,
+    isAtTail: () => bucketOf(state).getContext().isTail,
+    isAtHead: () => bucketOf(state).getContext().isHead,
 
     clone: () => createCursorFromState(cloneCursorState(state)),
 
@@ -286,8 +286,8 @@ const moveToLevel = async (
         state.blockstore,
         entryOf(state).val,
         {
-          isTail: underflows(state) && bucketOf(state).context.isTail,
-          isHead: overflows(state) && bucketOf(state).context.isHead,
+          isTail: underflows(state) && bucketOf(state).getContext().isTail,
+          isHead: overflows(state) && bucketOf(state).getContext().isHead,
         },
         {
           prefix: { average, level: level - 1, base: entryOf(state).seq },
@@ -321,7 +321,7 @@ const underflows = (state: CursorState): boolean => state.currentIndex === 0;
  * @returns
  */
 const moveSideways = async (state: CursorState): Promise<void> => {
-  if (overflows(state) && bucketOf(state).context.isHead) {
+  if (overflows(state) && bucketOf(state).getContext().isHead) {
     state.isDone = true;
     return;
   }

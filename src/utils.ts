@@ -105,7 +105,11 @@ export const getBucketEntry = (bucket: AddressedBucket): Entry | null => {
     return null;
   }
 
-  return new DefaultEntry(boundary.seq, boundary.key, bucket.addressed.digest);
+  return new DefaultEntry(
+    boundary.seq,
+    boundary.key,
+    bucket.getAddressed().digest,
+  );
 };
 
 /**
@@ -157,9 +161,15 @@ export const createBucket = <
           average,
           level,
           entries,
-          addressed,
+          addressed as Addressed,
         ) as TypedBucket<A, C>)
-      : new DefaultCommittedBucket(average, level, entries, addressed, context);
+      : (new DefaultCommittedBucket(
+          average,
+          level,
+          entries,
+          addressed,
+          context,
+        ) as TypedBucket<A, C>);
 
 export const createEmptyBucket = (
   average: number,

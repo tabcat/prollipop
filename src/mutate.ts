@@ -467,9 +467,13 @@ export async function* rebuildLevel(
       .map<BucketDiff>((b) => [b, null]),
   );
 
-  // if new root found yield any removed buckets from higher levels
-  if (state.newRoot != null && state.removedBuckets.length > 0) {
-    d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
+  if (state.newRoot != null) {
+    // if new root found yield any removed buckets from higher levels
+    if (state.removedBuckets.length > 0) {
+      d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
+    }
+
+    updts.next.length = 0;
   }
 
   if (d.buckets.length > 0) {

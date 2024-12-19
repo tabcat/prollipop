@@ -124,6 +124,16 @@ export const bucketToPrefix = ({ average, level, base }: Prefix): Prefix => ({
   base,
 });
 
+export const createBucket = (
+  average: number,
+  level: number,
+  entries: Entry[],
+  context: Context,
+): Bucket => {
+  const addressed = encodeBucket(average, level, entries, context);
+  return new DefaultBucket(average, level, entries, addressed, context);
+};
+
 export const createEmptyBucket = (
   average: number,
   level: number,

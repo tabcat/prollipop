@@ -137,8 +137,8 @@ export async function getUpdatee(
         digest: new Uint8Array(0),
       },
       {
-        isTail: cursor.isAtTail(),
-        isHead: cursor.isAtHead(),
+        isTail: true,
+        isHead: true,
       },
     );
   } else {

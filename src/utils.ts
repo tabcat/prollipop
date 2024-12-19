@@ -46,7 +46,11 @@ export async function* ensureSortedTuplesIterable(
   for await (const t of tuples) {
     if (t.length === 0) continue;
 
-    for (const _ of ensureSortedSet(t, compareTuples));
+    try {
+      for (const _ of ensureSortedSet(t, compareTuples));
+    } catch (e) {
+      throw new Error("tuples are unsorted or duplicate.", { cause: e });
+    }
 
     if (
       t[0] != null &&

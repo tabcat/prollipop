@@ -65,14 +65,20 @@ describe("cursor", () => {
 
       describe("buckets", () => {
         it("returns an array of buckets from root to current bucket", async () => {
-          const leaf = createBucket(average, 0, oddTreeEntries.slice(0, 2));
+          const leaf = createBucket(average, 0, oddTreeEntries.slice(0, 2), {
+            isTail: true,
+            isHead: false,
+          });
           expect(cursor.buckets()).to.deep.equal([oddTree.root, leaf]);
         });
       });
 
       describe("currentBucket", () => {
         it("returns the current bucket", () => {
-          const leaf = createBucket(average, 0, oddTreeEntries.slice(0, 2));
+          const leaf = createBucket(average, 0, oddTreeEntries.slice(0, 2), {
+            isTail: true,
+            isHead: false,
+          });
           expect(cursor.currentBucket()).to.deep.equal(leaf);
         });
       });
@@ -175,14 +181,20 @@ describe("cursor", () => {
           await cursor.nextBucket(0);
 
           expect(cursor.currentBucket()).to.deep.equal(
-            createBucket(average, 0, oddTreeEntries.slice(0, 2)),
+            createBucket(average, 0, oddTreeEntries.slice(0, 2), {
+              isTail: true,
+              isHead: false,
+            }),
           );
           expect(cursor.level()).to.equal(0);
 
           await cursor.nextBucket();
 
           expect(cursor.currentBucket()).to.deep.equal(
-            createBucket(average, 0, oddTreeEntries.slice(2, 4)),
+            createBucket(average, 0, oddTreeEntries.slice(2, 4), {
+              isTail: false,
+              isHead: true,
+            }),
           );
           expect(cursor.level()).to.equal(0);
         });
@@ -193,7 +205,10 @@ describe("cursor", () => {
           await cursor.nextBucket(0);
 
           expect(cursor.currentBucket()).to.deep.equal(
-            createBucket(average, 0, oddTreeEntries.slice(0, 2)),
+            createBucket(average, 0, oddTreeEntries.slice(0, 2), {
+              isTail: true,
+              isHead: false,
+            }),
           );
           expect(cursor.level()).to.equal(0);
           expect(cursor.index()).to.equal(0);

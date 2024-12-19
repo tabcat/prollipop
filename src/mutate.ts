@@ -466,6 +466,11 @@ export async function* rebuildLevel(
       .map<BucketDiff>((b) => [b, null]),
   );
 
+  // if new root found yield any removed buckets from higher levels
+  if (state.newRoot != null && state.removedBuckets.length > 0) {
+    d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
+  }
+
   if (d.buckets.length > 0) {
     d.buckets.sort(compareBucketDiffs);
     yield d;
@@ -503,14 +508,6 @@ export async function* mutate(
 
   if (state.newRoot == null) {
     throw new Error("Reached max level without finding a new root.");
-  }
-
-  // yield any removed buckets from higher levels
-  if (state.removedBuckets.length > 0) {
-    const d = createProllyTreeDiff();
-    d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
-
-    yield d;
   }
 
   tree.root = state.newRoot;

@@ -90,9 +90,16 @@ export async function* search(
       continue;
     }
 
-    const results: (Entry | Tuple)[] = [];
+    let results: (Entry | Tuple)[] = [];
     for (const tuple of t) {
+      const currentBucket = cursor.currentBucket();
       await cursor.nextTuple(tuple, 0);
+
+      // would be nice if results could be yielded before the next tuple is fetched
+      if (cursor.currentBucket() !== currentBucket && results.length > 0) {
+        yield results;
+        results = [];
+      }
 
       if (compareTuples(tuple, cursor.current()) === 0) {
         results.push(cursor.current());
@@ -100,7 +107,6 @@ export async function* search(
         results.push(entryToTuple(tuple));
       }
     }
-    yield results;
   }
 }
 

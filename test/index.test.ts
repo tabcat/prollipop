@@ -10,7 +10,7 @@ import {
   search,
   sync,
 } from "../src/index.js";
-import { createBucket } from "../src/utils.js";
+import { bucketDigestToCid, createBucket } from "../src/utils.js";
 import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
@@ -22,7 +22,7 @@ import {
   seq,
   tree,
 } from "./helpers/constants.js";
-import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
+import { oddTree, oddTreeEntries, oddTreeState } from "./helpers/odd-tree.js";
 
 vi.mock("../src/boundary.js");
 
@@ -30,7 +30,9 @@ describe("index", () => {
   describe("createEmptyTree", () => {
     it("returns an empty tree", () => {
       expect(createEmptyTree()).to.deep.equal(
-        new DefaultProllyTree(createBucket(average, level, [])),
+        new DefaultProllyTree(
+          createBucket(average, level, [], { isTail: true, isHead: true }),
+        ),
       );
     });
   });
@@ -38,8 +40,9 @@ describe("index", () => {
   describe("loadTree", () => {
     it("loads a tree from the blockstore", async () => {
       const blockstore = new MemoryBlockstore();
-      blockstore.put(tree.root.getCID(), tree.root.getBytes());
-      const loadedTree = await loadTree(blockstore, tree.root.getCID());
+      const { digest, bytes } = tree.root.getAddressed();
+      blockstore.put(bucketDigestToCid(digest), bytes);
+      const loadedTree = await loadTree(blockstore, bucketDigestToCid(digest));
       expect(loadedTree).to.deep.equal(tree);
     });
   });
@@ -54,9 +57,9 @@ describe("index", () => {
 
   describe("search", async () => {
     it("yields entries found in a tree", async () => {
-      const expected = oddTreeEntries;
+      const expected = oddTreeState[1]!.map((b) => b.entries);
       let count = 0;
-      for await (const entry of search(blockstore, oddTree, oddTreeEntries)) {
+      for await (const entry of search(blockstore, oddTree, [oddTreeEntries])) {
         expect(entry).to.deep.equal(expected[count]);
         count++;
       }
@@ -64,34 +67,28 @@ describe("index", () => {
 
     it("yields tuples for entries not found in a tree", async () => {
       const tuple = { seq: 10, key: bytes };
-      for await (const entry of search(blockstore, oddTree, [tuple])) {
+      for await (const entry of search(blockstore, oddTree, [[tuple]])) {
         expect(entry).to.deep.equal(tuple);
       }
     });
 
     it("rejects if tuples is unordered or contains duplicates", async () => {
       const unorderedTuples = createProllyTreeEntries([1, 0]);
-      const unorderedSearch = search(
-        blockstore,
-        tree,
+      const unorderedSearch = search(blockstore, tree, [
         unorderedTuples,
-      ) as AsyncGenerator;
+      ]) as AsyncGenerator;
 
-      await unorderedSearch.next();
       expect(unorderedSearch.next()).rejects.toThrow(
-        "Tuples must be ordered and non-repeating",
+        "tuples are unsorted or duplicate.",
       );
 
       const repeatingTuples = createProllyTreeEntries([1, 1]);
-      const repeatingSearch = search(
-        blockstore,
-        tree,
+      const repeatingSearch = search(blockstore, tree, [
         repeatingTuples,
-      ) as AsyncGenerator;
+      ]) as AsyncGenerator;
 
-      await repeatingSearch.next();
       expect(repeatingSearch.next()).rejects.toThrow(
-        "Tuples must be ordered and non-repeating",
+        "tuples are unsorted or duplicate.",
       );
     });
   });
@@ -114,7 +111,7 @@ describe("index", () => {
     it("accepts a choose function for handling key conflicts", async () => {
       const entry2 = new DefaultEntry(seq, key, new Uint8Array(32));
       const tree2 = new DefaultProllyTree(
-        createBucket(average, level, [entry2]),
+        createBucket(average, level, [entry2], { isTail: true, isHead: true }),
       );
 
       expect(tree).to.not.deep.equal(tree2);
@@ -142,18 +139,19 @@ describe("index", () => {
 
       expect(target).to.not.deep.equal(tree);
 
+      const { digest, bytes } = tree.root.getAddressed();
+      const cid = bucketDigestToCid(digest);
+
       for await (const cids of sync(
         localBlockstore,
         target,
         tree,
         blockstore,
       )) {
-        expect(cids).to.deep.equal([tree.root.getCID()]);
+        expect(cids).to.deep.equal([cid]);
       }
 
-      expect(await localBlockstore.get(tree.root.getCID())).to.deep.equal(
-        tree.root.getBytes(),
-      );
+      expect(await localBlockstore.get(cid)).to.deep.equal(bytes);
 
       expect(target).to.deep.equal(tree);
     });

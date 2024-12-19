@@ -290,6 +290,7 @@ export function rebuildBucket(
   // only create another bucket if isHead and there are entries or no buckets were rebuilt for the level yet.
   if (isHead && (entries.length > 0 || bucketsRebuilt === 0)) {
     bucketEntries.push(entries);
+    bucketsRebuilt++;
   }
 
   const isNewRoot = bucketsRebuilt === 1 && visitedLevelTail && isHead;
@@ -346,7 +347,7 @@ export async function* rebuildLevel(
     const { isTail, isHead } = updatee.getContext();
     const boundary = getBucketBoundary(updatee);
 
-    visitedLevelTail = visitedLevelTail ?? isTail;
+    visitedLevelTail = visitedLevelTail || isTail;
 
     if (level === 0) {
       // boundary will never be used if isHead is true and will never be null otherwise

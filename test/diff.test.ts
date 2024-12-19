@@ -27,15 +27,24 @@ describe("diff", () => {
         entries: oddTreeEntries.slice(1).map(removed),
         buckets: [
           [
-            await loadBucket(blockstore, oddTree.root.entries[0]!.val, false),
+            await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
+              isTail: true,
+              isHead: false,
+            }),
             null,
           ],
           [
-            await loadBucket(blockstore, oddTree.root.entries[1]!.val, false),
+            await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
+              isTail: false,
+              isHead: false,
+            }),
             null,
           ],
           [
-            await loadBucket(blockstore, oddTree.root.entries[2]!.val, true),
+            await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
+              isTail: false,
+              isHead: true,
+            }),
             null,
           ],
           [oddTree.root, null],

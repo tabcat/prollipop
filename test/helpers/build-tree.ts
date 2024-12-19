@@ -4,15 +4,15 @@ import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
-import { DefaultCommittedBucket, DefaultEntry } from "../../src/impls.js";
-import type { CommittedBucket, Entry } from "../../src/interface.js";
+import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
+import type { Bucket, Entry } from "../../src/interface.js";
 import { bucketDigestToCid, getBucketEntry } from "../../src/utils.js";
 
 const levelOfBuckets = (
   average: number,
   level: number,
   _entries: Entry[],
-): CommittedBucket[] => {
+): Bucket[] => {
   const isBoundary = createIsBoundary(average, level);
   let entries: Entry[] = [];
   const bucketEntries: Entry[][] = [];
@@ -32,14 +32,14 @@ const levelOfBuckets = (
 
   const isNewRoot = bucketEntries.length === 1;
 
-  const buckets: CommittedBucket[] = new Array(bucketEntries.length);
+  const buckets: Bucket[] = new Array(bucketEntries.length);
   for (const [i, entries] of bucketEntries.entries()) {
     const last = i === bucketEntries.length - 1;
     const context = {
       isTail: last && isNewRoot,
       isHead: last,
     };
-    buckets[i] = new DefaultCommittedBucket(
+    buckets[i] = new DefaultBucket(
       average,
       level,
       entries,
@@ -55,18 +55,19 @@ export const buildProllyTree = (
   blockstore: Blockstore,
   average: number,
   entries: Entry[],
-): CommittedBucket[][] => {
+): Bucket[][] => {
   let level: number = 0;
-  let newRoot: CommittedBucket | null = null;
+  let newRoot: Bucket | null = null;
 
-  const treeState: CommittedBucket[][] = [];
+  const treeState: Bucket[][] = [];
 
   // tree has higher levels
   while (true && level < 100) {
     const buckets = levelOfBuckets(average, level, entries);
-    buckets.forEach((b) =>
-      blockstore.put(bucketDigestToCid(b.addressed.digest), b.addressed.bytes),
-    );
+    buckets.forEach((b) => {
+      const { digest, bytes } = b.getAddressed();
+      blockstore.put(bucketDigestToCid(digest), bytes);
+    });
     treeState.push(buckets);
 
     if (buckets.length === 1) {

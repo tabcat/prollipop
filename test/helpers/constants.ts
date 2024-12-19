@@ -3,7 +3,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { MemoryBlockstore } from "blockstore-core/memory";
 import { EncodedEntry } from "../../src/codec.js";
 import {
-  DefaultCommittedBucket,
+  DefaultBucket,
   DefaultEntry,
   DefaultProllyTree,
 } from "../../src/impls.js";
@@ -40,18 +40,26 @@ export const encodedBucket = {
   base,
   entries: encodedEntries,
 };
-export const encodedBucketBytes = encode(encodedBucket);
-export const bucketDigest = sha256(encodedBucketBytes);
-export const bucket = new DefaultCommittedBucket(
+export const bucketBytes = encode(encodedBucket);
+export const bucketDigest = sha256(bucketBytes);
+export const bucket = new DefaultBucket(
   average,
   level,
   entries,
   {
-    bytes: encodedBucketBytes,
+    bytes: bucketBytes,
     digest: bucketDigest,
   },
   { isTail: true, isHead: true },
 );
+export const addressed = {
+  bytes: bucketBytes,
+  digest: bucketDigest,
+};
+export const context = {
+  isTail: true,
+  isHead: true,
+};
 
 export const encodedEmptyBucket = {
   average,
@@ -59,17 +67,23 @@ export const encodedEmptyBucket = {
   base: 0,
   entries: [],
 };
-export const encodedEmptyBucketBytes = encode(encodedEmptyBucket);
-export const emptyBucket = new DefaultCommittedBucket(
+export const emptyBucketBytes = encode(encodedEmptyBucket);
+export const emptyBucketDigest = sha256(emptyBucketBytes);
+export const emptyBucket = new DefaultBucket(
   average,
   level,
   [],
   {
-    bytes: encodedEmptyBucketBytes,
-    digest: sha256(encodedEmptyBucketBytes),
+    bytes: emptyBucketBytes,
+    digest: emptyBucketDigest,
   },
   { isTail: true, isHead: true },
 );
+export const emptyAddressed = {
+  bytes: emptyBucketBytes,
+  digest: emptyBucketDigest,
+};
+export const emptyContext = context;
 
 export const emptyTree = new DefaultProllyTree(emptyBucket);
 export const tree = new DefaultProllyTree(bucket);

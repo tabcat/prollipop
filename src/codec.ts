@@ -1,5 +1,13 @@
 /**
- * Safely encodes and decodes buckets using context of the tree structure.
+ * Safe bucket encoding and decoding.
+ *
+ * Checks properties of the bucket and its entries using context: { isTail, isHead }.
+ * Ensures only valid buckets are encoded or decoded.
+ *
+ * Properties that must be satisfied:
+ * - Bucket shape is valid.
+ * - Bucket entries have minimum length 0/1/2 for root (level 0)/non-root/root (level > 0).
+ * - Entries are valid, sorted and non-duplicative.
  */
 
 import { decode, encode } from "@ipld/dag-cbor";
@@ -54,14 +62,17 @@ export const isEncodedBucket = (b: any): b is EncodedBucket =>
   Array.isArray(b.entries); // check that entries are valid later
 
 /**
- * Ensures that entries are sorted and non-duplicative.
- * Ensures that isHead or isBoundary for last entry of bucket.
- * Ensures that !isBoundary for all other entries.
+ * Throws if the relation between the entry and the next entry is invalid.
+ *
+ * Ensures that entry is less than next by tuple sort.
+ * Ensures that entry is only a boundary if it is the last entry in the bucket.
+ * Optionally ensures that entry is within the range.
  *
  * @param entry
  * @param next
  * @param isHead
  * @param isBoundary
+ * @param range
  */
 export const validateEntryRelation = (
   entry: Entry,
@@ -95,6 +106,12 @@ export const validateEntryRelation = (
   }
 };
 
+/**
+ * Throws if the prefix of the bucket does not match the expected prefix.
+ *
+ * @param prefix
+ * @param expected
+ */
 export const validatePrefixExpected = (
   prefix: Prefix,
   expected: Prefix,
@@ -108,6 +125,13 @@ export const validatePrefixExpected = (
   }
 };
 
+/**
+ * Throws if the length of the entries does not meet the minimum length.
+ *
+ * @param length
+ * @param level
+ * @param isRoot
+ */
 export const validateEntriesLength = (
   length: number,
   level: number,
@@ -127,12 +151,11 @@ export const validateEntriesLength = (
 };
 
 /**
- * Encodes entries and delta encodes their seq value.
+ * Encodes entries and delta encodes their seq value while validating entry shape and relation.
  *
  * @param entries
  * @param isHead
  * @param isBoundary
- * @param range
  * @returns
  */
 export function encodeEntries(
@@ -170,6 +193,7 @@ export function encodeEntries(
 
 /**
  * Decodes entries and replaces their delta encoded seq with the original value.
+ * Validates entry shape, relation, and optionally range.
  *
  * @param encodedEntries
  * @param base
@@ -239,12 +263,13 @@ export interface TupleRange {
 }
 
 /**
- * Safely encodes bucket prefix and entries into a CBOR encoded byte array.
+ * Safely CBOR encodes bucket prefix and entries.
+ * Validates entries length based on context.
  *
  * @param average
  * @param level
  * @param entries
- * @param predicates
+ * @param context
  * @returns
  */
 export function encodeBucket(
@@ -279,10 +304,13 @@ export function encodeBucket(
 }
 
 /**
- * Safely decodes a CBOR encoded byte array into a bucket.
+ * Safely CBOR decodes a bucket.
+ * Validates bucket shape and entries length based on context.
+ * Optionally compares prefix to an expected prefix and entries to an expected range.
  *
- * @param bytes
- * @param predicates
+ * @param addressed
+ * @param context
+ * @param expected
  * @returns
  */
 export function decodeBucket(

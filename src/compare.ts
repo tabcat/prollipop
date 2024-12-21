@@ -1,3 +1,17 @@
+/**
+ * Comparison functions for bytes, tuples, entries, buckets, and bucket diffs.
+ *
+ * Entries are sorted by:
+ * 1. seq (sequence number)
+ * 2. key
+ * 3. val (value)
+ *
+ * Buckets are sorted by:
+ * 1. level (depth in the tree)
+ * 2. boundary (tuple)
+ * 3. digest (bucket hash)
+ */
+
 import { compare as compareBytes } from "uint8arrays";
 import { BucketDiff } from "./diff.js";
 import { Bucket, Entry, Tuple } from "./interface.js";
@@ -8,7 +22,7 @@ export { compareBytes };
 export const compareSeq = (a: number, b: number): number => a - b;
 
 /**
- * Compare two tuples.
+ * Compare two tuples. seq > key
  *
  * @param a
  * @param b
@@ -25,7 +39,7 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
 };
 
 /**
- * Compare two entries.
+ * Compare two entries. seq > key > val
  *
  * @param a
  * @param b
@@ -54,7 +68,7 @@ export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
 /**
  * Compare two buckets by their boundaries.
  * If a bucket does not have a boundary because it is empty, that bucket is first.
- * If both buckets are empty the 0 is returned.
+ * If both buckets are empty then 0 is returned.
  *
  * @param a
  * @param b
@@ -83,7 +97,7 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
 };
 
 /**
- * Compare two buckets.
+ * Compare two buckets. level > boundary > digest
  *
  * @param a
  * @param b

@@ -71,13 +71,14 @@ export interface Cursor {
    */
   nextBucket(level?: number): Promise<void>;
 
+  /**
+   * Moves the cursor to the next tuple on the current level.
+   * If the supplied tuple is less than or equal to the current tuple, the cursor will not be moved.
+   */
   nextTuple(tuple: Tuple, level?: number): Promise<void>;
 
   /**
    * Jumps the cursor from root to the tuple or parent tuple at level. This is not a move operation.
-   *
-   * @param tuple
-   * @param level
    */
   jumpTo(tuple: Tuple, level?: number): Promise<void>;
 
@@ -117,13 +118,21 @@ function createCursorFromState(state: CursorState): Cursor {
     currentBucket: () => bucketOf(state),
 
     next(level?: number) {
-      return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, false));
+      return preMove(
+        level ?? levelOf(state),
+        state,
+        nextAtLevel.bind(null, false),
+      );
     },
     nextBucket(level?: number) {
-      return pm(level ?? levelOf(state), state, nextAtLevel.bind(null, true));
+      return preMove(
+        level ?? levelOf(state),
+        state,
+        nextAtLevel.bind(null, true),
+      );
     },
     nextTuple(tuple: Tuple, level?: number) {
-      return pm(
+      return preMove(
         level ?? levelOf(state),
         state,
         nextTupleAtLevel.bind(null, tuple),
@@ -131,7 +140,7 @@ function createCursorFromState(state: CursorState): Cursor {
     },
 
     jumpTo(tuple: Tuple, level?: number) {
-      return pw(
+      return preWrite(
         level ?? levelOf(state),
         state,
         jumpToTupleAtLevel.bind(null, tuple),
@@ -148,8 +157,7 @@ function createCursorFromState(state: CursorState): Cursor {
   };
 }
 
-/** pre-write */
-const pw = async (
+const preWrite = async (
   level: number,
   state: CursorState,
   writer: (level: number, state: CursorState) => Promise<void>,
@@ -170,8 +178,7 @@ const pw = async (
   Object.assign(state, stateClone);
 };
 
-/** pre-move */
-const pm = (
+const preMove = (
   level: number,
   state: CursorState,
   mover: (level: number, state: CursorState) => Promise<void>,
@@ -181,7 +188,7 @@ const pm = (
     return Promise.resolve();
   }
 
-  return pw(level, state, mover);
+  return preWrite(level, state, mover);
 };
 
 /**
@@ -225,10 +232,44 @@ const guideByTuple =
     return index === -1 ? entries.length - 1 : index;
   };
 
+/**
+ * Returns whether increasing the currentIndex will overflow the bucket.
+ *
+ * @param state
+ * @returns
+ */
+const overflows = (state: CursorState): boolean =>
+  state.currentIndex === lastElement(state.currentBuckets).entries.length - 1;
+
+/**
+ * Returns whether decreasing the currentIndex will underflow the bucket.
+ *
+ * @param state
+ * @returns
+ */
+const underflows = (state: CursorState): boolean => state.currentIndex === 0;
+
+const moveUp = (
+  state: CursorState,
+  level: number,
+  guide?: (entries: Entry[]) => number,
+) => {
+  if (level > rootLevelOf(state)) {
+    throw new Error("Cannot move higher than root level.");
+  }
+
+  guide = guide ?? guideByTuple(entryOf(state));
+
+  const difference = levelOf(state) - level;
+
+  state.currentBuckets.splice(difference, -difference);
+  state.currentIndex = guide(bucketOf(state).entries);
+};
+
 const getRange = (state: CursorState): TupleRange => {
   const clone = cloneCursorState(state);
   while (underflows(clone) && levelOf(clone) < rootLevelOf(clone)) {
-    moveUpOne(clone);
+    moveUp(clone, levelOf(clone) + 1);
   }
 
   const min = bucketOf(clone).entries[clone.currentIndex - 1];
@@ -236,107 +277,72 @@ const getRange = (state: CursorState): TupleRange => {
   return [min ?? minTuple, entryOf(state)];
 };
 
-const moveUpOne = (state: CursorState) => {
-  if (rootLevelOf(state) === levelOf(state)) {
-    throw new Error("Cannot move up one from root.");
-  }
-
-  const guide = guideByTuple(entryOf(state));
-
-  state.currentBuckets.pop();
-  state.currentIndex = guide(bucketOf(state).entries);
-};
-
-/**
- * Elevates or de-elevates the cursor along the path to the given level.
- * Never causes the cursor to increment without a provided guide parameter.
- *
- * @param state
- * @param level
- * @param guide
- */
-const moveToLevel = async (
+const moveDown = async (
   state: CursorState,
   level: number,
   guide?: (entries: Entry[]) => number,
-): Promise<void> => {
-  if (level === levelOf(state) || level < 0 || level > rootLevelOf(state)) {
-    throw new Error(
-      "Cannot move to the current level or outside the root level.",
-    );
+) => {
+  if (level < 0) {
+    throw new Error("Cannot move lower than level 0.");
   }
 
-  // guides currentIndex during traversal
-  guide =
-    guide ??
-    (level < levelOf(state)
-      ? () => 0 // guide to first entry if moving down
-      : guideByTuple(entryOf(state)));
+  guide = guide ?? (() => 0);
 
-  while (level !== levelOf(state)) {
-    if (level > levelOf(state)) {
-      // jump up to higher level
-      const difference = levelOf(state) - level;
+  while (level < levelOf(state)) {
+    const { seq, val } = entryOf(state);
+    const bucket = bucketOf(state);
 
-      state.currentBuckets.splice(difference, -difference);
-    } else {
-      const { average, level } = bucketOf(state);
-      // walk down to lower level
-      const bucket = await loadBucket(
-        state.blockstore,
-        entryOf(state).val,
-        {
-          isTail: underflows(state) && bucketOf(state).getContext().isTail,
-          isHead: overflows(state) && bucketOf(state).getContext().isHead,
-        },
-        {
-          prefix: { average, level: level - 1, base: entryOf(state).seq },
-          range: getRange(state),
-        },
-      );
+    const lowerBucket = await loadBucket(
+      state.blockstore,
+      val,
+      {
+        isTail: underflows(state) && bucket.getContext().isTail,
+        isHead: overflows(state) && bucket.getContext().isHead,
+      },
+      {
+        prefix: { average: bucket.average, level: bucket.level - 1, base: seq },
+        range: getRange(state),
+      },
+    );
 
-      state.currentBuckets.push(bucket);
-    }
-
-    // set to guided index in new bucket
+    state.currentBuckets.push(lowerBucket);
     state.currentIndex = guide(bucketOf(state).entries);
   }
 };
 
-/**
- * Returns whether increasing the currentIndex will overflow the bucket.
- *
- * @param state - the state of the cursor
- * @returns
- */
-const overflows = (state: CursorState): boolean =>
-  state.currentIndex === lastElement(state.currentBuckets).entries.length - 1;
+const moveLevel = async (
+  state: CursorState,
+  level: number,
+  guide?: (entries: Entry[]) => number,
+) => {
+  if (level > levelOf(state)) {
+    moveUp(state, level, guide);
+  } else if (level < levelOf(state)) {
+    await moveDown(state, level, guide);
+  }
+};
 
-const underflows = (state: CursorState): boolean => state.currentIndex === 0;
+const moveRight = async (
+  state: CursorState,
+  moveUpWhile: (state: CursorState) => boolean,
+  increment: (state: CursorState) => void,
+  guide: (entries: Entry[]) => number,
+) => {
+  const originalLevel = levelOf(state);
 
-/**
- * Increments the cursor by one on the same level. Handles traversing buckets if necessary.
- *
- * @param state
- * @returns
- */
-const moveSideways = async (state: CursorState): Promise<void> => {
-  if (overflows(state) && bucketOf(state).getContext().isHead) {
+  while (moveUpWhile(state) && state.currentBuckets.length > 1) {
+    moveUp(state, levelOf(state) + 1);
+  }
+
+  if (overflows(state)) {
     state.isDone = true;
-    return;
+    guide = (entries) => entries.length - 1;
+  } else {
+    increment(state);
   }
 
-  const startingLevel = levelOf(state);
-
-  // find a higher level which allows increasing currentIndex
-  while (overflows(state)) {
-    moveUpOne(state);
-  }
-
-  state.currentIndex += 1;
-
-  if (levelOf(state) > startingLevel) {
-    await moveToLevel(state, startingLevel);
+  if (originalLevel < levelOf(state)) {
+    await moveDown(state, originalLevel, guide);
   }
 };
 
@@ -348,7 +354,7 @@ const nextAtLevel = async (
   const movingDown = level < levelOf(state);
 
   if (level !== levelOf(state)) {
-    await moveToLevel(state, level);
+    await moveLevel(state, level);
   }
 
   // only increment if level was higher or equal to original level
@@ -357,7 +363,12 @@ const nextAtLevel = async (
       state.currentIndex = bucketOf(state).entries.length - 1;
     }
 
-    await moveSideways(state);
+    moveRight(
+      state,
+      overflows,
+      (state) => state.currentIndex++,
+      () => 0,
+    );
   }
 };
 
@@ -366,25 +377,28 @@ const nextTupleAtLevel = async (
   level: number,
   state: CursorState,
 ): Promise<void> => {
+  // ensure that cursor does not move backwards
   if (compareTuples(tuple, entryOf(state)) <= 0 && level >= levelOf(state)) {
     tuple = entryOf(state);
   }
 
-  while (compareTuples(tuple, lastElement(bucketOf(state).entries)) > 0) {
-    if (state.currentBuckets.length === 1) {
-      state.isDone = true;
-      break;
-    }
-
-    await moveToLevel(state, levelOf(state) + 1);
+  if (level !== levelOf(state)) {
+    await moveLevel(state, level, guideByTuple(tuple));
   }
 
   const guide = guideByTuple(tuple);
-  state.currentIndex = guide(bucketOf(state).entries);
+  const tupleIsGreatest = (state: CursorState) =>
+    compareTuples(tuple, lastElement(bucketOf(state).entries)) > 0;
 
-  if (level < levelOf(state)) {
-    await moveToLevel(state, level, guide);
-  }
+  await moveRight(
+    state,
+    tupleIsGreatest,
+    (state) => {
+      state.currentIndex = guide(bucketOf(state).entries);
+      state.isDone = tupleIsGreatest(state);
+    },
+    guide,
+  );
 };
 
 // should look at current buckets to traverse faster
@@ -404,6 +418,6 @@ const jumpToTupleAtLevel = async (
 
   // move to level if needed
   if (level < levelOf(state)) {
-    await moveToLevel(state, level, guideByTuple(tuple));
+    await moveLevel(state, level, guideByTuple(tuple));
   }
 };

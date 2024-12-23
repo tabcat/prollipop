@@ -142,8 +142,12 @@ export async function getUpdatee(
       },
     );
   } else {
-    // do cursor.moveTo if same level of cursor?
-    await cursor.jumpTo(tuple, level);
+    if (level === cursor.level()) {
+      await cursor.nextTuple(tuple);
+    } else {
+      await cursor.jumpTo(tuple, level);
+    }
+
     return cursor.currentBucket();
   }
 }

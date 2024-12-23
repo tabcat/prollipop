@@ -238,7 +238,6 @@ export const getBucket = (
 /**
  * Rebuilds a bucket from the given updates.
  *
- * @remarks
  * The `bucket` must end in a boundary or be a head, otherwise this will throw an error.
  * The `leftovers` array must be empty or contain entries which precede any entries inside `bucket`.
  * If no updates result in changes to the bucket, the same bucket reference is returned.
@@ -310,7 +309,6 @@ export function rebuildBucket(
 /**
  * Rebuilds a level of the tree.
  *
- * @remarks
  * Only yields diffs when the level is changed.
  * Entry diffs are only yielded on level 0.
  * Writes to the state.removedBuckets array if a level 0 bucket is changed/removed/added.

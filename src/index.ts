@@ -19,7 +19,7 @@ import {
   loadBucket,
 } from "./utils.js";
 
-export { mutate };
+export { createCursor, diff, mutate };
 
 /**
  * Creates an empty prolly-tree.

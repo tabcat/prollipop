@@ -227,6 +227,10 @@ export function decodeEntries(
 
     const seq = (next?.seq ?? base) - delta;
 
+    if (seq < 0) {
+      throw new TypeError("Entry seq must be greater than 0.");
+    }
+
     const entry = new DefaultEntry(seq, key, val);
 
     validateEntryRelation(entry, next, isHead, isBoundary, range);

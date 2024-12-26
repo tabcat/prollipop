@@ -1,7 +1,7 @@
 import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { TupleRange } from "./codec.js";
-import { compareTuples } from "./compare.js";
+import { compareBytes, compareTuples } from "./compare.js";
 import { minTuple } from "./constants.js";
 import { Bucket, Entry, ProllyTree, Tuple } from "./interface.js";
 import { loadBucket } from "./utils.js";
@@ -281,6 +281,7 @@ const moveDown = async (
   state: CursorState,
   level: number,
   guide?: (entries: Entry[]) => number,
+  cache?: Bucket[],
 ) => {
   if (level < 0) {
     throw new Error("Cannot move lower than level 0.");
@@ -292,20 +293,32 @@ const moveDown = async (
     const { seq, val } = entryOf(state);
     const bucket = bucketOf(state);
 
-    const lowerBucket = await loadBucket(
-      state.blockstore,
-      val,
-      {
-        isTail: underflows(state) && bucket.getContext().isTail,
-        isHead: overflows(state) && bucket.getContext().isHead,
-      },
-      {
-        prefix: { average: bucket.average, level: bucket.level - 1, base: seq },
-        range: getRange(state),
-      },
-    );
+    const cached = cache?.[bucket.level - 1];
+    if (
+      cached != null &&
+      compareBytes(cached.getAddressed().digest, val) === 0
+    ) {
+      state.currentBuckets.push(cached);
+    } else {
+      const lowerBucket = await loadBucket(
+        state.blockstore,
+        val,
+        {
+          isTail: underflows(state) && bucket.getContext().isTail,
+          isHead: overflows(state) && bucket.getContext().isHead,
+        },
+        {
+          prefix: {
+            average: bucket.average,
+            level: bucket.level - 1,
+            base: seq,
+          },
+          range: getRange(state),
+        },
+      );
+      state.currentBuckets.push(lowerBucket);
+    }
 
-    state.currentBuckets.push(lowerBucket);
     state.currentIndex = guide(bucketOf(state).entries);
   }
 };
@@ -401,8 +414,6 @@ const nextTupleAtLevel = async (
   );
 };
 
-// should look at current buckets to traverse faster
-// could have the current buckets be part of a cache that can be read from by the other methods
 const jumpToTupleAtLevel = async (
   tuple: Tuple,
   level: number,
@@ -412,12 +423,14 @@ const jumpToTupleAtLevel = async (
     throw new Error("Cannot jump to level higher than root.");
   }
 
+  const cache = state.currentBuckets;
+
   // set to root at index matching tuple
   state.currentBuckets = [firstElement(state.currentBuckets)];
   state.currentIndex = guideByTuple(tuple)(bucketOf(state).entries);
 
   // move to level if needed
   if (level < levelOf(state)) {
-    await moveLevel(state, level, guideByTuple(tuple));
+    await moveDown(state, level, guideByTuple(tuple), cache);
   }
 };

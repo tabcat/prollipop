@@ -315,7 +315,7 @@ describe("codec", () => {
       expect(decodedBucket).toEqual(emptyBucket);
     });
 
-    it("throws when non-root bucket has less than two entries", () => {
+    it("throws when non-root bucket has less than one entry", () => {
       expect(() =>
         decodeBucket(emptyAddressed, { isTail: false, isHead: true }),
       ).toThrow("non-root bucket must have at least one entry.");

@@ -241,7 +241,7 @@ export function decodeEntries(
   if (
     range != null &&
     entries[0] != null &&
-    compareTuples(range[0], entries[0]) >= 0
+    compareTuples(range[0], entries[0]) < 0
   ) {
     throw new TypeError("Entry must be greater than min tuple range.");
   }

@@ -8,6 +8,7 @@ import {
   isEncodedBucket,
   isEncodedEntry,
   isEntry,
+  validateEntriesLength,
   validateEntryRelation,
 } from "../src/codec.js";
 import { minTuple } from "../src/constants.js";
@@ -126,6 +127,24 @@ describe("codec", () => {
     });
   });
 
+  describe("validateEntriesLength", () => {
+    it("returns when isRoot on level 0 and length is 0", () => {
+      expect(() => validateEntriesLength(0, 0, true)).to.not.throw();
+    });
+
+    it("throws when !isRoot and length < 1", () => {
+      expect(() => validateEntriesLength(0, 0, false)).toThrow(
+        "non-root bucket must have at least one entry.",
+      );
+    });
+
+    it("throws when isRoot on level > 0 and length < 2", () => {
+      expect(() => validateEntriesLength(1, 1, true)).toThrow(
+        "root bucket on level > 0 must have at least two entries.",
+      );
+    });
+  });
+
   describe("encodeEntries", () => {
     it("returns encoded entries for a non-head bucket", () => {
       const [encodedEntries, base] = encodeEntries(entries, false, () => true);
@@ -215,6 +234,15 @@ describe("codec", () => {
           entry,
         ]),
       ).toThrow("Entries must be sorted and non-duplicative.");
+    });
+
+    it("throws when decoded seq is negative", () => {
+      expect(() =>
+        decodeEntries(0, [[1, bytes, bytes], encodedEntry], true, () => false, [
+          entry,
+          entry,
+        ]),
+      ).toThrow("Entry seq must be greater than 0.");
     });
   });
 

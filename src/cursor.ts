@@ -6,7 +6,21 @@ import { minTuple } from "./constants.js";
 import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
 import { loadBucket } from "./utils.js";
 
-interface CursorState {
+/**
+ * Create a cursor for the given tree.
+ * If the tree is not empty, the cursor is initialized at the 0th index of the root entry.
+ * Otherwise, the index is -1 and the cursor is set to done.
+ *
+ * @param blockstore
+ * @param tree
+ * @returns
+ */
+export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
+  const state = createCursorState(blockstore, tree);
+  return createCursorFromState(state);
+}
+
+export interface CursorState {
   blockstore: Blockstore;
   currentBuckets: Bucket[];
   currentIndex: number;
@@ -14,7 +28,7 @@ interface CursorState {
   isLocked: boolean;
 }
 
-const createCursorState = (
+export const createCursorState = (
   blockstore: Blockstore,
   tree: ProllyTree,
 ): CursorState => {
@@ -33,7 +47,7 @@ const createCursorState = (
   };
 };
 
-function createCursorFromState(state: CursorState): Cursor {
+export function createCursorFromState(state: CursorState): Cursor {
   return {
     level: () => levelOf(state),
     rootLevel: () => rootLevelOf(state),
@@ -84,7 +98,7 @@ function createCursorFromState(state: CursorState): Cursor {
   };
 }
 
-const preWrite = async (
+export const preWrite = async (
   level: number,
   state: CursorState,
   writer: (level: number, state: CursorState) => Promise<void>,
@@ -105,7 +119,7 @@ const preWrite = async (
   Object.assign(state, stateClone);
 };
 
-const preMove = (
+export const preMove = (
   level: number,
   state: CursorState,
   mover: (level: number, state: CursorState) => Promise<void>,
@@ -118,21 +132,7 @@ const preMove = (
   return preWrite(level, state, mover);
 };
 
-/**
- * Create a cursor for the given tree.
- * If the tree is not empty, the cursor is initialized at the 0th index of the root entry.
- * Otherwise, the index is -1 and the cursor is set to done.
- *
- * @param blockstore
- * @param tree
- * @returns
- */
-export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
-  const state = createCursorState(blockstore, tree);
-  return createCursorFromState(state);
-}
-
-const cloneCursorState = (state: CursorState): CursorState =>
+export const cloneCursorState = (state: CursorState): CursorState =>
   Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
 
 const bucketOf = (state: CursorState): Bucket =>
@@ -151,7 +151,7 @@ const levelOf = (state: CursorState): number => bucketOf(state).level;
 const rootLevelOf = (state: CursorState): number =>
   firstElement(state.currentBuckets).level;
 
-const guideByTuple =
+export const guideByTuple =
   (target: Tuple) =>
   (entries: Entry[]): number => {
     const index = entries.findIndex((n) => compareTuples(target, n) <= 0);
@@ -176,7 +176,7 @@ const overflows = (state: CursorState): boolean =>
  */
 const underflows = (state: CursorState): boolean => state.currentIndex === 0;
 
-const moveUp = (
+export const moveUp = (
   state: CursorState,
   level: number,
   guide?: (entries: Entry[]) => number,
@@ -193,7 +193,7 @@ const moveUp = (
   state.currentIndex = guide(bucketOf(state).entries);
 };
 
-const getRange = (state: CursorState): TupleRange => {
+export const getRange = (state: CursorState): TupleRange => {
   const clone = cloneCursorState(state);
   while (underflows(clone) && levelOf(clone) < rootLevelOf(clone)) {
     moveUp(clone, levelOf(clone) + 1);
@@ -204,7 +204,7 @@ const getRange = (state: CursorState): TupleRange => {
   return [min ?? minTuple, entryOf(state)];
 };
 
-const moveDown = async (
+export const moveDown = async (
   state: CursorState,
   level: number,
   guide?: (entries: Entry[]) => number,
@@ -250,7 +250,7 @@ const moveDown = async (
   }
 };
 
-const moveLevel = async (
+export const moveLevel = async (
   state: CursorState,
   level: number,
   guide?: (entries: Entry[]) => number,
@@ -262,7 +262,7 @@ const moveLevel = async (
   }
 };
 
-const moveRight = async (
+export const moveRight = async (
   state: CursorState,
   moveUpWhile: (state: CursorState) => boolean,
   increment: (state: CursorState) => void,
@@ -286,7 +286,7 @@ const moveRight = async (
   }
 };
 
-const nextAtLevel = async (
+export const nextAtLevel = async (
   bucket: boolean,
   level: number,
   state: CursorState,
@@ -312,7 +312,7 @@ const nextAtLevel = async (
   }
 };
 
-const nextTupleAtLevel = async (
+export const nextTupleAtLevel = async (
   tuple: Tuple,
   level: number,
   state: CursorState,
@@ -341,7 +341,7 @@ const nextTupleAtLevel = async (
   );
 };
 
-const jumpToTupleAtLevel = async (
+export const jumpToTupleAtLevel = async (
   tuple: Tuple,
   level: number,
   state: CursorState,

@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import "../src/boundary.js";
 import { minTuple } from "../src/constants.js";
-import { Cursor, createCursor } from "../src/cursor.js";
+import {
+  createCursor,
+  createCursorState,
+  preMove,
+  preWrite,
+} from "../src/cursor.js";
+import { Cursor } from "../src/interface.js";
 import { createBucket } from "../src/utils.js";
 import { createProllyTreeEntry } from "./helpers/build-tree.js";
 import {
@@ -319,6 +325,59 @@ describe("cursor", () => {
           ).rejects.toThrow("Cannot jump to level higher than root.");
         });
       });
+    });
+  });
+
+  describe("createCursorState", () => {
+    it("creates a new cursor state", () => {
+      const state = createCursorState(blockstore, oddTree);
+      expect(state.currentIndex).to.equal(0);
+      expect(state.isDone).to.equal(false);
+      expect(state.isLocked).to.equal(false);
+    });
+
+    it("creates a new cursor state for an empty tree", () => {
+      const state = createCursorState(blockstore, { root: emptyBucket });
+      expect(state.currentIndex).to.equal(-1);
+      expect(state.isDone).to.equal(true);
+      expect(state.isLocked).to.equal(false);
+    });
+  });
+
+  describe("preWrite", () => {
+    it("returns if cursor is done", async () => {
+      const state = createCursorState(blockstore, oddTree);
+      state.isDone = true;
+      await preWrite(0, state, async () => {
+        state.isDone = false;
+      });
+      expect(state.isDone).to.equal(true);
+    });
+
+    it("rejects if cursor is locked", async () => {
+      const state = createCursorState(blockstore, oddTree);
+      state.isLocked = true;
+      expect(
+        preWrite(0, state, async () => {
+          expect.fail();
+        }),
+      ).rejects.toThrow("Failed to acquire cursor lock.");
+    });
+
+    it("locks the cursor state", () => {
+      const state = createCursorState(blockstore, oddTree);
+      preWrite(0, state, async () => {});
+      expect(state.isLocked).to.equal(true);
+    });
+  });
+
+  describe("preMove", () => {
+    it("sets cursor to done and returns if level > root level", async () => {
+      const state = createCursorState(blockstore, oddTree);
+      await preMove(10, state, async () => {
+        expect.fail();
+      });
+      expect(state.isDone).to.equal(true);
     });
   });
 });

@@ -35,7 +35,7 @@ import {
 } from "./helpers/constants.js";
 
 describe("codec", () => {
-  describe("isValidEntry", () => {
+  describe("isEntry", () => {
     it("returns true for a valid entry", () => {
       expect(isEntry(entry)).toBe(true);
     });
@@ -48,7 +48,7 @@ describe("codec", () => {
     });
   });
 
-  describe("isValidEncodedEntry", () => {
+  describe("isEncodedEntry", () => {
     it("returns true for a valid encoded entry", () => {
       expect(isEncodedEntry([0, bytes, bytes])).toBe(true);
     });
@@ -60,7 +60,7 @@ describe("codec", () => {
     });
   });
 
-  describe("isValidEncodedBucket", () => {
+  describe("isEncodedBucket", () => {
     it("returns true for a valid encoded bucket", () => {
       expect(isEncodedBucket(encodedBucket)).toBe(true);
     });

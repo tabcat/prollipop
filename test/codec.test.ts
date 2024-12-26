@@ -1,3 +1,5 @@
+import { encode } from "@ipld/dag-cbor";
+import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import {
   EncodedEntry,
@@ -319,6 +321,20 @@ describe("codec", () => {
       expect(() =>
         decodeBucket(emptyAddressed, { isTail: false, isHead: true }),
       ).toThrow("non-root bucket must have at least one entry.");
+    });
+
+    it("throws when root bucket level > 0 has less than two entries", () => {
+      const bytes = encode({ average, level: 1, entries: [], base: 0 });
+      const digest = sha256(bytes);
+      expect(() =>
+        decodeBucket(
+          { bytes, digest },
+          {
+            isTail: true,
+            isHead: true,
+          },
+        ),
+      ).toThrow("root bucket on level > 0 must have at least two entries.");
     });
 
     it("throws when prefix mismatch", () => {

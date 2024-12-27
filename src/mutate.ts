@@ -169,7 +169,7 @@ export async function collectUpdates(
   // only stop collecting updates if isHead is false and
   // the last current update is gte to updatee boundary
   const stop = () =>
-    // boundary only null if isHead === true
+    // boundary only null if empty bucket (isHead === true)
     !isHead && compareTuples(lastElement(updts.current), boundary!) >= 0;
 
   if (stop()) {
@@ -352,7 +352,6 @@ export async function* rebuildLevel(
     visitedLevelTail = visitedLevelTail || isTail;
 
     if (level === 0) {
-      // boundary will never be used if isHead is true and will never be null otherwise
       await collectUpdates(boundary, updts, isHead);
     }
 

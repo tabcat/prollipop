@@ -132,7 +132,7 @@ describe("index", () => {
     });
   });
 
-  describe("pull", () => {
+  describe("sync", () => {
     it("fetches missing blocks and adds them to the local blockstore", async () => {
       const localBlockstore = new MemoryBlockstore();
       const target = createEmptyTree({ average });

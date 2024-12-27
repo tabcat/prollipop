@@ -262,8 +262,8 @@ export function rebuildBucket(
   bucket: Bucket,
   leftovers: Entry[],
   updates: Update[],
-  isHead: boolean,
   visitedLevelTail: boolean,
+  isHead: boolean,
   bucketsRebuilt: number,
   isBoundary: IsBoundary,
 ): [Bucket[], Entry[], EntryDiff[], boolean] {
@@ -365,8 +365,8 @@ export async function* rebuildLevel(
       updatee,
       leftovers,
       updates,
-      isHead,
       visitedLevelTail,
+      isHead,
       bucketsRebuilt,
       isBoundary,
     );

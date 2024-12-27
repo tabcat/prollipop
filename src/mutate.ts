@@ -12,7 +12,7 @@ import {
   compareTuples,
 } from "./compare.js";
 import { MAX_LEVEL } from "./constants.js";
-import { Cursor, createCursor } from "./cursor.js";
+import { createCursor } from "./cursor.js";
 import {
   BucketDiff,
   EntryDiff,
@@ -20,7 +20,14 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
-import { Bucket, Context, Entry, ProllyTree, Tuple } from "./interface.js";
+import {
+  Bucket,
+  Context,
+  Cursor,
+  Entry,
+  ProllyTree,
+  Tuple,
+} from "./interface.js";
 import {
   AwaitIterable,
   createReusableAwaitIterable,

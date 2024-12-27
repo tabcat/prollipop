@@ -31,8 +31,8 @@ import {
   compareEntries,
   compareTuples,
 } from "./compare.js";
-import { createCursor, type Cursor } from "./cursor.js";
-import { Bucket, Entry, ProllyTree } from "./interface.js";
+import { createCursor } from "./cursor.js";
+import { Bucket, Cursor, Entry, ProllyTree } from "./interface.js";
 
 export type EntryDiff = Diff<Entry>;
 export type BucketDiff = ExclusiveDiff<Bucket>;

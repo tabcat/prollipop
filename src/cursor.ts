@@ -132,7 +132,7 @@ export const preMove = (
   return preWrite(level, state, mover);
 };
 
-export const cloneCursorState = (state: CursorState): CursorState =>
+const cloneCursorState = (state: CursorState): CursorState =>
   Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
 
 const bucketOf = (state: CursorState): Bucket =>
@@ -303,7 +303,7 @@ export const nextAtLevel = async (
       state.currentIndex = bucketOf(state).entries.length - 1;
     }
 
-    moveRight(
+    await moveRight(
       state,
       overflows,
       (state) => state.currentIndex++,

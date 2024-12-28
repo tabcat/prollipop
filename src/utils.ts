@@ -82,10 +82,8 @@ export const bucketDigestToCid = (digest: Uint8Array): CID =>
  */
 export const bucketCidToDigest = (cid: CID): Uint8Array => cid.multihash.digest;
 
-export const getBucketBoundary = (bucket: Bucket): Tuple | null =>
-  bucket.entries.length > 0
-    ? entryToTuple(bucket.entries[bucket.entries.length - 1]!)
-    : null;
+export const getBucketBoundary = (bucket: Bucket): Entry | null =>
+  bucket.entries.length > 0 ? bucket.entries[bucket.entries.length - 1]! : null;
 
 export const getBucketEntry = (bucket: Bucket): Entry | null => {
   const boundary = getBucketBoundary(bucket);

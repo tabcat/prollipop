@@ -1,37 +1,115 @@
 import { MemoryBlockstore } from "blockstore-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import "../src/boundary.js";
+import { DefaultEntry } from "../src/impls.js";
 import {
   bucketCidToDigest,
   bucketDigestToCid,
   bucketToPrefix,
   createBucket,
+  createEmptyBucket,
+  createReusableAwaitIterable,
+  ensureSortedTuplesIterable,
   entryToTuple,
+  getBucketBoundary,
+  getBucketEntry,
   loadBucket,
 } from "../src/utils.js";
 import {
   average,
+  blockstore,
   bucket,
+  cid,
+  createEntry,
   emptyBucket,
   entry,
   level,
   prefix,
   tuple,
 } from "./helpers/constants.js";
+import { oddTree, oddTreeState } from "./helpers/odd-tree.js";
+
+vi.mock("../src/boundary.js");
 
 describe("utils", () => {
+  describe("createReusableAwaitIterable", () => {
+    it("returns a reusable await iterable", async () => {
+      const iterable = createReusableAwaitIterable([1, 2, 3]);
+
+      for await (const n of iterable) {
+        expect(n).to.equal(1);
+        break;
+      }
+
+      for await (const n of iterable) {
+        expect(n).to.equal(2);
+        break;
+      }
+
+      for await (const n of iterable) {
+        expect(n).to.equal(3);
+        break;
+      }
+    });
+  });
+
+  describe("ensureSortedTuplesIterable", () => {
+    it("yields tuples and entries", async () => {
+      const it = ensureSortedTuplesIterable([[tuple], [createEntry(1)]]);
+
+      expect(await it.next()).to.deep.equal({ value: [tuple], done: false });
+      expect(await it.next()).to.deep.equal({
+        value: [createEntry(1)],
+        done: false,
+      });
+    });
+
+    it("throws if tuples are not sorted or duplicate", async () => {
+      const it1 = ensureSortedTuplesIterable([[tuple, tuple]]);
+
+      expect(it1.next()).to.rejects.toThrow();
+
+      const it2 = ensureSortedTuplesIterable([[tuple], [tuple]]);
+
+      await it2.next();
+
+      expect(it2.next()).to.rejects.toThrow();
+    });
+  });
+
   describe("bucketDigestToCid", () => {
     it("returns the cid for a given bucket hash", () => {
-      expect(bucketDigestToCid(bucket.getDigest())).to.deep.equal(
-        bucket.getCID(),
-      );
+      const { digest } = bucket.getAddressed();
+      expect(bucketDigestToCid(digest)).to.deep.equal(cid);
     });
   });
 
   describe("bucketCidToDigest", () => {
     it("returns the digest for a given bucket cid", () => {
-      expect(bucketCidToDigest(bucket.getCID())).to.deep.equal(
-        bucket.getDigest(),
+      const { digest } = bucket.getAddressed();
+      expect(bucketCidToDigest(cid)).to.deep.equal(digest);
+    });
+  });
+
+  describe("getBucketBoundary", () => {
+    it("returns the boundary for a given bucket", () => {
+      expect(getBucketBoundary(bucket)).to.deep.equal(entry);
+    });
+
+    it("returns null if the bucket has no entries", () => {
+      expect(getBucketBoundary(emptyBucket)).to.be.null;
+    });
+  });
+
+  describe("getBucketEntry", () => {
+    it("returns the entry for a given bucket", () => {
+      expect(getBucketEntry(bucket)).to.deep.equal(
+        new DefaultEntry(entry.seq, entry.key, bucket.getAddressed().digest),
       );
+    });
+
+    it("returns null if the bucket has no entries", () => {
+      expect(getBucketEntry(emptyBucket)).to.be.null;
     });
   });
 
@@ -49,39 +127,54 @@ describe("utils", () => {
 
   describe("createBucket", () => {
     it("returns a bucket", () => {
-      expect(createBucket(average, level, [entry])).to.deep.equal(bucket);
+      expect(
+        createBucket(average, level, [entry], {
+          isTail: true,
+          isHead: true,
+        }),
+      ).to.deep.equal(bucket);
+    });
+  });
+
+  describe("createEmptyBucket", () => {
+    it("returns an empty bucket", () => {
+      expect(
+        createEmptyBucket(average, level, {
+          isTail: true,
+          isHead: true,
+        }),
+      ).to.deep.equal(emptyBucket);
     });
   });
 
   describe("loadBucket", () => {
-    const blockstore = new MemoryBlockstore();
-    blockstore.put(bucket.getCID(), bucket.getBytes());
-
-    it("returns a bucket from a blockstore for the given hash", async () => {
+    it("returns a root bucket from a blockstore for the given hash", async () => {
+      const { digest } = oddTree.root.getAddressed();
       expect(
-        await loadBucket(blockstore, bucket.getDigest(), prefix),
-      ).to.deep.equal(bucket);
+        await loadBucket(blockstore, digest, {
+          isTail: true,
+          isHead: true,
+        }),
+      ).to.deep.equal(oddTree.root);
+    });
+
+    it("returns a head bucket from a blockstore", async () => {
+      expect(
+        await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
+          isTail: false,
+          isHead: true,
+        }),
+      ).to.deep.equal(oddTreeState[1]![2]);
     });
 
     it("throws if bucket is not found in blockstore", () => {
       const blockstore = new MemoryBlockstore();
       expect(() =>
-        loadBucket(blockstore, bucket.getDigest(), prefix),
-      ).rejects.toSatisfy((e) => e instanceof Error);
-    });
-
-    it("throws if bucket level mismatches level of expected prefix", () => {
-      expect(() =>
-        loadBucket(blockstore, bucket.getDigest(), { ...prefix, level: 1 }),
-      ).rejects.toSatisfy((e) => e instanceof TypeError);
-    });
-
-    it("throws if bucket key does not match requested hash", () => {
-      const blockstore = new MemoryBlockstore();
-      blockstore.put(emptyBucket.getCID(), bucket.getBytes());
-      expect(() =>
-        loadBucket(blockstore, emptyBucket.getDigest(), prefix),
-      ).rejects.toSatisfy((e) => e instanceof Error);
+        loadBucket(blockstore, bucket.getAddressed().digest, {
+          isTail: true,
+          isHead: true,
+        }),
+      ).rejects.toThrow("Bucket not found in blockstore.");
     });
   });
 });

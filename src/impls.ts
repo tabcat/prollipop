@@ -1,6 +1,8 @@
 import { lastElement } from "@tabcat/ith-element";
 import { base32 } from "multiformats/bases/base32";
+import { CID } from "multiformats/cid";
 import { Addressed, Bucket, Context, Entry, ProllyTree } from "./interface.js";
+import { bucketDigestToCid } from "./utils.js";
 
 const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
 
@@ -50,6 +52,14 @@ export class DefaultBucket implements Bucket {
 
   getContext(): Context {
     return this.#context;
+  }
+
+  getCID(): CID {
+    return bucketDigestToCid(this.getAddressed().digest);
+  }
+
+  getBytes(): Uint8Array {
+    return this.getAddressed().bytes;
   }
 }
 

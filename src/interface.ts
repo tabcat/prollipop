@@ -1,3 +1,5 @@
+import { CID } from "multiformats/cid";
+
 export interface Tuple {
   /**
    * Sequence number. Can be used to attach order to the key.
@@ -37,6 +39,9 @@ export interface Bucket extends Prefix {
 
   getAddressed(): Addressed;
   getContext(): Context;
+
+  getCID(): CID;
+  getBytes(): Uint8Array;
 }
 
 export interface Addressed {

@@ -467,18 +467,24 @@ export async function* rebuildLevel(
   // sort updates for next level, may be safely removed at some point when the tests are better
   updts.next.sort(compareTuples);
 
-  // add removed buckets on the same level to diff
-  const index = state.removedBuckets.findIndex((b) => b.level !== level);
-  d.buckets.push(
-    ...state.removedBuckets
-      .splice(0, index === -1 ? state.removedBuckets.length : index)
-      .map<BucketDiff>((b) => [b, null]),
-  );
+  let removed = 0;
+  for (const b of state.removedBuckets) {
+    if (b.level !== level) {
+      break;
+    }
+
+    d.buckets.push([b, null]);
+    removed++;
+  }
+  state.removedBuckets.splice(0, removed);
 
   if (state.newRoot != null) {
     // if new root found yield any removed buckets from higher levels
     if (state.removedBuckets.length > 0) {
-      d.buckets.push(...state.removedBuckets.map<BucketDiff>((b) => [b, null]));
+      for (const b of state.removedBuckets) {
+        d.buckets.push([b, null]);
+      }
+      state.removedBuckets = [];
     }
 
     updts.next.length = 0;

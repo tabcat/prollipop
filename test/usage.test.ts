@@ -68,12 +68,12 @@ describe("usage", () => {
      *
      * THE ORDER THE NODES AND TUPLES ARE SUPPLIED IS CRITICAL.
      * THERE CAN BE NO DUPLICATE NODES OR TUPLES PER TUPLE SUPPLIED TO THE SAME MUTATE CALL.
-     * VIOLATING EITHER OF THESE WILL RESULT IN INCONSISTENT TREES.
+     * VIOLATING EITHER OF THESE WILL RESULT IN AN ERROR.
      *
      * The AwaitIterable supplying Entries and Tuples MUST be an ordered set where each element is unique per Tuple.
      * Utility functions for maintaining order can be found in `prollipop/compare`, specifically `compareTuples` which can compare tuples and entries.
      */
-    for await (const diff of mutate(blockstore, tree, [entry])) {
+    for await (const diff of mutate(blockstore, tree, [[entry]])) {
       for (const [removed, added] of diff.entries) {
         /**
          * With entry diffs, removed and added could be defined, or only one could be defined.
@@ -122,18 +122,21 @@ describe("usage", () => {
      * The search function can be used to read keys from the tree.
      * Again, it is important to provide the keys you want to search sorted.
      */
-    for await (const entry of search(blockstore, tree, [tuple])) {
-      if ("val" in entry) {
-        /**
-         * If an entry is yieled then the key tuple exists in the tree.
-         */
-        found.push(entry);
-        console.log(new TextDecoder().decode(entry.key));
-        console.log(new TextDecoder().decode(entry.val));
-      } else {
-        /**
-         * If a tuple is yielded then the key does not exist in the tree
-         */
+    for await (const entries of search(blockstore, tree, [[tuple]])) {
+      for (const entry of entries) {
+        if ("val" in entry) {
+          /**
+           * If an entry is yieled then the key tuple exists in the tree.
+           */
+          found.push(entry);
+          console.log(new TextDecoder().decode(entry.key));
+          console.log(new TextDecoder().decode(entry.val));
+        } else {
+          console.log(entry);
+          /**
+           * If a tuple is yielded then the key does not exist in the tree
+           */
+        }
       }
     }
     expect(found).to.deep.equal([entry]);
@@ -189,7 +192,7 @@ describe("usage", () => {
     /**
      * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the tuple (aka the key).
      */
-    for await (const _ of mutate(blockstore, tree, [entryToTuple(entry)])) {
+    for await (const _ of mutate(blockstore, tree, [[entryToTuple(entry)]])) {
       /**
        * Like before any buckets that were added should be added to the blockstore.
        * Any buckets that were removed could be removed safely if not used by other trees.

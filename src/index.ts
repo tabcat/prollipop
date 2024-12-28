@@ -107,6 +107,10 @@ export async function* search(
         results.push(entryToTuple(tuple));
       }
     }
+
+    if (results.length > 0) {
+      yield results;
+    }
   }
 }
 

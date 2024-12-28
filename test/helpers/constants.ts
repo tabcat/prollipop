@@ -1,6 +1,9 @@
-import { encode } from "@ipld/dag-cbor";
+import { code as cborCode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { MemoryBlockstore } from "blockstore-core/memory";
+import { CID } from "multiformats";
+import { create as createMultihashDigest } from "multiformats/hashes/digest";
+import * as sha2 from "multiformats/hashes/sha2";
 import { EncodedEntry } from "../../src/codec.js";
 import {
   DefaultBucket,
@@ -56,6 +59,10 @@ export const addressed = {
   bytes: bucketBytes,
   digest: bucketDigest,
 };
+export const cid = CID.createV1(
+  cborCode,
+  createMultihashDigest(sha2.sha256.code, addressed.digest),
+);
 export const context = {
   isTail: true,
   isHead: true,

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import "../src/boundary.js";
 import { minTuple } from "../src/constants.js";
 import {
+  cloneCursorState,
   createCursor,
   createCursorState,
   preMove,
@@ -341,6 +342,17 @@ describe("cursor", () => {
       expect(state.currentIndex).to.equal(-1);
       expect(state.isDone).to.equal(true);
       expect(state.isLocked).to.equal(false);
+    });
+  });
+
+  describe("cloneCursorState", () => {
+    it("clones the cursor state", () => {
+      const state = createCursorState(blockstore, oddTree);
+      const cloned = cloneCursorState(state);
+
+      cloned.currentBuckets.length = 0;
+
+      expect(state.currentBuckets).to.not.deep.equal(cloned.currentBuckets);
     });
   });
 

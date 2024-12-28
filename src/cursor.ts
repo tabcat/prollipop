@@ -132,8 +132,10 @@ export const preMove = (
   return preWrite(level, state, mover);
 };
 
-const cloneCursorState = (state: CursorState): CursorState =>
-  Object.assign({ currentBuckets: Array.from(state.currentBuckets) }, state);
+export const cloneCursorState = (state: CursorState): CursorState => ({
+  ...state,
+  currentBuckets: Array.from(state.currentBuckets),
+});
 
 const bucketOf = (state: CursorState): Bucket =>
   lastElement(state.currentBuckets);

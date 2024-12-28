@@ -67,7 +67,7 @@ describe("index", () => {
 
     it("yields tuples for entries not found in a tree", async () => {
       const tuple = { seq: 10, key: bytes };
-      for await (const entry of search(blockstore, oddTree, [[tuple]])) {
+      for await (const [entry] of search(blockstore, oddTree, [[tuple]])) {
         expect(entry).to.deep.equal(tuple);
       }
     });

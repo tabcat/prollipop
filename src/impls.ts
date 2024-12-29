@@ -61,6 +61,10 @@ export class DefaultBucket implements Bucket {
   getBytes(): Uint8Array {
     return this.getAddressed().bytes;
   }
+
+  toString() {
+    return `B:l:${this.level}:e:${this.entries.length}:a:${base32.encode(this.getAddressed().digest)}`;
+  }
 }
 
 export class DefaultProllyTree implements ProllyTree {

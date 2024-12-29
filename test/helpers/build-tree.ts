@@ -6,7 +6,11 @@ import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
 import { DefaultBucket, DefaultEntry } from "../../src/impls.js";
 import type { Bucket, Entry } from "../../src/interface.js";
-import { bucketDigestToCid, getBucketEntry } from "../../src/utils.js";
+import {
+  bucketDigestToCid,
+  createEmptyBucket,
+  getBucketEntry,
+} from "../../src/utils.js";
 
 const levelOfBuckets = (
   average: number,
@@ -60,6 +64,10 @@ export const buildProllyTree = (
   let newRoot: Bucket | null = null;
 
   const treeState: Bucket[][] = [];
+
+  if (entries.length === 0) {
+    return [[createEmptyBucket(average, 0, { isTail: true, isHead: true })]];
+  }
 
   // tree has higher levels
   while (true && level < 100) {

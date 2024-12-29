@@ -32,6 +32,7 @@ import {
   AwaitIterable,
   createReusableAwaitIterable,
   ensureSortedTuplesIterable,
+  entryToTuple,
   getBucketBoundary,
   getBucketEntry,
 } from "./utils.js";
@@ -409,9 +410,13 @@ export async function* rebuildLevel(
         compareBoundaries,
       )) {
         // prioritize add updates
-        const b = add ?? rm;
-        const parentEntry = getBucketEntry(b);
-        parentEntry && updts.next.push(parentEntry);
+        if (add != null) {
+          const bucketEntry = getBucketEntry(add);
+          bucketEntry && updts.next.push(bucketEntry);
+        } else {
+          const bucketEntry = getBucketEntry(rm);
+          bucketEntry && updts.next.push(entryToTuple(bucketEntry));
+        }
       }
 
       // just up to last bucket

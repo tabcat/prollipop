@@ -386,7 +386,7 @@ export async function* rebuildLevel(
     }
 
     // there were changes
-    if (buckets[0] !== updatee) {
+    if (buckets[0] !== updatee || buckets.length > 1) {
       updatedLevel = true;
 
       if (level === 0) {

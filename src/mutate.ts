@@ -354,12 +354,6 @@ export async function* rebuildLevel(
     visitedLevelTail = visitedLevelTail || isTail;
 
     if (level === 0) {
-      if (updatee.base === 15023) {
-        console.log("here");
-      }
-      if (isHead) {
-        console.log("here");
-      }
       await collectUpdates(boundary, updts, isHead);
     }
 

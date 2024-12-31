@@ -303,10 +303,9 @@ export function rebuildBucket(
 
   const buckets: Bucket[] = [];
   for (const [i, entries] of bucketEntries.entries()) {
-    const last = i === bucketEntries.length - 1;
     buckets[i] = getBucket(bucket, entries, {
-      isTail: last && isNewRoot,
-      isHead: last && isHead,
+      isTail: isNewRoot,
+      isHead: i === bucketEntries.length - 1 && isHead,
     });
   }
 
@@ -336,14 +335,14 @@ export async function* rebuildLevel(
   average: number,
   level: number,
 ): AsyncIterable<ProllyTreeDiff> {
-  let leftovers: Entry[] = [];
-  const isBoundary = createIsBoundary(average, level);
+  let d = createProllyTreeDiff();
 
+  let leftovers: Entry[] = [];
   let visitedLevelTail: boolean = false;
   let bucketsRebuilt: number = 0;
   let updatedLevel: boolean = false;
 
-  let d = createProllyTreeDiff();
+  const isBoundary = createIsBoundary(average, level);
 
   let tuple = updts.current[0] ?? (await getUserUpdateTuple(updts, level));
 
@@ -355,14 +354,21 @@ export async function* rebuildLevel(
     visitedLevelTail = visitedLevelTail || isTail;
 
     if (level === 0) {
+      if (updatee.base === 15023) {
+        console.log("here");
+      }
+      if (isHead) {
+        console.log("here");
+      }
       await collectUpdates(boundary, updts, isHead);
     }
 
-    let index = updts.current.length;
-    if (!isHead) {
-      index = exclusiveMax(updts.current, boundary!, compareTuples);
-    }
-    const updates = updts.current.splice(0, index);
+    const updates = updts.current.splice(
+      0,
+      isHead
+        ? updts.current.length
+        : exclusiveMax(updts.current, boundary!, compareTuples),
+    );
 
     const [buckets, entries, entryDiffs, isNewRoot] = rebuildBucket(
       updatee,
@@ -388,7 +394,7 @@ export async function* rebuildLevel(
         // only add entry changes on level 0
         d.entries.push(...entryDiffs);
 
-        // removed buckets union bucket path
+        // removed buckets union mutated bucket path
         state.removedBuckets = Array.from(
           union(
             cursor.buckets().reverse(),
@@ -467,9 +473,7 @@ export async function* rebuildLevel(
     return;
   }
 
-  // sort updates for next level, may be safely removed at some point when the tests are better
-  updts.next.sort(compareTuples);
-
+  // any remaining removed buckets on the current level get added to the diff
   let removed = 0;
   for (const b of state.removedBuckets) {
     if (b.level !== level) {
@@ -522,9 +526,9 @@ export async function* mutate(
   while (state.newRoot == null && level < MAX_LEVEL) {
     yield* rebuildLevel(cursor, updts, state, average, level);
 
-    level++;
     updts.current = updts.next;
     updts.next = [];
+    level++;
   }
 
   if (state.newRoot == null) {

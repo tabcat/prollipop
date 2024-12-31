@@ -5,12 +5,7 @@ import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { encodeBucket } from "./codec.js";
-import {
-  compareBoundaries,
-  compareBucketDiffs,
-  compareBuckets,
-  compareTuples,
-} from "./compare.js";
+import { compareBoundaries, compareBuckets, compareTuples } from "./compare.js";
 import { MAX_LEVEL } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import {
@@ -435,9 +430,13 @@ export async function* rebuildLevel(
       for (const [added, removed] of pairwiseTraversal(
         buckets,
         removedBuckets,
-        compareBoundaries,
+        compareBuckets,
       )) {
         const diffs: BucketDiff[] = [];
+
+        if (added != null && removed != null) {
+          continue;
+        }
 
         if (added != null) {
           diffs.push([null, added]);
@@ -454,7 +453,6 @@ export async function* rebuildLevel(
       // these are clean breaks
       // dont yield on isHead, yield after while loop
       if (buckets.length > 0 && leftovers.length === 0 && !isHead) {
-        d.buckets.sort(compareBucketDiffs);
         yield d;
         d = createProllyTreeDiff();
       }
@@ -496,7 +494,6 @@ export async function* rebuildLevel(
   }
 
   if (d.buckets.length > 0) {
-    d.buckets.sort(compareBucketDiffs);
     yield d;
   }
 }

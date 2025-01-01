@@ -49,7 +49,7 @@ export const isEncodedEntry = (e: any): e is EncodedEntry =>
   e[1] instanceof Uint8Array &&
   e[2] instanceof Uint8Array;
 
-export const isEncodedBucket = (b: any): b is EncodedBucket =>
+export const isBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
   Object.keys(b).length === 4 &&
@@ -294,12 +294,18 @@ export function encodeBucket(
     createIsBoundary(average, level),
   );
 
-  const bytes = encode({
+  const encodedBucket: EncodedBucket = {
     average,
     level,
     base,
     entries: encodedEntries,
-  });
+  };
+
+  if (!isBucket(encodedBucket)) {
+    throw new TypeError("invalid bucket.");
+  }
+
+  const bytes = encode(encodedBucket);
 
   return {
     bytes,
@@ -324,8 +330,12 @@ export function decodeBucket(
 ): Bucket {
   const decoded = decode(addressed.bytes);
 
-  if (!isEncodedBucket(decoded)) {
+  if (!isBucket(decoded)) {
     throw new TypeError("invalid bucket.");
+  }
+
+  if (decoded.level > MAX_LEVEL) {
+    throw new Error("bucket level exceeds maximum allowed level.");
   }
 
   if (expected?.prefix != null) {

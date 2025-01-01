@@ -7,13 +7,13 @@ import {
   decodeEntries,
   encodeBucket,
   encodeEntries,
-  isEncodedBucket,
+  isBucket,
   isEncodedEntry,
   isEntry,
   validateEntriesLength,
   validateEntryRelation,
 } from "../src/codec.js";
-import { minTuple } from "../src/constants.js";
+import { MAX_LEVEL, minTuple } from "../src/constants.js";
 import { DefaultBucket } from "../src/impls.js";
 import { Entry } from "../src/interface.js";
 import {
@@ -65,16 +65,14 @@ describe("codec", () => {
 
   describe("isEncodedBucket", () => {
     it("returns true for a valid encoded bucket", () => {
-      expect(isEncodedBucket(encodedBucket)).toBe(true);
+      expect(isBucket(encodedBucket)).toBe(true);
     });
 
     it("returns false for invalid encoded bucket", () => {
-      expect(isEncodedBucket(null)).toBe(false);
-      expect(isEncodedBucket({})).toBe(false);
-      expect(isEncodedBucket({ ...encodedBucket, oneMore: "field" })).toBe(
-        false,
-      );
-      expect(isEncodedBucket({ ...encodedBucket, average: 1 })).toBe(false);
+      expect(isBucket(null)).toBe(false);
+      expect(isBucket({})).toBe(false);
+      expect(isBucket({ ...encodedBucket, oneMore: "field" })).toBe(false);
+      expect(isBucket({ ...encodedBucket, average: 1 })).toBe(false);
     });
   });
 
@@ -281,6 +279,15 @@ describe("codec", () => {
       expect(encodedBucket).toEqual(encodedBucket);
     });
 
+    it("throws when level > MAX_LEVEL", () => {
+      expect(() =>
+        encodeBucket(average, MAX_LEVEL + 1, [createEntry(1), createEntry(2)], {
+          isTail: true,
+          isHead: true,
+        }),
+      ).toThrow("invalid bucket.");
+    });
+
     it("throws when non-root bucket has less than one entries", () => {
       expect(() =>
         encodeBucket(average, level, [], { isTail: false, isHead: false }),
@@ -315,6 +322,20 @@ describe("codec", () => {
     it("returns decoded empty root bucket", () => {
       const decodedBucket = decodeBucket(emptyAddressed, emptyContext);
       expect(decodedBucket).toEqual(emptyBucket);
+    });
+
+    it("throws when level > MAX_LEVEL", () => {
+      const bytes = encode({
+        average,
+        level: MAX_LEVEL + 1,
+        entries: [createEntry(1), createEntry(2)],
+        base: 2,
+      });
+      const digest = sha256(bytes);
+
+      expect(() =>
+        decodeBucket({ bytes, digest }, { isTail: true, isHead: true }),
+      ).toThrow("invalid bucket.");
     });
 
     it("throws when non-root bucket has less than one entry", () => {

@@ -103,12 +103,13 @@ export const preWrite = async (
   state: CursorState,
   writer: (level: number, state: CursorState) => Promise<void>,
 ) => {
-  if (state.isDone) {
-    return;
-  }
-
   if (state.isLocked) {
     throw new Error("Failed to acquire cursor lock.");
+  }
+
+  if (state.isDone) {
+    writer = (level, state) =>
+      moveLevel(state, level, (entries) => entries.length - 1);
   }
 
   const stateClone = cloneCursorState(state);
@@ -125,8 +126,11 @@ export const preMove = (
   mover: (level: number, state: CursorState) => Promise<void>,
 ) => {
   if (level > rootLevelOf(state)) {
-    state.isDone = true;
-    return Promise.resolve();
+    mover = async (_, state) => {
+      state.currentBuckets = [firstElement(state.currentBuckets)];
+      state.currentIndex = state.currentBuckets[0]!.entries.length - 1;
+      state.isDone = true;
+    };
   }
 
   return preWrite(level, state, mover);

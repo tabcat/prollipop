@@ -248,7 +248,7 @@ describe("codec", () => {
 
   describe("encodeBucket", () => {
     it("returns encoded bucket for a bucket", () => {
-      const encodedBucket = encodeBucket(1, level, entries, {
+      const encodedBucket = encodeBucket(2, level, entries, {
         isTail: false,
         isHead: false,
       });

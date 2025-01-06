@@ -63,7 +63,7 @@ export class DefaultBucket implements Bucket {
   }
 
   toString() {
-    return `B:l:${this.level}:e:${this.entries.length}:a:${base32.encode(this.getAddressed().digest)}`;
+    return `B:l:${this.level}:b:${this.base}:e:${this.entries.length}:d:${base32.encode(this.getAddressed().digest)}`;
   }
 }
 

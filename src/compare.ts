@@ -19,7 +19,22 @@ import { getBucketBoundary } from "./utils.js";
 
 export { compareBytes };
 
-export const compareSeq = (a: number, b: number): number => a - b;
+export interface Comparitor<T> {
+  (a: T, b: T): number;
+}
+
+export const combineComparisons = <T>(
+  ...comparitors: Comparitor<T>[]
+): Comparitor<T> => {
+  return (a: T, b: T): number => {
+    for (const comparitor of comparitors) {
+      const comparison = comparitor(a, b);
+      if (comparison !== 0) return comparison;
+    }
+
+    return 0;
+  };
+};
 
 /**
  * Compare two tuples. seq > key
@@ -28,15 +43,11 @@ export const compareSeq = (a: number, b: number): number => a - b;
  * @param b
  * @returns
  */
-export const compareTuples = (a: Tuple, b: Tuple): number => {
-  const difference = compareSeq(a.seq, b.seq);
-
-  if (difference !== 0) return difference;
-
-  const comparison = compareBytes(a.key, b.key);
-
-  return comparison;
-};
+export const compareTuples = (a: Tuple, b: Tuple): number =>
+  combineComparisons<Tuple>(
+    (a, b) => a.seq - b.seq,
+    (a, b) => compareBytes(a.key, b.key),
+  )(a, b);
 
 /**
  * Compare two entries. seq > key > val
@@ -45,15 +56,10 @@ export const compareTuples = (a: Tuple, b: Tuple): number => {
  * @param b
  * @returns
  */
-export const compareEntries = (a: Entry, b: Entry): number => {
-  const tuples = compareTuples(a, b);
-
-  if (tuples !== 0) {
-    return tuples;
-  }
-
-  return compareBytes(a.val, b.val);
-};
+export const compareEntries = (a: Entry, b: Entry): number =>
+  combineComparisons<Entry>(compareTuples, (a, b) =>
+    compareBytes(a.val, b.val),
+  )(a, b);
 
 /**
  * Compare two buckets by their digests.
@@ -64,6 +70,9 @@ export const compareEntries = (a: Entry, b: Entry): number => {
  */
 export const compareBucketDigests = (a: Bucket, b: Bucket): number =>
   compareBytes(a.getAddressed().digest, b.getAddressed().digest);
+
+export const compareLevels = (a: Bucket, b: Bucket): number =>
+  a.level - b.level;
 
 /**
  * Compare two buckets by their boundaries.

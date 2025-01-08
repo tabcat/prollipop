@@ -5,7 +5,13 @@ import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { encodeBucket } from "./codec.js";
-import { compareBoundaries, compareBuckets, compareTuples } from "./compare.js";
+import {
+  compareBoundaries,
+  compareBuckets,
+  compareLevels,
+  compareTuples,
+  composableComparator,
+} from "./compare.js";
 import { MAX_LEVEL } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import {
@@ -31,6 +37,9 @@ import {
   getBucketBoundary,
   getBucketEntry,
 } from "./utils.js";
+
+const compareLevelThenBoundary = (a: Bucket, b: Bucket): number =>
+  composableComparator<Bucket>(compareLevels, compareBoundaries)(a, b);
 
 /**
  * An update is made of a Tuple, an Entry, or an Entry with a `strict: true` property.
@@ -402,7 +411,7 @@ export async function* rebuildLevel(
       for (const [rm, add] of pairwiseTraversal(
         updatee ? [updatee] : [],
         buckets,
-        compareBoundaries,
+        compareLevelThenBoundary,
       )) {
         // prioritize add updates
         if (add != null) {
@@ -421,7 +430,7 @@ export async function* rebuildLevel(
           ? exclusiveMax(
               state.removedBuckets,
               lastElement(buckets),
-              compareBoundaries,
+              compareLevelThenBoundary,
             )
           : 0,
       );

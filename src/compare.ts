@@ -23,7 +23,7 @@ export interface Comparitor<T> {
   (a: T, b: T): number;
 }
 
-export const combineComparisons = <T>(
+export const composableComparator = <T>(
   ...comparitors: Comparitor<T>[]
 ): Comparitor<T> => {
   return (a: T, b: T): number => {
@@ -44,7 +44,7 @@ export const combineComparisons = <T>(
  * @returns
  */
 export const compareTuples = (a: Tuple, b: Tuple): number =>
-  combineComparisons<Tuple>(
+  composableComparator<Tuple>(
     (a, b) => a.seq - b.seq,
     (a, b) => compareBytes(a.key, b.key),
   )(a, b);
@@ -57,7 +57,7 @@ export const compareTuples = (a: Tuple, b: Tuple): number =>
  * @returns
  */
 export const compareEntries = (a: Entry, b: Entry): number =>
-  combineComparisons<Entry>(compareTuples, (a, b) =>
+  composableComparator<Entry>(compareTuples, (a, b) =>
     compareBytes(a.val, b.val),
   )(a, b);
 

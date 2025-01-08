@@ -132,14 +132,10 @@ export const createBucket = (
   return new DefaultBucket(average, level, entries, addressed, context);
 };
 
-export const createEmptyBucket = (
-  average: number,
-  level: number,
-  context: Context,
-): Bucket => {
+export const createEmptyBucket = (average: number, level: number): Bucket => {
   const entries: Entry[] = [];
-  const addressed = encodeBucket(average, level, entries, context);
-  return new DefaultBucket(average, level, entries, addressed, context);
+  const context: Context = { isTail: true, isHead: true };
+  return createBucket(average, level, entries, context);
 };
 
 /**

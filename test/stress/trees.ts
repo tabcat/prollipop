@@ -24,13 +24,13 @@ export const superTreeIds = Array(treeEntriesMax)
 export const subTreeIds = Array(treeEntriesThird)
   .fill(0)
   .map((_, i) => i + treeEntriesThird);
-export const lowerTreeIds = Array(Math.floor(treeEntriesHalf))
+export const lowerTreeIds = Array(treeEntriesHalf)
   .fill(0)
   .map((_, i) => i);
 export const midTreeIds = Array(treeEntriesHalf)
   .fill(0)
-  .map((_, i) => i + treeEntriesHalf / 2);
-export const upperTreeIds = Array(Math.floor(treeEntriesHalf))
+  .map((_, i) => i + Math.floor(treeEntriesHalf / 2));
+export const upperTreeIds = Array(treeEntriesHalf)
   .fill(0)
   .map((_, i) => i + treeEntriesHalf);
 

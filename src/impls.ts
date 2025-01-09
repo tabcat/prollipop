@@ -4,8 +4,6 @@ import { CID } from "multiformats/cid";
 import { Addressed, Bucket, Context, Entry, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
 
-const nodeInspectSymbol = Symbol.for("entryjs.util.inspect.custom");
-
 export const entriesToDeltaBase = (entries: Entry[]): number =>
   entries.length > 0 ? lastElement(entries).seq : 0;
 
@@ -15,14 +13,6 @@ export class DefaultEntry implements Entry {
     readonly key: Entry["key"],
     readonly val: Entry["val"],
   ) {}
-
-  [nodeInspectSymbol]() {
-    return {
-      seq: this.seq,
-      key: base32.encode(this.key),
-      val: base32.encode(this.val),
-    };
-  }
 
   toString() {
     return `N:s:${this.seq}:k:${base32.encode(this.key)}:v:${base32.encode(this.val)}`;

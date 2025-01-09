@@ -40,6 +40,7 @@ export interface Bucket extends Prefix {
 
   getAddressed(): Addressed;
   getContext(): Context;
+  getRange(): TupleRange;
 
   getCID(): CID;
   getBytes(): Uint8Array;
@@ -131,11 +132,6 @@ export interface Cursor {
    * Returns true or false depending on whether the cursor is at the head bucket for the level.
    */
   isAtHead(): boolean;
-
-  /**
-   * Returns the range of the current bucket.
-   */
-  range(): TupleRange;
 
   /**
    * Returns true or false depending on whether the cursor is currently being incremented.

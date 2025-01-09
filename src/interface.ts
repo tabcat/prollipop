@@ -1,4 +1,5 @@
 import { CID } from "multiformats/cid";
+import { TupleRange } from "./codec.js";
 
 export interface Tuple {
   /**
@@ -130,6 +131,11 @@ export interface Cursor {
    * Returns true or false depending on whether the cursor is at the head bucket for the level.
    */
   isAtHead(): boolean;
+
+  /**
+   * Returns the range of the current bucket.
+   */
+  range(): TupleRange;
 
   /**
    * Returns true or false depending on whether the cursor is currently being incremented.

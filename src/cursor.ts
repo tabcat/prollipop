@@ -58,6 +58,11 @@ export function createCursorFromState(state: CursorState): Cursor {
     buckets: () => Array.from(state.currentBuckets),
     currentBucket: () => bucketOf(state),
 
+    isAtTail: () => bucketOf(state).getContext().isTail,
+    isAtHead: () => bucketOf(state).getContext().isHead,
+
+    range: () => getRange(state),
+
     next(level?: number) {
       return preMove(
         level ?? levelOf(state),
@@ -87,9 +92,6 @@ export function createCursorFromState(state: CursorState): Cursor {
         jumpToTupleAtLevel.bind(null, tuple),
       );
     },
-
-    isAtTail: () => bucketOf(state).getContext().isTail,
-    isAtHead: () => bucketOf(state).getContext().isHead,
 
     clone: () => createCursorFromState(cloneCursorState(state)),
 

@@ -8,3 +8,4 @@ export const MAX_LEVEL = 10;
  * This is not valid for an entry but can be used for comparisons and Tuple Ranges.
  */
 export const minTuple = { seq: -1, key: new Uint8Array(0) };
+export const maxTuple = { seq: Infinity, key: new Uint8Array(0) };

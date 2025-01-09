@@ -240,13 +240,11 @@ export const moveDown = async (
           isTail: underflows(state) && bucket.getContext().isTail,
           isHead: overflows(state) && bucket.getContext().isHead,
         },
+        getRange(state),
         {
-          prefix: {
-            average: bucket.average,
-            level: bucket.level - 1,
-            base: seq,
-          },
-          range: getRange(state),
+          average: bucket.average,
+          level: bucket.level - 1,
+          base: seq,
         },
       );
       state.currentBuckets.push(lowerBucket);

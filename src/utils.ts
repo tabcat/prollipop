@@ -4,8 +4,14 @@ import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
-import { decodeBucket, encodeBucket, Expected, TupleRange } from "./codec.js";
+import {
+  decodeBucket,
+  encodeBucket,
+  MinTupleRange,
+  TupleRange,
+} from "./codec.js";
 import { compareTuples } from "./compare.js";
+import { maxTuple, minTuple } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Context, Entry, Prefix, Tuple } from "./interface.js";
 
@@ -131,15 +137,16 @@ export const createBucket = (
   level: number,
   entries: Entry[],
   context: Context,
+  range: TupleRange,
 ): Bucket => {
   const addressed = encodeBucket(average, level, entries, context);
-  return new DefaultBucket(average, level, entries, addressed, context);
+  return new DefaultBucket(average, level, entries, addressed, context, range);
 };
 
 export const createEmptyBucket = (average: number): Bucket => {
   const entries: Entry[] = [];
   const context: Context = { isTail: true, isHead: true };
-  return createBucket(average, 0, entries, context);
+  return createBucket(average, 0, entries, context, [minTuple, maxTuple]);
 };
 
 /**
@@ -154,7 +161,8 @@ export async function loadBucket(
   blockstore: Blockstore,
   digest: Uint8Array,
   context: Context,
-  expected?: Expected,
+  range: TupleRange | MinTupleRange,
+  prefix?: Prefix,
 ): Promise<Bucket> {
   let bytes: Uint8Array;
   try {
@@ -168,7 +176,7 @@ export async function loadBucket(
     }
   }
 
-  const bucket = decodeBucket({ bytes, digest }, context, expected);
+  const bucket = decodeBucket({ bytes, digest }, context, range, prefix);
 
   return bucket;
 }

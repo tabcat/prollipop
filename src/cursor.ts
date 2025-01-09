@@ -61,8 +61,6 @@ export function createCursorFromState(state: CursorState): Cursor {
     isAtTail: () => bucketOf(state).getContext().isTail,
     isAtHead: () => bucketOf(state).getContext().isHead,
 
-    range: () => getRange(state),
-
     next(level?: number) {
       return preMove(
         level ?? levelOf(state),

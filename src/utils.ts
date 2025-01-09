@@ -106,7 +106,10 @@ export const getBucketEntry = (bucket: Bucket): Entry | null => {
 };
 
 export function hasIntersect(range1: TupleRange, range2: TupleRange): boolean {
-  return range1[0]!.seq < range2[1]!.seq && range2[0]!.seq < range1[1]!.seq;
+  return (
+    compareTuples(range1[0], range2[1]) < 0 &&
+    compareTuples(range2[0], range1[1]) < 0
+  );
 }
 
 /**

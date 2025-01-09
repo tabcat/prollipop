@@ -12,9 +12,10 @@
 
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
+import { lastElement } from "@tabcat/ith-element";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareTuples } from "./compare.js";
-import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
+import { MAX_LEVEL, MAX_UINT32, maxTuple } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
   Addressed,
@@ -24,6 +25,7 @@ import {
   Prefix,
   Tuple,
 } from "./interface.js";
+import { entryToTuple } from "./utils.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
 
@@ -102,6 +104,10 @@ export const validateEntryRelation = (
 
     if (isBoundary(entry)) {
       throw new TypeError("Only the last entry of a bucket can be a boundary.");
+    }
+
+    if (range != null && compareTuples(entry, range[0]) <= 0) {
+      throw new TypeError("Entry must be greater than min tuple range.");
     }
   }
 };
@@ -207,7 +213,7 @@ export function decodeEntries(
   encodedEntries: EncodedEntry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
+  range: TupleRange | MinTupleRange,
 ): Entry[] {
   const entries: Entry[] = new Array(encodedEntries.length);
 
@@ -231,9 +237,13 @@ export function decodeEntries(
       throw new TypeError("Entry seq must be greater than 0.");
     }
 
+    if (i === encodedEntries.length - 1) {
+      range = [range[0]!, range[1] ?? { seq, key }];
+    }
+
     const entry = new DefaultEntry(seq, key, val);
 
-    validateEntryRelation(entry, next, isHead, isBoundary, range);
+    validateEntryRelation(entry, next, isHead, isBoundary, range as TupleRange);
 
     entries[i] = entry;
   }
@@ -254,17 +264,8 @@ export interface Expected {
   range?: TupleRange;
 }
 
-export interface TupleRange {
-  /**
-   * Exclusive lower bound.
-   */
-  0: Tuple;
-
-  /**
-   * Inclusive upper bound.
-   */
-  1: Tuple;
-}
+export type MinTupleRange = [Tuple];
+export type TupleRange = [Tuple, Tuple];
 
 /**
  * Safely CBOR encodes bucket prefix and entries.
@@ -326,7 +327,8 @@ export function encodeBucket(
 export function decodeBucket(
   addressed: Addressed,
   context: Context,
-  expected?: Expected,
+  range: TupleRange | MinTupleRange,
+  expectedPrefix?: Prefix,
 ): Bucket {
   const decoded = decode(addressed.bytes);
 
@@ -338,8 +340,8 @@ export function decodeBucket(
     throw new Error("bucket level exceeds maximum allowed level.");
   }
 
-  if (expected?.prefix != null) {
-    validatePrefixExpected(decoded, expected.prefix);
+  if (expectedPrefix != null) {
+    validatePrefixExpected(decoded, expectedPrefix);
   }
 
   validateEntriesLength(
@@ -353,8 +355,15 @@ export function decodeBucket(
     decoded.entries,
     context.isHead,
     createIsBoundary(decoded.average, decoded.level),
-    expected?.range,
+    range,
   );
+
+  if (range.length === 1) {
+    range = [
+      range[0]!,
+      entries.length > 0 ? entryToTuple(lastElement(entries)) : maxTuple,
+    ];
+  }
 
   return new DefaultBucket(
     decoded.average,
@@ -362,5 +371,6 @@ export function decodeBucket(
     entries,
     addressed,
     context,
+    range,
   );
 }

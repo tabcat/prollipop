@@ -13,7 +13,6 @@
  */
 
 import { compare as compareBytes } from "uint8arrays";
-import { BucketDiff } from "./diff.js";
 import { Bucket, Entry, Tuple } from "./interface.js";
 import { getBucketBoundary } from "./utils.js";
 
@@ -23,7 +22,7 @@ export interface Comparitor<T> {
   (a: T, b: T): number;
 }
 
-export const composableComparator = <T>(
+export const composeComparators = <T>(
   ...comparitors: Comparitor<T>[]
 ): Comparitor<T> => {
   return (a: T, b: T): number => {
@@ -44,7 +43,7 @@ export const composableComparator = <T>(
  * @returns
  */
 export const compareTuples = (a: Tuple, b: Tuple): number =>
-  composableComparator<Tuple>(
+  composeComparators<Tuple>(
     (a, b) => a.seq - b.seq,
     (a, b) => compareBytes(a.key, b.key),
   )(a, b);
@@ -57,7 +56,7 @@ export const compareTuples = (a: Tuple, b: Tuple): number =>
  * @returns
  */
 export const compareEntries = (a: Entry, b: Entry): number =>
-  composableComparator<Entry>(compareTuples, (a, b) =>
+  composeComparators<Entry>(compareTuples, (a, b) =>
     compareBytes(a.val, b.val),
   )(a, b);
 
@@ -84,11 +83,6 @@ export const compareLevels = (a: Bucket, b: Bucket): number =>
  * @returns
  */
 export const compareBoundaries = (a: Bucket, b: Bucket): number => {
-  // buckets are first ordered by level
-  const levelComparison = a.level - b.level;
-
-  if (levelComparison !== 0) return levelComparison;
-
   const aBoundary = getBucketBoundary(a);
   const bBoundary = getBucketBoundary(b);
 
@@ -112,22 +106,9 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
  * @param b
  * @returns
  */
-export const compareBuckets = (a: Bucket, b: Bucket): number => {
-  const boundaryComparison = compareBoundaries(a, b);
-
-  if (boundaryComparison !== 0) {
-    return boundaryComparison;
-  }
-
-  return compareBucketDigests(a, b);
-};
-
-/**
- * Compare two bucket diffs.
- *
- * @param a
- * @param b
- * @returns
- */
-export const compareBucketDiffs = (a: BucketDiff, b: BucketDiff): number =>
-  compareBuckets(a[0] ?? a[1], b[0] ?? b[1]);
+export const compareBuckets = (a: Bucket, b: Bucket): number =>
+  composeComparators<Bucket>(
+    compareLevels,
+    compareBoundaries,
+    compareBucketDigests,
+  )(a, b);

@@ -5,6 +5,7 @@ import { CID } from "multiformats";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { EncodedEntry } from "../../src/codec.js";
+import { maxTuple, minTuple } from "../../src/constants.js";
 import {
   DefaultBucket,
   DefaultEntry,
@@ -54,6 +55,7 @@ export const bucket = new DefaultBucket(
     digest: bucketDigest,
   },
   { isTail: true, isHead: true },
+  [minTuple, tuple],
 );
 export const addressed = {
   bytes: bucketBytes,
@@ -85,6 +87,7 @@ export const emptyBucket = new DefaultBucket(
     digest: emptyBucketDigest,
   },
   { isTail: true, isHead: true },
+  [minTuple, maxTuple],
 );
 export const emptyAddressed = {
   bytes: emptyBucketBytes,

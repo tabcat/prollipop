@@ -10,7 +10,7 @@ import {
   compareBuckets,
   compareLevels,
   compareTuples,
-  composableComparator,
+  composeComparators,
 } from "./compare.js";
 import { MAX_LEVEL } from "./constants.js";
 import { createCursor } from "./cursor.js";
@@ -39,7 +39,7 @@ import {
 } from "./utils.js";
 
 const compareLevelThenBoundary = (a: Bucket, b: Bucket): number =>
-  composableComparator<Bucket>(compareLevels, compareBoundaries)(a, b);
+  composeComparators<Bucket>(compareLevels, compareBoundaries)(a, b);
 
 /**
  * An update is made of a Tuple, an Entry, or an Entry with a `strict: true` property.

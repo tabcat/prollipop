@@ -3,6 +3,8 @@ import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import {
   EncodedEntry,
+  MinTupleRange,
+  TupleRange,
   decodeBucket,
   decodeEntries,
   encodeBucket,
@@ -26,7 +28,6 @@ import {
   createEntry,
   emptyAddressed,
   emptyBucket,
-  emptyContext,
   encodedBucket,
   encodedEntries,
   encodedEntry,
@@ -223,7 +224,9 @@ describe("codec", () => {
 
     it("throws when entries[i] is invalid", () => {
       expect(() =>
-        decodeEntries(0, [null as unknown as EncodedEntry], true, () => false),
+        decodeEntries(0, [null as unknown as EncodedEntry], true, () => false, [
+          minTuple,
+        ]),
       ).toThrow("invalid encoded entry.");
     });
 
@@ -305,22 +308,26 @@ describe("codec", () => {
     it("returns decoded bucket for a bucket", () => {
       const context = { isTail: false, isHead: false };
       const addressed = encodeBucket(2, level, entries, context);
-      const decodedBucket = decodeBucket(addressed, context);
+      const decodedBucket = decodeBucket(addressed, context, [minTuple]);
       expect(decodedBucket).toEqual(
-        new DefaultBucket(2, level, entries, addressed, context),
+        new DefaultBucket(2, level, entries, addressed, context, [
+          minTuple,
+          tuple,
+        ]),
       );
     });
 
     it("returns decoded bucket for a head bucket", () => {
-      const decodedBucket = decodeBucket(addressed, {
-        isHead: true,
-        isTail: false,
-      });
+      const context = { isTail: false, isHead: true };
+      const addressed = encodeBucket(32, level, entries, context);
+      const decodedBucket = decodeBucket(addressed, context, [minTuple, tuple]);
       expect(decodedBucket).toEqual(bucket);
     });
 
     it("returns decoded empty root bucket", () => {
-      const decodedBucket = decodeBucket(emptyAddressed, emptyContext);
+      const context = { isTail: true, isHead: true };
+      const addressed = encodeBucket(32, level, [], context);
+      const decodedBucket = decodeBucket(addressed, context, [minTuple, tuple]);
       expect(decodedBucket).toEqual(emptyBucket);
     });
 
@@ -333,35 +340,41 @@ describe("codec", () => {
       });
       const digest = sha256(bytes);
 
-      expect(() =>
-        decodeBucket({ bytes, digest }, { isTail: true, isHead: true }),
-      ).toThrow("invalid bucket.");
+      const context = { isTail: true, isHead: true };
+      const range: TupleRange = [minTuple, createEntry(2)];
+
+      expect(() => decodeBucket({ bytes, digest }, context, range)).toThrow(
+        "invalid bucket.",
+      );
     });
 
     it("throws when non-root bucket has less than one entry", () => {
-      expect(() =>
-        decodeBucket(emptyAddressed, { isTail: false, isHead: true }),
-      ).toThrow("non-root bucket must have at least one entry.");
+      const context = { isTail: false, isHead: true };
+      const range: MinTupleRange = [minTuple];
+
+      expect(() => decodeBucket(emptyAddressed, context, range)).toThrow(
+        "non-root bucket must have at least one entry.",
+      );
     });
 
     it("throws when root bucket level > 0 has less than two entries", () => {
       const bytes = encode({ average, level: 1, entries: [], base: 0 });
       const digest = sha256(bytes);
-      expect(() =>
-        decodeBucket(
-          { bytes, digest },
-          {
-            isTail: true,
-            isHead: true,
-          },
-        ),
-      ).toThrow("root bucket on level > 0 must have at least two entries.");
+
+      const context = { isTail: true, isHead: true };
+      const range: MinTupleRange = [minTuple];
+
+      expect(() => decodeBucket({ bytes, digest }, context, range)).toThrow(
+        "root bucket on level > 0 must have at least two entries.",
+      );
     });
 
     it("throws when prefix mismatch", () => {
       expect(() =>
-        decodeBucket(addressed, context, {
-          prefix: { average: 1, level, base: 0 },
+        decodeBucket(addressed, context, [minTuple, tuple], {
+          average: 1,
+          level,
+          base: 0,
         }),
       ).toThrow("prefix mismatch.");
     });

@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { compareEntries, compareSeq, compareTuples } from "../src/compare.js";
+import { compareEntries, compareTuples } from "../src/compare.js";
 
 describe("compare", () => {
-  describe("compareSeq", () => {
-    it("returns the difference of two numbers", () => {
-      expect(compareSeq(1, 1)).to.equal(1 - 1);
-      expect(compareSeq(1, 0)).to.equal(1 - 0);
-      expect(compareSeq(0, 1)).to.equal(0 - 1);
-    });
-  });
-
   describe("compareTuples", () => {
     it("returns the difference of the seq if they do not match", () => {
       expect(

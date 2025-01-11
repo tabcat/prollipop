@@ -1,7 +1,6 @@
 import { lastElement } from "@tabcat/ith-element";
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
-import { TupleRange } from "./codec.js";
 import { Addressed, Bucket, Context, Entry, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
 
@@ -24,7 +23,6 @@ export class DefaultBucket implements Bucket {
   readonly base: number;
   #addressed: Addressed;
   #context: Context;
-  #range: TupleRange;
 
   constructor(
     readonly average: number,
@@ -32,12 +30,10 @@ export class DefaultBucket implements Bucket {
     readonly entries: Entry[],
     addressed: Addressed,
     context: Context,
-    range: TupleRange,
   ) {
     this.base = entriesToDeltaBase(entries);
     this.#addressed = addressed;
     this.#context = context;
-    this.#range = range;
   }
 
   getAddressed(): Addressed {
@@ -46,10 +42,6 @@ export class DefaultBucket implements Bucket {
 
   getContext(): Context {
     return this.#context;
-  }
-
-  getRange(): TupleRange {
-    return this.#range;
   }
 
   getCID(): CID {

@@ -1,5 +1,4 @@
 import { CID } from "multiformats/cid";
-import { TupleRange } from "./codec.js";
 
 export interface Tuple {
   /**
@@ -40,7 +39,6 @@ export interface Bucket extends Prefix {
 
   getAddressed(): Addressed;
   getContext(): Context;
-  getRange(): TupleRange;
 
   getCID(): CID;
   getBytes(): Uint8Array;

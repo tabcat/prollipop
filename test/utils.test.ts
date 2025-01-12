@@ -138,12 +138,7 @@ describe("utils", () => {
 
   describe("createEmptyBucket", () => {
     it("returns an empty bucket", () => {
-      expect(
-        createEmptyBucket(average, level, {
-          isTail: true,
-          isHead: true,
-        }),
-      ).to.deep.equal(emptyBucket);
+      expect(createEmptyBucket(average)).to.deep.equal(emptyBucket);
     });
   });
 

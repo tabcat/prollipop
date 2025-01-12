@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js"; // for the mock
+import { minTuple } from "../src/constants.js";
 import { createCursor } from "../src/cursor.js";
 import { ProllyTreeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
@@ -360,10 +361,8 @@ describe("mutate", () => {
       });
 
       it("handles head bucket without boundary", () => {
-        const bucket = createBucket(average, 0, [createEntry(0)], {
-          isTail: false,
-          isHead: true,
-        });
+        const context = { isTail: false, isHead: true };
+        const bucket = createBucket(average, 0, [createEntry(0)], context);
         const [buckets] = rebuildBucket(
           bucket,
           [],
@@ -381,10 +380,8 @@ describe("mutate", () => {
 
     describe("updates", () => {
       it("handles add updates", () => {
-        const bucket = createBucket(average, 0, [createEntry(1)], {
-          isTail: true,
-          isHead: false,
-        });
+        const context = { isTail: true, isHead: false };
+        const bucket = createBucket(average, 0, [createEntry(1)], context);
         const updates = [createEntry(0)];
 
         const [buckets, _, diff] = rebuildBucket(
@@ -406,10 +403,8 @@ describe("mutate", () => {
 
       it("handles remove updates", () => {
         const entries = [createEntry(0), createEntry(1)];
-        const bucket = createBucket(average, 0, entries, {
-          isTail: true,
-          isHead: false,
-        });
+        const context = { isTail: true, isHead: false };
+        const bucket = createBucket(average, 0, entries, context);
         const updates = [entryToTuple(entries[0]!)];
 
         const [buckets, _, diff] = rebuildBucket(
@@ -428,10 +423,8 @@ describe("mutate", () => {
 
       it("handles strict remove updates", () => {
         const entries = [createEntry(0), createEntry(1)];
-        const bucket = createBucket(average, 0, entries, {
-          isTail: true,
-          isHead: false,
-        });
+        const context = { isTail: true, isHead: false };
+        const bucket = createBucket(average, 0, entries, context);
         const updates = [{ ...entries[0]!, strict: true }];
 
         const [buckets, _, diff] = rebuildBucket(
@@ -452,11 +445,12 @@ describe("mutate", () => {
     // Boundary handling tests
     describe("boundary handling", () => {
       it("splits bucket at boundaries", () => {
+        const context = { isTail: true, isHead: false };
         const bucket = createBucket(
           average,
           0,
           [createEntry(0), createEntry(2), createEntry(3)],
-          { isTail: true, isHead: false },
+          context,
         );
 
         const [buckets] = rebuildBucket(
@@ -483,10 +477,8 @@ describe("mutate", () => {
 
     describe("edge cases", () => {
       it("handles empty bucket", () => {
-        const bucket = createBucket(average, 0, [], {
-          isTail: true,
-          isHead: true,
-        });
+        const context = { isTail: true, isHead: true };
+        const bucket = createBucket(average, 0, [], context);
         const [buckets] = rebuildBucket(
           bucket,
           [],
@@ -503,10 +495,8 @@ describe("mutate", () => {
 
       it("handles complete removal of entries", () => {
         const entries = [createEntry(0), createEntry(1)];
-        const bucket = createBucket(average, 0, entries, {
-          isTail: true,
-          isHead: true,
-        });
+        const context = { isTail: true, isHead: true };
+        const bucket = createBucket(average, 0, entries, context);
         const updates = entries.map(entryToTuple);
 
         const [buckets, leftover, diff] = rebuildBucket(
@@ -526,10 +516,8 @@ describe("mutate", () => {
 
       it("handles complete removal with isTail=true and isHead=true", () => {
         const entries = [createEntry(0), createEntry(1)];
-        const bucket = createBucket(average, 0, entries, {
-          isTail: true,
-          isHead: true,
-        });
+        const context = { isTail: true, isHead: true };
+        const bucket = createBucket(average, 0, entries, context);
         const updates = entries.map(entryToTuple);
 
         const [buckets, leftover, diff] = rebuildBucket(
@@ -596,24 +584,51 @@ describe("mutate", () => {
             [emptyBucket, null],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
-                isTail: true,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[0]!.val,
+                {
+                  isTail: true,
+                  isHead: false,
+                },
+                {
+                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                },
+              ),
             ],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
-                isTail: false,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[1]!.val,
+                {
+                  isTail: false,
+                  isHead: false,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[0]!),
+                    entryToTuple(oddTree.root.entries[1]!),
+                  ],
+                },
+              ),
             ],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
-                isTail: true,
-                isHead: true,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[2]!.val,
+                {
+                  isTail: true,
+                  isHead: true,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[1]!),
+                    entryToTuple(oddTree.root.entries[2]!),
+                  ],
+                },
+              ),
             ],
           ],
         },
@@ -656,24 +671,51 @@ describe("mutate", () => {
           buckets: [
             [null, emptyBucket],
             [
-              await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
-                isTail: true,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[0]!.val,
+                {
+                  isTail: true,
+                  isHead: false,
+                },
+                {
+                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                },
+              ),
               null,
             ],
             [
-              await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
-                isTail: false,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[1]!.val,
+                {
+                  isTail: false,
+                  isHead: false,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[0]!),
+                    entryToTuple(oddTree.root.entries[1]!),
+                  ],
+                },
+              ),
               null,
             ],
             [
-              await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
-                isTail: true,
-                isHead: true,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[2]!.val,
+                {
+                  isTail: true,
+                  isHead: true,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[1]!),
+                    entryToTuple(oddTree.root.entries[2]!),
+                  ],
+                },
+              ),
               null,
             ],
             [oddTree.root, null],
@@ -721,24 +763,51 @@ describe("mutate", () => {
             [emptyBucket, null],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
-                isTail: true,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[0]!.val,
+                {
+                  isTail: true,
+                  isHead: false,
+                },
+                {
+                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                },
+              ),
             ],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
-                isTail: false,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[1]!.val,
+                {
+                  isTail: false,
+                  isHead: false,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[0]!),
+                    entryToTuple(oddTree.root.entries[1]!),
+                  ],
+                },
+              ),
             ],
             [
               null,
-              await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
-                isTail: true,
-                isHead: true,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[2]!.val,
+                {
+                  isTail: true,
+                  isHead: true,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[1]!),
+                    entryToTuple(oddTree.root.entries[2]!),
+                  ],
+                },
+              ),
             ],
           ],
         },
@@ -772,24 +841,51 @@ describe("mutate", () => {
           buckets: [
             [null, emptyBucket],
             [
-              await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
-                isTail: true,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[0]!.val,
+                {
+                  isTail: true,
+                  isHead: false,
+                },
+                {
+                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                },
+              ),
               null,
             ],
             [
-              await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
-                isTail: false,
-                isHead: false,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[1]!.val,
+                {
+                  isTail: false,
+                  isHead: false,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[0]!),
+                    entryToTuple(oddTree.root.entries[1]!),
+                  ],
+                },
+              ),
               null,
             ],
             [
-              await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
-                isTail: true,
-                isHead: true,
-              }),
+              await loadBucket(
+                blockstore,
+                oddTree.root.entries[2]!.val,
+                {
+                  isTail: true,
+                  isHead: true,
+                },
+                {
+                  range: [
+                    entryToTuple(oddTree.root.entries[1]!),
+                    entryToTuple(oddTree.root.entries[2]!),
+                  ],
+                },
+              ),
               null,
             ],
             [oddTree.root, null],

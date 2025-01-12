@@ -103,10 +103,10 @@ export const validateEntryRelation = (
     if (isBoundary(entry)) {
       throw new TypeError("Only the last entry of a bucket can be a boundary.");
     }
+  }
 
-    if (range != null && compareTuples(entry, range[0]) <= 0) {
-      throw new TypeError("Entry must be greater than min tuple range.");
-    }
+  if (range != null && compareTuples(entry, range[0]) <= 0) {
+    throw new TypeError("Entry must be greater than min tuple range.");
   }
 };
 

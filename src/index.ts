@@ -2,7 +2,7 @@ import { Blockstore } from "interface-blockstore";
 import { asyncMap } from "iter-tools-es";
 import { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
-import { DEFAULT_AVERAGE, minTuple } from "./constants.js";
+import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
@@ -45,15 +45,10 @@ export async function loadTree(
   cid: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
-    await loadBucket(
-      blockstore,
-      bucketCidToDigest(cid),
-      {
-        isTail: true,
-        isHead: true,
-      },
-      [minTuple],
-    ),
+    await loadBucket(blockstore, bucketCidToDigest(cid), {
+      isTail: true,
+      isHead: true,
+    }),
   );
 }
 

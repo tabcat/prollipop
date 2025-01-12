@@ -233,6 +233,14 @@ export const moveDown = async (
     ) {
       state.currentBuckets.push(cached);
     } else {
+      const expected = {
+        prefix: {
+          average: bucket.average,
+          level: bucket.level - 1,
+          base: seq,
+        },
+        range: getRange(state),
+      };
       const lowerBucket = await loadBucket(
         state.blockstore,
         val,
@@ -240,12 +248,7 @@ export const moveDown = async (
           isTail: underflows(state) && bucket.getContext().isTail,
           isHead: overflows(state) && bucket.getContext().isHead,
         },
-        getRange(state),
-        {
-          average: bucket.average,
-          level: bucket.level - 1,
-          base: seq,
-        },
+        expected,
       );
       state.currentBuckets.push(lowerBucket);
     }

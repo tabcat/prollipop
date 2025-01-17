@@ -171,13 +171,13 @@ describe("mutate trees", () => {
         try {
           await checkMutate(tree1Name, tree2Name);
         } catch (e) {
-          if (tree1Name.startsWith("random")) {
+          console.error("Failed mutate on trees: ", tree1Name, tree2Name);
+          if (tree1Name.includes("randomized")) {
             console.log(trees.get(tree1Name)!.ids.toString());
           }
-          if (tree2Name.startsWith("random")) {
+          if (tree2Name.includes("randomized")) {
             console.log(trees.get(tree2Name)!.ids.toString());
           }
-
           throw e;
         }
       });

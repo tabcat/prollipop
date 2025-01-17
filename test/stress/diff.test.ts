@@ -46,13 +46,23 @@ export async function checkDiffs(
     orderedDiff(states1.buckets, states2.buckets, compareBuckets),
   );
 
+  // would be nice to yield buckets in a sorted order wrt all yielded diffs
+  actualBucketDiffs.sort((d1, d2) =>
+    compareBuckets(d1[0] ?? d1[1], d2[0] ?? d2[1]),
+  );
+
   expect(actualEntryDiffs.length).to.equal(expectedEntryDiffs.length);
   for (const [actualDiff, expectedDiff] of pairwiseTraversal(
     actualEntryDiffs,
     expectedEntryDiffs,
     () => 0,
   )) {
-    expect(actualDiff).to.deep.equal(expectedDiff);
+    try {
+      expect(actualDiff).to.deep.equal(expectedDiff);
+    } catch (e) {
+      console.error("Failed entry diff on trees: ", tree1Name, tree2Name);
+      throw e;
+    }
   }
 
   expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
@@ -61,15 +71,32 @@ export async function checkDiffs(
     expectedBucketDiffs,
     () => 0,
   )) {
-    expect(actualDiff).to.deep.equal(expectedDiff);
+    try {
+      expect(actualDiff).to.deep.equal(expectedDiff);
+    } catch (e) {
+      console.error("Failed bucket diff on trees: ", tree1Name, tree2Name);
+      throw e;
+    }
   }
 }
 
 describe("diff", () => {
   for (const tree1Name of trees.keys()) {
     for (const tree2Name of trees.keys()) {
-      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () =>
-        await checkDiffs(tree1Name, tree2Name));
+      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () => {
+        try {
+          await checkDiffs(tree1Name, tree2Name);
+        } catch (e) {
+          console.error("Failed diff on trees: ", tree1Name, tree2Name);
+          if (tree1Name.includes("randomized")) {
+            console.log(trees.get(tree1Name)?.ids.toString());
+          }
+          if (tree2Name.includes("randomized")) {
+            console.log(trees.get(tree2Name)?.ids.toString());
+          }
+          throw e;
+        }
+      });
     }
   }
 });

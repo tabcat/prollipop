@@ -43,8 +43,20 @@ const checkSearch = async (
 describe("search", () => {
   for (const tree1Name of trees.keys()) {
     for (const tree2Name of trees.keys()) {
-      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () =>
-        await checkSearch(tree1Name, tree2Name));
+      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () => {
+        try {
+          await checkSearch(tree1Name, tree2Name);
+        } catch (e) {
+          console.error("Failed search on trees: ", tree1Name, tree2Name);
+          if (tree1Name.includes("randomized")) {
+            console.log(trees.get(tree1Name)?.ids.toString());
+          }
+          if (tree2Name.includes("randomized")) {
+            console.log(trees.get(tree2Name)?.ids.toString());
+          }
+          throw e;
+        }
+      });
     }
   }
 });

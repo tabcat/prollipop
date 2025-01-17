@@ -13,7 +13,7 @@ import {
   validateEntriesLength,
   validateEntryRelation,
 } from "../src/codec.js";
-import { MAX_LEVEL, minTuple } from "../src/constants.js";
+import { MAX_LEVEL, MIN_TUPLE } from "../src/constants.js";
 import { DefaultBucket } from "../src/impls.js";
 import { Entry } from "../src/interface.js";
 import {
@@ -98,8 +98,8 @@ describe("codec", () => {
       it("throws when range[1] !== entry on last entry", () => {
         expect(() =>
           validateEntryRelation(entry, undefined, false, () => true, [
-            minTuple,
-            minTuple,
+            MIN_TUPLE,
+            MIN_TUPLE,
           ]),
         ).toThrow("Last entry must equal max tuple range.");
       });
@@ -187,7 +187,7 @@ describe("codec", () => {
         encodedEntries,
         false,
         () => true,
-        [minTuple, tuple],
+        [MIN_TUPLE, tuple],
       );
       expect(decodedEntries).toEqual(entries);
     });
@@ -198,7 +198,7 @@ describe("codec", () => {
         encodedEntries,
         true,
         () => false,
-        [minTuple, tuple],
+        [MIN_TUPLE, tuple],
       );
       expect(decodedEntries).toEqual(entries);
     });
@@ -209,7 +209,7 @@ describe("codec", () => {
         [createEncodedEntry(2), encodedEntry],
         true,
         () => false,
-        [minTuple, createEntry(3)],
+        [MIN_TUPLE, createEntry(3)],
       );
       expect(decodedEntries).toEqual([createEntry(1), createEntry(3)]);
     });
@@ -229,7 +229,7 @@ describe("codec", () => {
     it("throws when entries are not sorted or duplicative", () => {
       expect(() =>
         decodeEntries(0, [encodedEntry, encodedEntry], true, () => false, [
-          entry,
+          MIN_TUPLE,
           entry,
         ]),
       ).toThrow("Entries must be sorted and non-duplicative.");
@@ -238,7 +238,7 @@ describe("codec", () => {
     it("throws when decoded seq is negative", () => {
       expect(() =>
         decodeEntries(0, [[1, bytes, bytes], encodedEntry], true, () => false, [
-          entry,
+          MIN_TUPLE,
           entry,
         ]),
       ).toThrow("Entry seq must be greater than 0.");
@@ -310,7 +310,7 @@ describe("codec", () => {
           level,
           base: 0,
         },
-        range: [minTuple, tuple],
+        range: [MIN_TUPLE, tuple],
       });
       expect(decodedBucket).toEqual(
         new DefaultBucket(2, level, entries, addressed, context),
@@ -369,7 +369,7 @@ describe("codec", () => {
     it("throws when max tuple range not equal to last entry", () => {
       expect(() =>
         decodeBucket(addressed, context, {
-          range: [minTuple, minTuple],
+          range: [MIN_TUPLE, MIN_TUPLE],
         }),
       ).toThrow("Last entry must equal max tuple range.");
     });

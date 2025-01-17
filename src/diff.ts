@@ -1,38 +1,21 @@
-/**
- * implements efficient prolly-tree diff https://www.dolthub.com/blog/2020-06-16-efficient-diff-on-prolly-trees/
- * article by Aaron Son, June 16, 2020
- *
- * (code, comments) have been scraped from the article and turned into (typescript, jsdoc) format.
- *
- * Changes:
- *
- * - In the article, the cursor is always set to level 0. Starting on level 0 may require loading blocks other than root (which is already loaded as part of the tree instance).
- *   The FastForwardUntilEqual and GreatestMatchingLevelForPaths functions from the article have been replaced with ffwUnequalLevel0 and getMatchingBucketsLength, respectively.
- *   Like the original functions, they are able to forward the cursors to unequal points or done.
- *   Unlike the original functions from the article, they are able to handle equal or unequal (by compareTuples) cursors that are not on level 0.
- *
- * - Along with outputing the diffs of entries the diff function below needs to output the diffs of buckets. This allows for bucket cids to be pinned and unpinned by any underlying blockstores or hosts.
- *   This feature required diverging from the article's implementation.
- */
-
 import {
   Diff,
+  difference,
   ExclusiveDiff,
   diff as orderedDiff,
 } from "@tabcat/sorted-sets/difference";
-import { union } from "@tabcat/sorted-sets/union";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import {
-  compareBucketDiffs,
+  compareBLD,
   compareBucketDigests,
-  compareBuckets,
-  compareBytes,
   compareEntries,
   compareTuples,
 } from "./compare.js";
+import { MAX_TUPLE } from "./constants.js";
 import { createCursor } from "./cursor.js";
-import { Bucket, Cursor, Entry, ProllyTree } from "./interface.js";
+import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
+import { getBucketBoundary, getEntryRange, hasIntersect } from "./utils.js";
 
 export type EntryDiff = Diff<Entry>;
 export type BucketDiff = ExclusiveDiff<Bucket>;
@@ -52,71 +35,116 @@ export const createProllyTreeDiff = (): ProllyTreeDiff => ({
   buckets: [],
 });
 
-async function ffwUnequalLevel0(lc: Cursor, rc: Cursor): Promise<void> {
-  if (lc.level() !== rc.level()) {
-    throw new Error("expected cursors to be same level");
+export const getMatchingBucketsLength = (
+  leftBuckets: Bucket[],
+  rightBuckets: Bucket[],
+) => {
+  let matchingBucketsLength = 0;
+  for (const [lb, rb] of pairwiseTraversal(
+    leftBuckets,
+    rightBuckets,
+    compareBucketDigests,
+  )) {
+    if (lb == null || rb == null) {
+      break;
+    }
+
+    matchingBucketsLength++;
   }
 
-  // while both cursors are not done AND the level is not 0 or the comparison is 0
-  // ensures that returned cursors are on level 0 and unequal OR one of the cursors is done
+  return matchingBucketsLength;
+};
+
+export async function unequalizeBuckets(lc: Cursor, rc: Cursor) {
   while (!lc.done() && !rc.done()) {
+    const level = lc.level();
+
     if (compareEntries(lc.current(), rc.current()) === 0) {
-      // move to comparison that is non-equal or one or more cursors done
-      let matchingBucketsLength = 0;
-      for (const [lb, rb] of pairwiseTraversal(
+      const matchingBucketsLength = getMatchingBucketsLength(
         lc.buckets().reverse(),
         rc.buckets().reverse(),
-        compareBucketDigests,
-      )) {
-        if (lb == null || rb == null) {
-          break;
-        }
+      );
 
-        matchingBucketsLength++;
-      }
-
-      const level = lc.level();
-
-      // could be sped up by checking when the bucket will end
-      // skip the matchingBucketsLength for every .next call
+      // moves across matching buckets when cursors are equal
       await Promise.all([
         lc.next(matchingBucketsLength + level),
         rc.next(matchingBucketsLength + level),
       ]);
     } else {
-      if (lc.level() === 0) {
-        // unequal on level zero return
-        return;
+      if (level > 1) {
+        await Promise.all([lc.next(level - 1), rc.next(level - 1)]);
       } else {
-        // unequal on level > zero, increment on level 0
-        await Promise.all([lc.next(0), rc.next(0)]);
+        break;
       }
     }
   }
+
+  await Promise.all([
+    lc.level() === 0 || lc.done() ? Promise.resolve() : lc.next(0),
+    rc.level() === 0 || rc.done() ? Promise.resolve() : rc.next(0),
+  ]);
 }
 
-/**
- * Yields the diff of two trees.
- * A separate blockstore can be provided for fetching the blocks of each tree.
- * Diffs of entries and buckets will be yielded in a deterministic order.
- *
- * @param blockstore
- * @param left
- * @param right
- * @param rightBlockstore
- */
+export function writeEntryDiffs(
+  lEntries: Entry[],
+  rEntries: Entry[],
+  cutoff: Tuple,
+  d: ProllyTreeDiff,
+): [Entry[], Entry[]] {
+  const lLeftovers: Entry[] = [];
+  const rLeftovers: Entry[] = [];
+
+  for (const [le, re] of pairwiseTraversal(lEntries, rEntries, compareTuples)) {
+    if (compareTuples(le ?? re, cutoff) <= 0) {
+      if (le == null || re == null || compareEntries(le, re) !== 0) {
+        d.entries.push([le, re] as EntryDiff);
+      }
+      continue;
+    }
+
+    if (le != null) {
+      lLeftovers.push(le);
+    }
+
+    if (re != null) {
+      rLeftovers.push(re);
+    }
+  }
+
+  return [lLeftovers, rLeftovers];
+}
+
+export function* getDifferentBuckets(
+  lastBuckets: Bucket[],
+  currentBuckets: Bucket[],
+  done: boolean,
+): Iterable<Bucket> {
+  yield* difference(
+    lastBuckets.sort(compareBLD),
+    currentBuckets.sort(compareBLD),
+    compareBLD,
+  );
+
+  if (done) {
+    // already sorted to BLD
+    yield* currentBuckets;
+  }
+}
+
 export async function* diff(
   blockstore: Blockstore,
   left: ProllyTree,
   right: ProllyTree,
   rightBlockstore?: Blockstore,
 ): AsyncIterable<ProllyTreeDiff> {
+  rightBlockstore = rightBlockstore ?? blockstore;
+
   let d = createProllyTreeDiff();
 
-  const lc: Cursor = createCursor(blockstore, left);
-  const rc: Cursor = createCursor(rightBlockstore ?? blockstore, right);
+  const lc = createCursor(blockstore, left);
+  const rc = createCursor(rightBlockstore, right);
 
-  // move higher cursor to level of lower cursor
+  // move cursors to the same level
   if (lc.level() > rc.level()) {
     await lc.next(rc.level());
   }
@@ -124,104 +152,108 @@ export async function* diff(
     await rc.next(lc.level());
   }
 
-  // moves cursors to level 0 or one or more cursors to done
-  await ffwUnequalLevel0(lc, rc);
+  await unequalizeBuckets(lc, rc);
+  // buckets are different and level 0 or one or more cursors done;
 
-  let bucketDiffs: BucketDiff[] = [];
-
-  const updateBucketDiffs = (lbs: Bucket[], rbs: Bucket[]) => {
-    // sort by level
-    lbs.reverse();
-    rbs.reverse();
-
-    bucketDiffs = Array.from(
-      union(
-        bucketDiffs,
-        orderedDiff(lbs, rbs, compareBuckets),
-        compareBucketDiffs,
-      ),
-    );
-
-    let i = 0;
-    for (const diff of bucketDiffs) {
-      if (
-        diff[0] != null &&
-        lbs[0] != null &&
-        compareBuckets(lbs[0], diff[0]) >= 0
-      ) {
-        break;
-      }
-
-      if (
-        diff[1] != null &&
-        rbs[0] != null &&
-        compareBuckets(rbs[0], diff[1]) >= 0
-      ) {
-        break;
-      }
-
-      d.buckets.push(diff);
-      i++;
-    }
-    bucketDiffs.splice(0, i);
-  };
-
-  updateBucketDiffs(lc.buckets(), rc.buckets());
+  let lLeftovers: Entry[] = [];
+  let rLeftovers: Entry[] = [];
 
   while (!lc.done() && !rc.done()) {
-    const [lv, rv] = [lc.current(), rc.current()];
-    const comparison = compareTuples(lv, rv);
+    const lb = lc.currentBucket();
+    const rb = rc.currentBucket();
 
-    if (comparison < 0) {
-      d.entries.push([lv, null]);
-      await lc.next(0);
-    } else if (comparison > 0) {
-      d.entries.push([null, rv]);
-      await rc.next(0);
+    const bucketComparison = compareBLD(lb, rb);
+
+    const lesser: Bucket = bucketComparison < 0 ? lb : rb;
+
+    const intersect = hasIntersect(
+      getEntryRange(lb.entries),
+      getEntryRange(rb.entries),
+    );
+
+    const lLastBuckets = lc.buckets();
+    const rLastBuckets = rc.buckets();
+
+    if (bucketComparison === 0) {
+      await unequalizeBuckets(lc, rc);
     } else {
-      if (compareBytes(lv.val, rv.val) !== 0) {
-        d.entries.push([lv, rv]);
-        await Promise.all([lc.next(0), rc.next(0)]);
+      [lLeftovers, rLeftovers] = writeEntryDiffs(
+        intersect || lesser === lb
+          ? [...lLeftovers, ...lb.entries]
+          : lLeftovers,
+        intersect || lesser === rb
+          ? [...rLeftovers, ...rb.entries]
+          : rLeftovers,
+        getBucketBoundary(lesser)!,
+        d,
+      );
+
+      if (intersect) {
+        await Promise.all([lc.nextBucket(0), rc.nextBucket(0)]);
       } else {
-        // may cause both cursor buckets to change so bucket diffs must be done after ffw
-        await ffwUnequalLevel0(lc, rc);
+        lesser === lb ? await lc.nextBucket(0) : await rc.nextBucket(0);
       }
     }
 
-    updateBucketDiffs(lc.buckets(), rc.buckets());
-
-    if (d.buckets.length > 0) {
-      yield d;
-      d = createProllyTreeDiff();
+    for (const diff of orderedDiff(
+      getDifferentBuckets(lLastBuckets, lc.buckets(), lc.done()),
+      getDifferentBuckets(rLastBuckets, rc.buckets(), rc.done()),
+      compareBLD,
+    )) {
+      d.buckets.push(diff);
     }
+
+    yield d;
+    d = createProllyTreeDiff();
   }
 
   while (!lc.done()) {
-    d.entries.push([lc.current(), null]);
-    await lc.next(0);
+    const lb = lc.currentBucket();
 
-    updateBucketDiffs(lc.buckets(), []);
+    const lLastBuckets = lc.buckets().sort(compareBLD);
+    await lc.nextBucket(0);
 
-    if (d.buckets.length > 0) {
-      yield d;
-      d = createProllyTreeDiff();
+    [lLeftovers, rLeftovers] = writeEntryDiffs(
+      [...lLeftovers, ...lb.entries],
+      rLeftovers,
+      lc.done() ? MAX_TUPLE : getBucketBoundary(lb)!,
+      d,
+    );
+
+    for (const b of getDifferentBuckets(
+      lLastBuckets,
+      lc.buckets(),
+      lc.done(),
+    )) {
+      d.buckets.push([b, null] as BucketDiff);
     }
+
+    yield d;
+    d = createProllyTreeDiff();
   }
 
   while (!rc.done()) {
-    d.entries.push([null, rc.current()]);
-    await rc.next(0);
+    const rb = rc.currentBucket();
 
-    updateBucketDiffs([], rc.buckets());
+    const rLastBuckets = rc.buckets().sort(compareBLD);
+    await rc.nextBucket(0);
 
-    if (d.buckets.length > 0) {
-      yield d;
-      d = createProllyTreeDiff();
+    [lLeftovers, rLeftovers] = writeEntryDiffs(
+      lLeftovers,
+      [...rLeftovers, ...rb.entries],
+      rc.done() ? MAX_TUPLE : getBucketBoundary(rb)!,
+      d,
+    );
+
+    for (const b of getDifferentBuckets(
+      rLastBuckets,
+      rc.buckets(),
+      rc.done(),
+    )) {
+      d.buckets.push([null, b] as BucketDiff);
     }
-  }
 
-  if (bucketDiffs.length) {
-    d.buckets.push(...bucketDiffs);
     yield d;
+    d = createProllyTreeDiff();
   }
 }

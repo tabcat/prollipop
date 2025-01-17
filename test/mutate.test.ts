@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js"; // for the mock
-import { minTuple } from "../src/constants.js";
+import { MIN_TUPLE } from "../src/constants.js";
 import { createCursor } from "../src/cursor.js";
 import { ProllyTreeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
@@ -144,7 +144,6 @@ describe("mutate", () => {
         user: [],
         next: [],
       };
-
       const currentTuple = await getUserUpdateTuple(updts, level);
 
       expect(currentTuple).to.equal(null);
@@ -592,7 +591,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
                 },
               ),
             ],
@@ -679,7 +678,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
                 },
               ),
               null,
@@ -771,7 +770,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
                 },
               ),
             ],
@@ -849,7 +848,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [minTuple, entryToTuple(oddTree.root.entries[0]!)],
+                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
                 },
               ),
               null,

@@ -1,6 +1,7 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js";
+import { MAX_TUPLE, MIN_TUPLE } from "../src/constants.js";
 import { DefaultEntry } from "../src/impls.js";
 import {
   bucketCidToDigest,
@@ -13,6 +14,8 @@ import {
   entryToTuple,
   getBucketBoundary,
   getBucketEntry,
+  getEntryRange,
+  hasIntersect,
   loadBucket,
 } from "../src/utils.js";
 import {
@@ -21,6 +24,7 @@ import {
   bucket,
   cid,
   createEntry,
+  createTuple,
   emptyBucket,
   entry,
   level,
@@ -110,6 +114,41 @@ describe("utils", () => {
 
     it("returns null if the bucket has no entries", () => {
       expect(getBucketEntry(emptyBucket)).to.be.null;
+    });
+  });
+
+  describe("getEntryRange", () => {
+    it("returns a range for a given entry", () => {
+      expect(getEntryRange([entry])).to.deep.equal([tuple, tuple]);
+    });
+
+    it("returns a range for given entries", () => {
+      expect(getEntryRange([createEntry(1), createEntry(3)])).to.deep.equal([
+        createTuple(1),
+        createTuple(3),
+      ]);
+    });
+
+    it("returns min and max tuple if entries are empty", () => {
+      expect(getEntryRange([])).to.deep.equal([MIN_TUPLE, MAX_TUPLE]);
+    });
+  });
+
+  describe("hasIntersect", () => {
+    it("returns true if the ranges intersect", () => {
+      expect(
+        hasIntersect([tuple, createTuple(3)], [createTuple(1), createTuple(2)]),
+      ).to.equal(true);
+      expect(
+        hasIntersect([tuple, createTuple(1)], [createTuple(1), createTuple(2)]),
+      ).to.equal(true);
+      expect(hasIntersect([tuple, tuple], [tuple, tuple])).to.equal(true);
+    });
+
+    it("returns false if ranges do not intersect", () => {
+      expect(
+        hasIntersect([tuple, createTuple(3)], [createTuple(4), createTuple(5)]),
+      ).to.equal(false);
     });
   });
 

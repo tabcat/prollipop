@@ -6,6 +6,7 @@ import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { decodeBucket, encodeBucket, Expected, TupleRange } from "./codec.js";
 import { compareTuples } from "./compare.js";
+import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Context, Entry, Prefix, Tuple } from "./interface.js";
 
@@ -98,6 +99,15 @@ export const getBucketEntry = (bucket: Bucket): Entry | null => {
     bucket.getAddressed().digest,
   );
 };
+
+export function getEntryRange(entries: Entry[]): TupleRange {
+  const min = entries[0]!;
+  const max = entries[entries.length - 1];
+
+  return min == null || max == null
+    ? [MIN_TUPLE, MAX_TUPLE]
+    : [entryToTuple(min), entryToTuple(max)];
+}
 
 export function hasIntersect(range1: TupleRange, range2: TupleRange): boolean {
   return (

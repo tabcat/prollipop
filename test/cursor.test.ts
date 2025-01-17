@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import "../src/boundary.js";
-import { minTuple } from "../src/constants.js";
+import { MIN_TUPLE } from "../src/constants.js";
 import {
   cloneCursorState,
   createCursor,
@@ -274,7 +274,7 @@ describe("cursor", () => {
         it("moves cursor to tuple when moving to higher level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await cursor.nextTuple(minTuple, 0);
+          await cursor.nextTuple(MIN_TUPLE, 0);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.level()).to.equal(0);
@@ -288,7 +288,7 @@ describe("cursor", () => {
         it("moves cursor to tuple when moving to a lower level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await cursor.nextTuple(minTuple, 0);
+          await cursor.nextTuple(MIN_TUPLE, 0);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.level()).to.equal(0);

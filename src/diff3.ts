@@ -5,13 +5,10 @@ import {
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import {
-  compareBoundaries,
+  compareBLD,
   compareBucketDigests,
-  compareBuckets,
   compareEntries,
-  compareLevels,
   compareTuples,
-  composeComparators,
 } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import {
@@ -20,14 +17,8 @@ import {
   ProllyTreeDiff,
   createProllyTreeDiff,
 } from "./diff.js";
-import { Bucket, Cursor, Entry, ProllyTree } from "./interface.js";
-import { getEntryRange, hasIntersect } from "./utils.js";
-
-const compareBoundaryLevelDigest = composeComparators(
-  compareBoundaries,
-  compareLevels,
-  compareBucketDigests,
-);
+import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
+import { getBucketBoundary, getEntryRange, hasIntersect } from "./utils.js";
 
 export const getMatchingBucketsLength = (
   leftBuckets: Bucket[],
@@ -79,36 +70,50 @@ export async function unequalizeBuckets(lc: Cursor, rc: Cursor) {
   ]);
 }
 
-export function diffBucketEntries(
+export function writeEntryDiffs(
   lEntries: Entry[],
   rEntries: Entry[],
+  cutoff: Tuple,
   d: ProllyTreeDiff,
 ): [Entry[], Entry[]] {
   const lLeftovers: Entry[] = [];
   const rLeftovers: Entry[] = [];
 
-  for (const [le, re, leftDone, rightDone] of pairwiseTraversal(
-    lEntries,
-    rEntries,
-    compareTuples,
-  )) {
-    if (!leftDone && !rightDone) {
+  for (const [le, re] of pairwiseTraversal(lEntries, rEntries, compareTuples)) {
+    if (compareTuples(le ?? re, cutoff) <= 0) {
       if (le == null || re == null || compareEntries(le, re) !== 0) {
         d.entries.push([le, re] as EntryDiff);
       }
       continue;
     }
 
-    if (!leftDone && le != null) {
+    if (le != null) {
       lLeftovers.push(le);
     }
 
-    if (!rightDone && re != null) {
+    if (re != null) {
       rLeftovers.push(re);
     }
   }
 
   return [lLeftovers, rLeftovers];
+}
+
+export function* getDifferentBuckets(
+  lastBuckets: Bucket[],
+  currentBuckets: Bucket[],
+  done: boolean,
+): Iterable<Bucket> {
+  yield* difference(
+    lastBuckets.sort(compareBLD),
+    currentBuckets.sort(compareBLD),
+    compareBLD,
+  );
+
+  if (done) {
+    // already sorted to BLD
+    yield* currentBuckets;
+  }
 }
 
 export async function* diff(
@@ -133,83 +138,52 @@ export async function* diff(
   }
 
   await unequalizeBuckets(lc, rc);
-  // buckets are different and level 0 or one or more cursors done
+  // buckets are different and level 0 or one or more cursors done;
 
-  // let lLeftovers: Entry[] = [];
-  // let rLeftovers: Entry[] = [];
+  let lLeftovers: Entry[] = [];
+  let rLeftovers: Entry[] = [];
 
   while (!lc.done() && !rc.done()) {
     const lb = lc.currentBucket();
     const rb = rc.currentBucket();
 
-    const comparison = compareBoundaryLevelDigest(lb, rb);
+    const bucketComparison = compareBLD(lb, rb);
 
-    const lesser: Cursor = comparison < 0 ? lc : rc;
+    const lesser: Bucket = bucketComparison < 0 ? lb : rb;
 
     const intersect = hasIntersect(
       getEntryRange(lb.entries),
       getEntryRange(rb.entries),
     );
 
-    // for (const [le, re, leftDone, rightDone] of pairwiseTraversal(
-    //   intersect || lesser === lc ? [...lLeftovers, ...lb.entries] : lLeftovers,
-    //   intersect || lesser === rc ? [...rLeftovers, ...rb.entries] : rLeftovers,
-    //   compareTuples,
-    // )) {
-    //   if (!leftDone && !rightDone) {
-    //     if (le == null || re == null || compareEntries(le, re) !== 0) {
-    //       d.entries.push([le, re] as EntryDiff);
-    //     }
+    const lLastBuckets = lc.buckets();
+    const rLastBuckets = rc.buckets();
 
-    //     continue;
-    //   }
-
-    //   if (!leftDone && le != null) {
-    //     lLeftovers.push(le);
-    //   }
-
-    //   if (!rightDone && re != null) {
-    //     rLeftovers.push(re);
-    //   }
-    // }
-
-    const lLastBuckets = lc.buckets().reverse();
-    const rLastBuckets = rc.buckets().reverse();
-
-    if (comparison === 0) {
+    if (bucketComparison === 0) {
       await unequalizeBuckets(lc, rc);
     } else {
       if (intersect) {
         await Promise.all([lc.nextBucket(0), rc.nextBucket(0)]);
       } else {
-        await lesser.nextBucket(0);
+        lesser === lb ? await lc.nextBucket(0) : await rc.nextBucket(0);
       }
-    }
 
-    const lRemovedBuckets = Array.from(
-      difference(lLastBuckets, lc.buckets().reverse(), compareBuckets),
-    );
-    const rRemovedBuckets = Array.from(
-      difference(rLastBuckets, rc.buckets().reverse(), compareBuckets),
-    );
-
-    const o = orderedDiff;
-    const c = compareBuckets;
-
-    if (lc.done()) {
-      lRemovedBuckets.push(...lc.buckets());
-      lRemovedBuckets.sort(compareBuckets);
-    }
-
-    if (rc.done()) {
-      rRemovedBuckets.push(...rc.buckets());
-      rRemovedBuckets.sort(compareBuckets);
+      [lLeftovers, rLeftovers] = writeEntryDiffs(
+        intersect || lesser === lb
+          ? [...lLeftovers, ...lb.entries]
+          : lLeftovers,
+        intersect || lesser === rb
+          ? [...rLeftovers, ...rb.entries]
+          : rLeftovers,
+        getBucketBoundary(lesser)!,
+        d,
+      );
     }
 
     for (const diff of orderedDiff(
-      lRemovedBuckets,
-      rRemovedBuckets,
-      compareBuckets,
+      getDifferentBuckets(lLastBuckets, lc.buckets(), lc.done()),
+      getDifferentBuckets(rLastBuckets, rc.buckets(), rc.done()),
+      compareBLD,
     )) {
       d.buckets.push(diff);
     }
@@ -219,28 +193,22 @@ export async function* diff(
   }
 
   while (!lc.done()) {
-    // if (lLeftovers.length > 0) {
-    //   d.entries.push(...lLeftovers.map<EntryDiff>((e) => [e, null]));
-    //   lLeftovers = [];
-    // }
+    [lLeftovers, rLeftovers] = writeEntryDiffs(
+      [...lLeftovers, ...lc.currentBucket().entries],
+      rLeftovers,
+      getBucketBoundary(lc.currentBucket())!,
+      d,
+    );
 
-    // d.entries.push(
-    //   ...lc.currentBucket().entries.map<EntryDiff>((e) => [e, null]),
-    // );
-
-    const lLastBuckets = lc.buckets();
+    const lLastBuckets = lc.buckets().sort(compareBLD);
 
     await lc.nextBucket(0);
 
-    const lRemovedBuckets = Array.from(
-      difference(lLastBuckets, lc.buckets(), compareBuckets),
-    );
-
-    if (lc.done()) {
-      lRemovedBuckets.push(...lc.buckets());
-    }
-
-    for (const b of lRemovedBuckets) {
+    for (const b of getDifferentBuckets(
+      lLastBuckets,
+      lc.buckets(),
+      lc.done(),
+    )) {
       d.buckets.push([b, null] as BucketDiff);
     }
 
@@ -249,32 +217,43 @@ export async function* diff(
   }
 
   while (!rc.done()) {
-    // if (rLeftovers.length > 0) {
-    //   d.entries.push(...rLeftovers.map<EntryDiff>((e) => [null, e]));
-    //   rLeftovers = [];
-    // }
+    const rb = rc.currentBucket();
+    [lLeftovers, rLeftovers] = writeEntryDiffs(
+      lLeftovers,
+      [...rLeftovers, ...rb.entries],
+      getBucketBoundary(rb)!,
+      d,
+    );
 
-    // d.entries.push(
-    //   ...rc.currentBucket().entries.map<EntryDiff>((e) => [null, e]),
-    // );
-
-    const rLastBuckets = rc.buckets();
+    const rLastBuckets = rc.buckets().sort(compareBLD);
 
     await rc.nextBucket(0);
 
-    const rRemovedBuckets = Array.from(
-      difference(rLastBuckets, rc.buckets(), compareBuckets),
-    );
-
-    if (rc.done()) {
-      rRemovedBuckets.push(...rc.buckets());
-    }
-
-    for (const b of rRemovedBuckets) {
+    for (const b of getDifferentBuckets(
+      rLastBuckets,
+      rc.buckets(),
+      rc.done(),
+    )) {
       d.buckets.push([null, b] as BucketDiff);
     }
 
     yield d;
     d = createProllyTreeDiff();
+  }
+
+  if (lLeftovers.length > 0) {
+    for (const e of lLeftovers) {
+      d.entries.push([e, null] as EntryDiff);
+    }
+
+    yield d;
+  }
+
+  if (rLeftovers.length > 0) {
+    for (const e of rLeftovers) {
+      d.entries.push([null, e] as EntryDiff);
+    }
+
+    yield d;
   }
 }

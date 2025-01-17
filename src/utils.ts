@@ -111,8 +111,8 @@ export function getEntryRange(entries: Entry[]): TupleRange {
 
 export function hasIntersect(range1: TupleRange, range2: TupleRange): boolean {
   return (
-    compareTuples(range1[0], range2[1]) < 0 &&
-    compareTuples(range2[0], range1[1]) < 0
+    compareTuples(range1[0], range2[1]) <= 0 &&
+    compareTuples(range2[0], range1[1]) <= 0
   );
 }
 

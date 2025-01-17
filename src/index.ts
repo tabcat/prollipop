@@ -89,11 +89,11 @@ export async function* search(
 
     let results: (Entry | Tuple)[] = [];
     for (const tuple of t) {
-      const currentBucket = cursor.currentBucket();
+      const lastBucket = cursor.currentBucket();
       await cursor.nextTuple(tuple, 0);
 
       // would be nice if results could be yielded before the next tuple is fetched
-      if (cursor.currentBucket() !== currentBucket && results.length > 0) {
+      if (cursor.currentBucket() !== lastBucket && results.length > 0) {
         yield results;
         results = [];
       }

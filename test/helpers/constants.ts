@@ -10,10 +10,12 @@ import {
   DefaultEntry,
   DefaultProllyTree,
 } from "../../src/impls.js";
+import { entryToTuple } from "../../src/utils.js";
 
 export const blockstore = new MemoryBlockstore();
 
 export const createEntry = (seq: number) => new DefaultEntry(seq, bytes, bytes);
+export const createTuple = (seq: number) => entryToTuple(createEntry(seq));
 export const createEncodedEntry = (delta: number): EncodedEntry => [
   delta,
   bytes,

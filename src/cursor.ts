@@ -281,7 +281,7 @@ export const moveRight = async (
     moveUp(state, levelOf(state) + 1);
   }
 
-  if (overflows(state)) {
+  if (overflows(state) && levelOf(state) === rootLevelOf(state)) {
     state.isDone = true;
     guide = (entries) => entries.length - 1;
   } else {

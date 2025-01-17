@@ -2,7 +2,7 @@ import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { TupleRange } from "./codec.js";
 import { compareBytes, compareTuples } from "./compare.js";
-import { minTuple } from "./constants.js";
+import { MIN_TUPLE } from "./constants.js";
 import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
 import { loadBucket } from "./utils.js";
 
@@ -207,7 +207,7 @@ export const getRange = (state: CursorState): TupleRange => {
 
   const min = bucketOf(clone).entries[clone.currentIndex - 1];
 
-  return [min ?? minTuple, entryOf(state)];
+  return [min ?? MIN_TUPLE, entryOf(state)];
 };
 
 export const moveDown = async (

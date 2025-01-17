@@ -7,5 +7,5 @@ export const MAX_LEVEL = 10;
  * Normally a tuple seq is a positive integer.
  * This is not valid for an entry but can be used for comparisons and Tuple Ranges.
  */
-export const minTuple = { seq: -1, key: new Uint8Array(0) };
-export const maxTuple = { seq: Infinity, key: new Uint8Array(0) };
+export const MIN_TUPLE = { seq: -1, key: new Uint8Array(0) };
+export const MAX_TUPLE = { seq: Infinity, key: new Uint8Array(0) };

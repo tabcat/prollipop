@@ -1,3 +1,11 @@
+/**
+ * Implements efficient prolly-tree diff.
+ *
+ * Originally implemented https://www.dolthub.com/blog/2020-06-16-efficient-diff-on-prolly-trees/
+ * Now traverses buckets of entries instead of entries. This reduces async work.
+ *
+ */
+
 import {
   Diff,
   difference,

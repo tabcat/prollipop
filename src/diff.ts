@@ -15,8 +15,8 @@ import {
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import {
-  compareBLD,
   compareBucketDigests,
+  compareBuckets,
   compareEntries,
   compareTuples,
 } from "./compare.js";
@@ -128,9 +128,9 @@ export function* getDifferentBuckets(
   done: boolean,
 ): Iterable<Bucket> {
   yield* difference(
-    lastBuckets.sort(compareBLD),
-    currentBuckets.sort(compareBLD),
-    compareBLD,
+    lastBuckets.reverse(),
+    currentBuckets.reverse(),
+    compareBuckets,
   );
 
   if (done) {
@@ -184,7 +184,7 @@ export async function* diff(
     const lb = lc.currentBucket();
     const rb = rc.currentBucket();
 
-    const bucketComparison = compareBLD(lb, rb);
+    const bucketComparison = compareBuckets(lb, rb);
 
     const lesser: Bucket = bucketComparison < 0 ? lb : rb;
 
@@ -216,7 +216,7 @@ export async function* diff(
     for (const diff of orderedDiff(
       getDifferentBuckets(lLastBuckets, lc.buckets(), lc.done()),
       getDifferentBuckets(rLastBuckets, rc.buckets(), rc.done()),
-      compareBLD,
+      compareBuckets,
     )) {
       d.buckets.push(diff);
     }
@@ -228,7 +228,7 @@ export async function* diff(
   while (!lc.done()) {
     const lb = lc.currentBucket();
 
-    const lLastBuckets = lc.buckets().sort(compareBLD);
+    const lLastBuckets = lc.buckets();
     await lc.nextBucket(0);
 
     [lLeftovers, rLeftovers] = writeEntryDiffs(
@@ -253,7 +253,7 @@ export async function* diff(
   while (!rc.done()) {
     const rb = rc.currentBucket();
 
-    const rLastBuckets = rc.buckets().sort(compareBLD);
+    const rLastBuckets = rc.buckets();
     await rc.nextBucket(0);
 
     [lLeftovers, rLeftovers] = writeEntryDiffs(

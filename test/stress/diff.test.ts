@@ -46,7 +46,6 @@ export async function checkDiffs(
     orderedDiff(states1.buckets, states2.buckets, compareBuckets),
   );
 
-  // would be nice to yield buckets in a sorted order wrt all yielded diffs
   actualBucketDiffs.sort((d1, d2) =>
     compareBuckets(d1[0] ?? d1[1], d2[0] ?? d2[1]),
   );

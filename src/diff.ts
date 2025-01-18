@@ -173,7 +173,6 @@ export async function* diff(
   ) {
     d.buckets.push([null, rc.currentBucket()] as BucketDiff);
   }
-  d.buckets.sort((a, b) => compareBucketDigests(a[0] ?? a[1], b[0] ?? b[1]));
 
   await unequalizeBuckets(lc, rc);
   // buckets are different and level 0 or one or more cursors done;

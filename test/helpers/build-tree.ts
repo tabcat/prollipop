@@ -66,7 +66,7 @@ export const buildProllyTree = (
   const treeState: Bucket[][] = [];
 
   if (entries.length === 0) {
-    return [[createEmptyBucket(average, 0, { isTail: true, isHead: true })]];
+    return [[createEmptyBucket(average)]];
   }
 
   // tree has higher levels

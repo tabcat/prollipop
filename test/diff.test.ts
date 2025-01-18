@@ -20,12 +20,9 @@ describe("diff", () => {
 
     const expected: ProllyTreeDiff[] = [
       {
-        entries: oddTreeEntries.slice(0, 1).map(removed),
-        buckets: [[null, emptyBucket]],
-      },
-      {
-        entries: oddTreeEntries.slice(1).map(removed),
+        entries: oddTreeEntries.slice(0, 2).map(removed),
         buckets: [
+          [null, emptyBucket],
           [
             await loadBucket(blockstore, oddTree.root.entries[0]!.val, {
               isTail: true,
@@ -33,6 +30,11 @@ describe("diff", () => {
             }),
             null,
           ],
+        ],
+      },
+      {
+        entries: oddTreeEntries.slice(2, 4).map(removed),
+        buckets: [
           [
             await loadBucket(blockstore, oddTree.root.entries[1]!.val, {
               isTail: false,
@@ -40,6 +42,11 @@ describe("diff", () => {
             }),
             null,
           ],
+        ],
+      },
+      {
+        entries: oddTreeEntries.slice(4).map(removed),
+        buckets: [
           [
             await loadBucket(blockstore, oddTree.root.entries[2]!.val, {
               isTail: false,

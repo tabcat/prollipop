@@ -177,23 +177,19 @@ export async function* diff(
     if (bucketComparison === 0) {
       await unequalizeBuckets(lc, rc);
     } else {
-      [lLeftovers, rLeftovers] = writeEntryDiffs(
-        intersect || lesser === lb
-          ? [...lLeftovers, ...lb.entries]
-          : lLeftovers,
-        intersect || lesser === rb
-          ? [...rLeftovers, ...rb.entries]
-          : rLeftovers,
-        getBucketBoundary(lesser)!,
-        d,
-      );
-
       if (intersect) {
         await Promise.all([lc.nextBucket(0), rc.nextBucket(0)]);
       } else {
         lesser === lb ? await lc.nextBucket(0) : await rc.nextBucket(0);
       }
     }
+
+    [lLeftovers, rLeftovers] = writeEntryDiffs(
+      intersect || lesser === lb ? [...lLeftovers, ...lb.entries] : lLeftovers,
+      intersect || lesser === rb ? [...rLeftovers, ...rb.entries] : rLeftovers,
+      lc.done() && rc.done() ? MAX_TUPLE : getBucketBoundary(lesser)!,
+      d,
+    );
 
     for (const diff of orderedDiff(
       getDifferentBuckets(lLastBuckets, lc.buckets(), lc.done()),

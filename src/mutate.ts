@@ -282,18 +282,11 @@ export function rebuildBucket(
   bucket: Bucket,
   leftovers: Entry[],
   updates: Update[],
-  visitedLevelTail: boolean,
-  isHead: boolean,
-  bucketsRebuilt: number,
   isBoundary: IsBoundary,
-): [Bucket[], Entry[], EntryDiff[]] {
+): [Entry[][], Entry[], EntryDiff[]] {
   const bucketEntries: Entry[][] = [];
   let entries: Entry[] = leftovers;
   const diffs: EntryDiff[] = [];
-
-  if (bucket.level === 2 && updates.findIndex((e) => e.seq === 199) !== -1) {
-    console.log("nice");
-  }
 
   for (const [e, u] of pairwiseTraversal(
     bucket.entries,
@@ -309,28 +302,11 @@ export function rebuildBucket(
       if (isBoundary(entry)) {
         bucketEntries.push(entries);
         entries = [];
-        bucketsRebuilt++;
       }
     }
   }
 
-  // only create another bucket if isHead and there are entries or no buckets were rebuilt for the level yet.
-  if (isHead && (entries.length > 0 || bucketsRebuilt === 0)) {
-    bucketEntries.push(entries);
-    bucketsRebuilt++;
-  }
-
-  const isNewRoot = bucketsRebuilt === 1 && visitedLevelTail && isHead;
-
-  const buckets: Bucket[] = [];
-  for (const [i, entries] of bucketEntries.entries()) {
-    buckets[i] = getBucket(bucket, entries, {
-      isTail: isNewRoot,
-      isHead: i === bucketEntries.length - 1 && isHead,
-    });
-  }
-
-  return [buckets, entries, diffs];
+  return [bucketEntries, entries, diffs];
 }
 
 /**

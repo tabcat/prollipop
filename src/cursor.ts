@@ -241,6 +241,9 @@ export const moveDown = async (
         },
         range: getRange(state),
       };
+      if (expected.prefix.base === 199) {
+        console.log(expected);
+      }
       const lowerBucket = await loadBucket(
         state.blockstore,
         val,

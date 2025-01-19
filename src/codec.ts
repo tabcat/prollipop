@@ -244,7 +244,11 @@ export function decodeEntries(
 
     const entry = new DefaultEntry(seq, key, val);
 
-    validateEntryRelation(entry, next, isHead, isBoundary, range);
+    try {
+      validateEntryRelation(entry, next, isHead, isBoundary, range);
+    } catch (e) {
+      throw e;
+    }
 
     entries[i] = entry;
   }
@@ -351,13 +355,18 @@ export function decodeBucket(
     context.isTail && context.isHead,
   );
 
-  const entries = decodeEntries(
-    decoded.base,
-    decoded.entries,
-    context.isHead,
-    createIsBoundary(decoded.average, decoded.level),
-    expected?.range,
-  );
+  let entries: Entry[];
+  try {
+    entries = decodeEntries(
+      decoded.base,
+      decoded.entries,
+      context.isHead,
+      createIsBoundary(decoded.average, decoded.level),
+      expected?.range,
+    );
+  } catch (e) {
+    throw e;
+  }
 
   return new DefaultBucket(
     decoded.average,

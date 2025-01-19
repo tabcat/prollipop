@@ -22,6 +22,7 @@ import {
 } from "./diff.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
+  Addressed,
   Bucket,
   Context,
   Cursor,
@@ -238,7 +239,14 @@ export const getBucket = (
   context: Context,
 ): Bucket => {
   const { average, level } = original;
-  const addressed = encodeBucket(average, level, entries, context);
+  let addressed: Addressed;
+  try {
+    addressed = encodeBucket(average, level, entries, context);
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
+
   const bucket = new DefaultBucket(average, level, entries, addressed, context);
 
   // can probably compare entryDiffs.length and entries.length with original.entries.length
@@ -278,10 +286,14 @@ export function rebuildBucket(
   isHead: boolean,
   bucketsRebuilt: number,
   isBoundary: IsBoundary,
-): [Bucket[], Entry[], EntryDiff[], boolean] {
+): [Bucket[], Entry[], EntryDiff[]] {
   const bucketEntries: Entry[][] = [];
   let entries: Entry[] = leftovers;
   const diffs: EntryDiff[] = [];
+
+  if (bucket.level === 2 && updates.findIndex((e) => e.seq === 199) !== -1) {
+    console.log("nice");
+  }
 
   for (const [e, u] of pairwiseTraversal(
     bucket.entries,
@@ -318,7 +330,7 @@ export function rebuildBucket(
     });
   }
 
-  return [buckets, entries, diffs, isNewRoot];
+  return [buckets, entries, diffs];
 }
 
 /**
@@ -348,8 +360,14 @@ export async function* rebuildLevel(
 
   let leftovers: Entry[] = [];
   let visitedLevelTail: boolean = false;
+  let visitedLevelHead: boolean = false;
   let bucketsRebuilt: number = 0;
   let updatedLevel: boolean = false;
+
+  const addNext: Update[] = [];
+  const rmNext: Update[] = [];
+
+  let lastBuiltBucket: Bucket | null = null;
 
   const isBoundary = createIsBoundary(average, level);
 
@@ -360,7 +378,12 @@ export async function* rebuildLevel(
     const { isTail, isHead } = updatee.getContext();
     const boundary = getBucketBoundary(updatee);
 
+    if (updatee.base === 270) {
+      console.log("here");
+    }
+
     visitedLevelTail = visitedLevelTail || isTail;
+    visitedLevelHead = visitedLevelHead || isHead;
 
     if (level === 0) {
       await collectUpdates(boundary, updts, isHead);
@@ -373,7 +396,7 @@ export async function* rebuildLevel(
         : exclusiveMax(updts.current, boundary!, compareTuples),
     );
 
-    const [buckets, entries, entryDiffs, isNewRoot] = rebuildBucket(
+    const [buckets, entries, entryDiffs] = rebuildBucket(
       updatee,
       leftovers,
       updates,
@@ -384,10 +407,7 @@ export async function* rebuildLevel(
     );
     bucketsRebuilt += buckets.length;
     leftovers = entries;
-
-    if (isNewRoot) {
-      state.newRoot = buckets[0]!;
-    }
+    lastBuiltBucket = lastBuiltBucket ?? buckets[buckets.length - 1] ?? null;
 
     // there were changes
     if (buckets[0] !== updatee || buckets.length > 1) {
@@ -396,7 +416,6 @@ export async function* rebuildLevel(
       if (level === 0) {
         // only add entry changes on level 0
         d.entries.push(...entryDiffs);
-
         // removed buckets union mutated bucket path
         state.removedBuckets = Array.from(
           union(
@@ -416,10 +435,10 @@ export async function* rebuildLevel(
         // prioritize add updates
         if (add != null) {
           const bucketEntry = getBucketEntry(add);
-          bucketEntry && updts.next.push(bucketEntry);
+          bucketEntry && addNext.push(bucketEntry);
         } else {
           const bucketEntry = getBucketEntry(rm);
-          bucketEntry && updts.next.push(entryToTuple(bucketEntry));
+          bucketEntry && rmNext.push(entryToTuple(bucketEntry));
         }
       }
 
@@ -488,7 +507,8 @@ export async function* rebuildLevel(
   }
   state.removedBuckets.splice(0, removed);
 
-  if (state.newRoot != null) {
+  if (bucketsRebuilt === 1 && visitedLevelTail && visitedLevelHead) {
+    state.newRoot = lastBuiltBucket;
     // if new root found yield any removed buckets from higher levels
     if (state.removedBuckets.length > 0) {
       for (const b of state.removedBuckets) {
@@ -503,6 +523,8 @@ export async function* rebuildLevel(
   if (d.buckets.length > 0) {
     yield d;
   }
+
+  updts.next = Array.from(union(addNext, rmNext, compareTuples));
 }
 
 export async function* mutate(
@@ -527,6 +549,10 @@ export async function* mutate(
   const { average } = cursor.currentBucket();
 
   while (state.newRoot == null && level < MAX_LEVEL) {
+    if (level === 3) {
+      console.log("here");
+      console.log(state.newRoot);
+    }
     yield* rebuildLevel(cursor, updts, state, average, level);
 
     updts.current = updts.next;
@@ -538,5 +564,14 @@ export async function* mutate(
     throw new Error("Reached max level without finding a new root.");
   }
 
-  tree.root = state.newRoot;
+  tree.root = new DefaultBucket(
+    state.newRoot.average,
+    state.newRoot.level,
+    state.newRoot.entries,
+    state.newRoot.getAddressed(),
+    {
+      isTail: true,
+      isHead: true,
+    },
+  );
 }

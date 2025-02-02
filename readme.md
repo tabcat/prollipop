@@ -76,6 +76,7 @@ As you can see from the list below, a lot of ideas have been stolen from the [Do
 
 ### Additional Resources:
 
+- https://github.com/canvasxyz/okra?tab=readme-ov-file#design
 - https://github.com/ipld/ipld/blob/prolly-trees/specs/advanced-data-layouts/prollytree/spec.md
 - https://github.com/mikeal/prolly-trees
 

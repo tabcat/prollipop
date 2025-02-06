@@ -13,7 +13,7 @@ const average = 3;
 // randomized trees remove 1 of 3 entries
 const random_threshold = 1 / 3;
 
-export const treeEntriesMax = 300;
+export const treeEntriesMax = 3000;
 export const treeEntriesHalf = Math.floor(treeEntriesMax / 2);
 export const treeEntriesThird = Math.floor(treeEntriesMax / 3);
 

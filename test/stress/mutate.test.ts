@@ -77,17 +77,13 @@ const checkMutate = async (
     expect(actualDiff).to.deep.equal(expectedDiff);
   }
 
-  // expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
+  expect(actualBucketDiffs.length).to.equal(expectedBucketDiffs.length);
   for (const [actualDiff, expectedDiff] of pairwiseTraversal(
     actualBucketDiffs,
     expectedBucketDiffs,
     () => 0,
   )) {
-    try {
-      expect(actualDiff).to.deep.equal(expectedDiff);
-    } catch (e) {
-      throw e;
-    }
+    expect(actualDiff).to.deep.equal(expectedDiff);
   }
 
   updateBatch = [];
@@ -112,6 +108,7 @@ const checkMutate = async (
       actualBucketDiffs.push(diff);
     }
   }
+  actualBucketDiffs.sort((a, b) => compareBuckets(a[0] ?? a[1], b[0] ?? b[1]));
 
   expectedEntryDiffs = Array.from(
     orderedDiff(
@@ -147,10 +144,6 @@ const checkMutate = async (
 };
 
 describe("mutate trees", () => {
-  it("tests upper and randomized-upper", async () => {
-    await checkMutate("upper", "randomized-upper");
-  });
-
   for (const tree1Name of trees.keys()) {
     for (const tree2Name of trees.keys()) {
       it(`rebuilds a ${tree1Name} into a ${tree2Name} and back using output diff`, async () => {

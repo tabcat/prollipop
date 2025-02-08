@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js"; // for the mock
 import { MIN_TUPLE } from "../src/constants.js";
 import { createCursor } from "../src/cursor.js";
-import { ProllyTreeDiff } from "../src/diff.js";
+import { EntryDiff, ProllyTreeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
 import { Cursor, Entry } from "../src/interface.js";
 import {
@@ -10,16 +10,14 @@ import {
   Updts,
   applyUpdate,
   collectUpdates,
+  createGetUpdatee,
   exclusiveMax,
-  getBucket,
-  getUpdatee,
   getUserUpdateTuple,
   mutate,
-  rebuildBucket,
   rebuildLevel,
+  segmentEntries,
 } from "../src/mutate.js";
 import {
-  createBucket,
   createReusableAwaitIterable,
   entryToTuple,
   loadBucket,
@@ -31,7 +29,6 @@ import {
   createEntry,
   emptyBucket,
   emptyTree,
-  entry,
   tuple,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
@@ -169,14 +166,17 @@ describe("mutate", () => {
   describe("getUpdatee", () => {
     it("returns next bucket if leftovers is not empty", async () => {
       const cursor = {
-        nextBucket: vi.fn(),
+        nextTuple: vi.fn(),
         currentBucket: () => bucket,
         isAtHead: () => false,
+        rootLevel: () => 0,
+        level: () => 0,
       } as unknown as Cursor;
+      const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(cursor, [entry], tuple, 0, 0);
+      await getUpdatee(tuple, false);
 
-      expect(cursor.nextBucket).toHaveBeenCalledOnce();
+      expect(cursor.nextTuple).toHaveBeenCalledOnce();
     });
 
     it("returns next tuple if level has not changed", async () => {
@@ -188,38 +188,47 @@ describe("mutate", () => {
         rootLevel: () => 0,
         level: () => 0,
       } as unknown as Cursor;
+      const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(cursor, [], tuple, 0, 0);
+      await getUpdatee(tuple, false);
 
       expect(cursor.nextTuple).toHaveBeenCalledOnce();
     });
 
     it("returns jump to tuple if level has changed", async () => {
       const cursor: Cursor = {
-        jumpTo: vi.fn(),
+        nextTuple: vi.fn(),
         isAtHead: () => false,
         isAtTail: () => false,
         currentBucket: () => bucket,
         rootLevel: () => 1,
         level: () => 0,
       } as unknown as Cursor;
+      const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(cursor, [], tuple, 0, 1);
+      await getUpdatee(tuple, false);
 
-      expect(cursor.jumpTo).toHaveBeenCalledOnce();
+      expect(cursor.nextTuple).toHaveBeenCalledOnce();
     });
 
     it("returns empty bucket on level if leftovers is empty and level > root level", async () => {
       const cursor = {
+        jumpTo: vi.fn(),
         currentBucket: () => bucket,
         rootLevel: () => 0,
+        level: () => 1,
       } as unknown as Cursor;
+      const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      const updatee = await getUpdatee(cursor, [], tuple, 0, 1);
+      const updatee = await getUpdatee(tuple, false);
 
-      expect(updatee.average).to.equal(0);
-      expect(updatee.level).to.equal(1);
-      expect(updatee.entries.length).to.equal(0);
+      expect(updatee).to.not.equal(null);
+
+      const context = updatee!.getContext();
+
+      expect(context.isTail).to.be.true;
+      expect(context.isHead).to.be.true;
+      expect(cursor.jumpTo).toHaveBeenCalledOnce();
     });
   });
 
@@ -294,244 +303,155 @@ describe("mutate", () => {
     });
   });
 
-  describe("getBucket", () => {
-    it("returns the original bucket if digests match", () => {
-      expect(
-        getBucket(bucket, bucket.entries, { isTail: true, isHead: true }),
-      ).to.equal(bucket);
-    });
-
-    it("returns a new bucket if digests differ", () => {
-      expect(
-        getBucket(bucket, [], { isTail: true, isHead: true }),
-      ).to.not.equal(bucket);
-    });
-  });
-
-  describe("rebuildBucket", () => {
+  describe("segmentEntries", () => {
     const isBoundary = (e: Entry) => e.seq % 2 === 1;
 
     describe("basic operations", () => {
-      it("returns original bucket when no changes needed", () => {
-        const bucket = createBucket(
-          average,
-          0,
-          [createEntry(0), createEntry(1)],
-          { isTail: true, isHead: false },
-        );
-        const [buckets, leftover, diff] = rebuildBucket(
-          bucket,
+      it("returns original segment and empty diff when no changes needed", () => {
+        const currentEntries = [createEntry(0), createEntry(1)];
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
           [],
           [],
-          true,
-          false,
-          0,
+          [],
           isBoundary,
         );
 
-        expect(buckets[0]).to.equal(bucket); // Same reference
-        expect(leftover).to.deep.equal([]);
-        expect(diff).to.deep.equal([]);
+        expect(entrySegments).to.deep.equal([currentEntries]); // Same reference
+        expect(diffSegments).to.deep.equal([[]]);
+        expect(leftovers).to.deep.equal(false);
       });
 
-      it("processes leftovers correctly", () => {
-        const bucket = createBucket(average, 0, [createEntry(1)], {
-          isTail: true,
-          isHead: false,
-        });
-        const leftovers = [createEntry(0)];
+      it("processes lastEntries and lasDiffs correctly", () => {
+        const lastEntries = [createEntry(0)];
+        const lastDiffs: EntryDiff[] = [[null, createEntry(0)]];
 
-        const [buckets, leftover, diff] = rebuildBucket(
-          bucket,
-          leftovers,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          [createEntry(1)],
+          lastEntries,
+          lastDiffs,
           [],
-          true,
-          false,
-          0,
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([
-          createEntry(0),
-          createEntry(1),
-        ]);
-        expect(leftover).to.deep.equal([]);
-        expect(diff).to.deep.equal([]);
-      });
-
-      it("handles head bucket without boundary", () => {
-        const context = { isTail: false, isHead: true };
-        const bucket = createBucket(average, 0, [createEntry(0)], context);
-        const [buckets] = rebuildBucket(
-          bucket,
-          [],
-          [],
-          false,
-          true,
-          0,
-          () => false,
-        );
-
-        expect(buckets).to.have.length(1);
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(0)]);
+        expect(entrySegments).to.deep.equal([[createEntry(0), createEntry(1)]]);
+        expect(diffSegments).to.deep.equal([lastDiffs]);
+        expect(leftovers).to.deep.equal(false);
       });
     });
 
     describe("updates", () => {
       it("handles add updates", () => {
-        const context = { isTail: true, isHead: false };
-        const bucket = createBucket(average, 0, [createEntry(1)], context);
+        const currentEntries = [createEntry(1)];
         const updates = [createEntry(0)];
 
-        const [buckets, _, diff] = rebuildBucket(
-          bucket,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
+          [],
           [],
           updates,
-          true,
-          false,
-          0,
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([
-          createEntry(0),
-          createEntry(1),
-        ]);
-        expect(diff).to.deep.equal([[null, createEntry(0)]]);
+        expect(entrySegments).to.deep.equal([[createEntry(0), createEntry(1)]]);
+        expect(diffSegments).to.deep.equal([[[null, createEntry(0)]]]);
+        expect(leftovers).to.equal(false);
       });
 
       it("handles remove updates", () => {
-        const entries = [createEntry(0), createEntry(1)];
-        const context = { isTail: true, isHead: false };
-        const bucket = createBucket(average, 0, entries, context);
-        const updates = [entryToTuple(entries[0]!)];
+        const currentEntries = [createEntry(0), createEntry(1)];
+        const updates = [entryToTuple(currentEntries[0]!)];
 
-        const [buckets, _, diff] = rebuildBucket(
-          bucket,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
+          [],
           [],
           updates,
-          true,
-          false,
-          0,
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(1)]);
-        expect(diff).to.deep.equal([[entries[0], null]]);
+        expect(entrySegments).to.deep.equal([[createEntry(1)]]);
+        expect(diffSegments).to.deep.equal([[[currentEntries[0], null]]]);
+        expect(leftovers).to.equal(false);
       });
 
       it("handles strict remove updates", () => {
-        const entries = [createEntry(0), createEntry(1)];
-        const context = { isTail: true, isHead: false };
-        const bucket = createBucket(average, 0, entries, context);
-        const updates = [{ ...entries[0]!, strict: true }];
+        const currentEntries = [createEntry(0), createEntry(1)];
+        const updates = [{ ...currentEntries[0]!, strict: true }];
 
-        const [buckets, _, diff] = rebuildBucket(
-          bucket,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
+          [],
           [],
           updates,
-          true,
-          false,
-          0,
           isBoundary,
         );
 
-        expect(buckets[0]!.entries).to.deep.equal([createEntry(1)]);
-        expect(diff).to.deep.equal([[entries[0], null]]);
+        expect(entrySegments).to.deep.equal([[createEntry(1)]]);
+        expect(diffSegments).to.deep.equal([[[currentEntries[0], null]]]);
+        expect(leftovers).to.equal(false);
       });
     });
 
     // Boundary handling tests
     describe("boundary handling", () => {
       it("splits bucket at boundaries", () => {
-        const context = { isTail: true, isHead: false };
-        const bucket = createBucket(
-          average,
-          0,
-          [createEntry(0), createEntry(2), createEntry(3)],
-          context,
-        );
+        const currentEntries = [createEntry(0), createEntry(2), createEntry(3)];
+        const updates = [createEntry(1)];
 
-        const [buckets] = rebuildBucket(
-          bucket,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
           [],
-          [createEntry(1)],
-          true,
-          false,
-          0,
+          [],
+          updates,
           isBoundary,
         );
 
-        expect(buckets).to.have.length(2);
-        expect(buckets[0]!.entries).to.deep.equal([
-          createEntry(0),
-          createEntry(1),
+        expect(entrySegments).to.deep.equal([
+          [createEntry(0), createEntry(1)],
+          [createEntry(2), createEntry(3)],
         ]);
-        expect(buckets[1]!.entries).to.deep.equal([
-          createEntry(2),
-          createEntry(3),
-        ]);
+        expect(diffSegments).to.deep.equal([[[null, createEntry(1)]], []]);
+        expect(leftovers).to.equal(false);
       });
     });
 
     describe("edge cases", () => {
       it("handles empty bucket", () => {
-        const context = { isTail: true, isHead: true };
-        const bucket = createBucket(average, 0, [], context);
-        const [buckets] = rebuildBucket(
-          bucket,
+        const currentEntries: Entry[] = [];
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
           [],
           [],
-          true,
-          true,
-          0,
+          [],
           isBoundary,
         );
 
-        expect(buckets).to.have.length(1);
-        expect(buckets[0]!.entries).to.deep.equal([]);
+        expect(entrySegments).to.deep.equal([[]]);
+        expect(diffSegments).to.deep.equal([[]]);
+        expect(leftovers).to.equal(true);
       });
 
       it("handles complete removal of entries", () => {
-        const entries = [createEntry(0), createEntry(1)];
-        const context = { isTail: true, isHead: true };
-        const bucket = createBucket(average, 0, entries, context);
-        const updates = entries.map(entryToTuple);
+        const currentEntries = [createEntry(0), createEntry(1)];
+        const updates = currentEntries.map(entryToTuple);
 
-        const [buckets, leftover, diff] = rebuildBucket(
-          bucket,
+        const [entrySegments, diffSegments, leftovers] = segmentEntries(
+          currentEntries,
+          [],
           [],
           updates,
-          false,
-          false,
-          0,
           isBoundary,
         );
 
-        expect(buckets).to.have.length(0);
-        expect(leftover).to.deep.equal([]);
-        expect(diff).to.have.length(2);
-      });
-
-      it("handles complete removal with isTail=true and isHead=true", () => {
-        const entries = [createEntry(0), createEntry(1)];
-        const context = { isTail: true, isHead: true };
-        const bucket = createBucket(average, 0, entries, context);
-        const updates = entries.map(entryToTuple);
-
-        const [buckets, leftover, diff] = rebuildBucket(
-          bucket,
-          [],
-          updates,
-          true,
-          true,
-          0,
-          isBoundary,
-        );
-
-        expect(buckets).to.have.length(1);
-        expect(leftover).to.deep.equal([]);
-        expect(diff).to.have.length(2);
+        expect(entrySegments).to.deep.equal([[]]);
+        expect(diffSegments).to.deep.equal([
+          [
+            [currentEntries[0], null],
+            [currentEntries[1], null],
+          ],
+        ]);
+        expect(leftovers).to.equal(true);
       });
     });
   });

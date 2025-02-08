@@ -451,12 +451,12 @@ export async function* rebuildLevel(
 
   // found new root, yield any removed buckets from higher levels
   if (state.newRoot != null) {
-    if (state.removedBuckets.length > 0) {
-      for (const b of state.removedBuckets) {
-        d.buckets.push([b, null]);
-      }
-      state.removedBuckets = [];
+    for (const b of state.removedBuckets) {
+      d.buckets.push([b, null]);
+    }
+    state.removedBuckets = [];
 
+    if (d.buckets.length > 0) {
       yield d;
     }
 

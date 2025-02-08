@@ -155,15 +155,9 @@ export const validateEntriesLength = (
 };
 
 /**
- * Encodes entries and delta encodes their seq value while validating entry shape and relation.
+ * Encodes entries and delta encodes their seq value.
+ * Validates entry shape and relation.
  *
-  if (
-    range != null &&
-    entries[0] != null &&
-    compareTuples(entries[0], range[0]) < 0
-  ) {
-    throw new TypeError("Entry must be greater than min tuple range.");
-  }
  * @param entries
  * @param isHead
  * @param isBoundary
@@ -274,7 +268,7 @@ export interface TupleRange {
 }
 
 /**
- * Safely CBOR encodes bucket prefix and entries.
+ * Encodes bucket to CBOR.
  * Validates entries length based on context.
  *
  * @param average
@@ -321,7 +315,7 @@ export function encodeBucket(
 }
 
 /**
- * Safely CBOR decodes a bucket.
+ * Decodes a bucket from CBOR.
  * Validates bucket shape and entries length based on context.
  * Optionally compares prefix to an expected prefix and entries to an expected range.
  *

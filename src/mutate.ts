@@ -435,8 +435,10 @@ export async function* rebuildLevel(
     }
     state.removedBuckets.splice(0, removesProcessed);
 
-    yield d;
-    d = createProllyTreeDiff();
+    if (d.buckets.length > 0 && state.newRoot == null) {
+      yield d;
+      d = createProllyTreeDiff();
+    }
 
     updatee = nextUpdatee;
   }

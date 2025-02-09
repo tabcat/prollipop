@@ -8,7 +8,7 @@ import { loadBucket } from "./utils.js";
 
 /**
  * Create a cursor for the given tree.
- * If the tree is not empty, the cursor is initialized at the 0th index of the root entry.
+ * If the tree is non-empty, the cursor is initialized at the 0th index of the root entry.
  * Otherwise, the index is -1 and the cursor is set to done.
  *
  * @param blockstore

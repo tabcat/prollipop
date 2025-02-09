@@ -99,18 +99,6 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
   return compareTuples(aBoundary, bBoundary);
 };
 
-export const compareBLD = composeComparators(
-  compareBoundaries,
-  compareLevels,
-  compareBucketDigests,
-);
-
-export const compareLBD = composeComparators(
-  compareLevels,
-  compareBoundaries,
-  compareBucketDigests,
-);
-
 /**
  * Compare two buckets. level > boundary > digest
  *
@@ -118,4 +106,8 @@ export const compareLBD = composeComparators(
  * @param b
  * @returns
  */
-export const compareBuckets = compareLBD;
+export const compareBuckets = composeComparators(
+  compareLevels,
+  compareBoundaries,
+  compareBucketDigests,
+);

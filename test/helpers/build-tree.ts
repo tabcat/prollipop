@@ -1,6 +1,5 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
-import { firstElement, lastElement } from "@tabcat/ith-element";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
@@ -101,7 +100,7 @@ export const createProllyTreeEntry = (
 ): Entry => {
   const key = sha256(new Uint8Array(Array(id).fill(id)));
   // make val unique to tree
-  const val = encode(id + -firstElement(ids) + lastElement(ids));
+  const val = encode(id + -ids[0]! + ids[ids.length - 1]!);
   return new DefaultEntry(id, key, val);
 };
 

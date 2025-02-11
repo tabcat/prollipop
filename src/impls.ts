@@ -1,11 +1,10 @@
-import { lastElement } from "@tabcat/ith-element";
 import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import { Addressed, Bucket, Context, Entry, ProllyTree } from "./interface.js";
 import { bucketDigestToCid } from "./utils.js";
 
 export const entriesToDeltaBase = (entries: Entry[]): number =>
-  entries.length > 0 ? lastElement(entries).seq : 0;
+  entries.length > 0 ? entries[entries.length - 1]!.seq : 0;
 
 export class DefaultEntry implements Entry {
   constructor(

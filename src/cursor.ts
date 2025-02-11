@@ -1,4 +1,3 @@
-import { firstElement, ithElement, lastElement } from "@tabcat/ith-element";
 import type { Blockstore } from "interface-blockstore";
 import { TupleRange } from "./codec.js";
 import { compareBytes, compareTuples } from "./compare.js";
@@ -35,7 +34,7 @@ export const createCursorState = (
   const currentBuckets = [tree.root];
   const currentIndex = Math.min(
     0,
-    lastElement(currentBuckets).entries.length - 1,
+    currentBuckets[currentBuckets.length - 1]!.entries.length - 1,
   );
 
   return {
@@ -127,7 +126,7 @@ export const preMove = (
 ) => {
   if (level > rootLevelOf(state)) {
     mover = async (_, state) => {
-      state.currentBuckets = [firstElement(state.currentBuckets)];
+      state.currentBuckets = [state.currentBuckets[0]!];
       state.currentIndex = state.currentBuckets[0]!.entries.length - 1;
       state.isDone = true;
     };
@@ -142,20 +141,20 @@ export const cloneCursorState = (state: CursorState): CursorState => ({
 });
 
 const bucketOf = (state: CursorState): Bucket =>
-  lastElement(state.currentBuckets);
+  state.currentBuckets[state.currentBuckets.length - 1]!;
 
 const entryOf = (state: CursorState): Entry => {
   if (state.currentIndex === -1) {
     throw new Error("Failed to return current entry from empty bucket.");
   }
 
-  return ithElement(bucketOf(state).entries, state.currentIndex);
+  return bucketOf(state).entries[state.currentIndex]!;
 };
 
 const levelOf = (state: CursorState): number => bucketOf(state).level;
 
 const rootLevelOf = (state: CursorState): number =>
-  firstElement(state.currentBuckets).level;
+  state.currentBuckets[0]!.level;
 
 export const guideByTuple =
   (target: Tuple) =>
@@ -172,7 +171,8 @@ export const guideByTuple =
  * @returns
  */
 const overflows = (state: CursorState): boolean =>
-  state.currentIndex === lastElement(state.currentBuckets).entries.length - 1;
+  state.currentIndex ===
+  state.currentBuckets[state.currentBuckets.length - 1]!.entries.length - 1;
 
 /**
  * Returns whether decreasing the currentIndex will underflow the bucket.
@@ -335,7 +335,10 @@ export const nextTupleAtLevel = async (
 
   const guide = guideByTuple(tuple);
   const tupleIsGreatest = (state: CursorState) =>
-    compareTuples(tuple, lastElement(bucketOf(state).entries)) > 0;
+    compareTuples(
+      tuple,
+      bucketOf(state).entries[bucketOf(state).entries.length - 1]!,
+    ) > 0;
 
   await moveRight(
     state,
@@ -360,7 +363,7 @@ export const jumpToTupleAtLevel = async (
   const cache = state.currentBuckets;
 
   // set to root at index matching tuple
-  state.currentBuckets = [firstElement(state.currentBuckets)];
+  state.currentBuckets = [state.currentBuckets[0]!];
   state.currentIndex = guideByTuple(tuple)(bucketOf(state).entries);
 
   // move to level if needed

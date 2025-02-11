@@ -1,4 +1,3 @@
-import { firstElement, lastElement } from "@tabcat/ith-element";
 import { union } from "@tabcat/sorted-sets/union";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
@@ -129,7 +128,7 @@ export async function getUserUpdateTuple(
   if (level === 0) {
     for await (const u of updts.user) {
       updts.current.push(...u);
-      return firstElement(u);
+      return u[0]!;
     }
   }
 
@@ -199,7 +198,8 @@ export async function collectUpdates(
   // the last current update is gte to updatee boundary
   const stop = () =>
     // boundary only null if empty bucket (isHead === true)
-    !isHead && compareTuples(lastElement(updts.current), boundary!) >= 0;
+    !isHead &&
+    compareTuples(updts.current[updts.current.length - 1]!, boundary!) >= 0;
 
   if (stop()) {
     // already have enough updates

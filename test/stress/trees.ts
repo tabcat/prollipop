@@ -1,4 +1,3 @@
-import { firstElement } from "@tabcat/ith-element";
 import { compareBuckets } from "../../src/compare.js";
 import { DefaultProllyTree } from "../../src/impls.js";
 import { Bucket, Entry, ProllyTree } from "../../src/interface.js";
@@ -67,7 +66,7 @@ for (const [name, ids] of Array.from(Object.entries(namedTreeIds))) {
   const entries = createProllyTreeEntries(ids);
   const state = buildProllyTree(blockstore, average, entries);
   const buckets = state.flat().sort(compareBuckets);
-  const tree = new DefaultProllyTree(firstElement(firstElement(state)));
+  const tree = new DefaultProllyTree(state[0]![0]!);
 
   trees.set(name, { tree, state, buckets, entries, ids });
 }

@@ -27,6 +27,7 @@ import {
   createReusableAwaitIterable,
   ensureSortedTuplesIterable,
   entryToTuple,
+  exclusiveMax,
   getBucketBoundary,
   getBucketEntry,
 } from "./utils.js";
@@ -68,16 +69,6 @@ export interface State {
    */
   removedBuckets: Bucket[];
 }
-
-export const exclusiveMax = <T>(
-  array: T[],
-  boundary: T,
-  compare: (a: T, b: T) => number,
-) => {
-  const index = array.findIndex((x) => compare(x, boundary) > 0);
-
-  return index === -1 ? array.length : index;
-};
 
 /**
  * Takes an entry and update of equal tuples and returns whether a change must be made.

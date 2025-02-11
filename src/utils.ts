@@ -14,6 +14,16 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
+export const exclusiveMax = <T>(
+  array: T[],
+  boundary: T,
+  compare: (a: T, b: T) => number,
+) => {
+  const index = array.findIndex((x) => compare(x, boundary) > 0);
+
+  return index === -1 ? array.length : index;
+};
+
 export function createReusableAwaitIterable<T>(
   it: AwaitIterable<T>,
 ): AwaitIterable<T> {

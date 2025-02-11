@@ -11,7 +11,6 @@ import {
   applyUpdate,
   collectUpdates,
   createGetUpdatee,
-  exclusiveMax,
   getUserUpdateTuple,
   mutate,
   rebuildLevel,
@@ -36,23 +35,6 @@ import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
 vi.mock("../src/boundary.js");
 
 describe("mutate", () => {
-  describe("exclusiveMax", () => {
-    const compareNums = (a: number, b: number) => a - b;
-    const array = [1, 2, 3];
-
-    it("returns 0 if boundary is lower than first element", () => {
-      expect(exclusiveMax(array, 0, compareNums)).to.equal(0);
-    });
-
-    it("returns array length if boundary is higher than first element", () => {
-      expect(exclusiveMax(array, 4, compareNums)).to.equal(array.length);
-    });
-
-    it("returns index of first element to fail", () => {
-      expect(exclusiveMax(array, 2, compareNums)).to.equal(2);
-    });
-  });
-
   describe("applyUpdate", () => {
     const entry = createEntry(0);
 

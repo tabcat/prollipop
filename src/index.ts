@@ -1,5 +1,4 @@
 import { Blockstore } from "interface-blockstore";
-import { asyncMap } from "iter-tools-es";
 import { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
@@ -136,25 +135,31 @@ export async function* merge(
 
   remoteBlockstore = remoteBlockstore ?? blockstore;
 
-  const getNewEntries = ({ entries }: ProllyTreeDiff) => {
-    const add: Entry[] = [];
-    for (const [t, s] of entries) {
-      if (t == null) {
-        add.push(s);
+  async function* getDifferentEntries() {
+    for await (const { entries } of diff(
+      blockstore,
+      target,
+      source,
+      remoteBlockstore,
+    )) {
+      const add: Entry[] = [];
+      for (const [t, s] of entries) {
+        if (t == null) {
+          add.push(s);
+        }
+
+        if (t != null && s != null) {
+          typeof choose === "function" && choose(t, s) === s && add.push(s);
+        }
       }
 
-      if (t != null && s != null) {
-        typeof choose === "function" && choose(t, s) === s && add.push(s);
+      if (add.length > 0) {
+        yield add;
       }
     }
-    return add;
-  };
+  }
 
-  yield* mutate(
-    blockstore,
-    target,
-    asyncMap(getNewEntries, diff(blockstore, target, source, remoteBlockstore)),
-  );
+  yield* mutate(blockstore, target, getDifferentEntries());
 }
 
 /**

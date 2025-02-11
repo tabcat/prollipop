@@ -62,7 +62,6 @@
     "@noble/hashes": "^1.3.3",
     "@tabcat/sorted-sets": "^4.2.1",
     "interface-blockstore": "^5.2.10",
-    "iter-tools-es": "^7.5.3",
     "multiformats": "^13.1.0",
     "uint8arrays": "^5.0.2"
   },

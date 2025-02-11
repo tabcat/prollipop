@@ -1,3 +1,4 @@
+import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { compareTuples } from "./compare.js";
@@ -15,6 +16,8 @@ import {
   createEmptyBucket,
   ensureSortedTuplesIterable,
   entryToTuple,
+  exclusiveMax,
+  getBucketBoundary,
   loadBucket,
 } from "./utils.js";
 
@@ -79,33 +82,48 @@ export async function* search(
   tuples: AwaitIterable<Tuple[]>,
 ): AsyncIterable<(Entry | Tuple)[]> {
   const cursor = createCursor(blockstore, tree);
+  let results: (Entry | Tuple)[] = [];
 
-  for await (const t of ensureSortedTuplesIterable(tuples)) {
+  for await (let t of ensureSortedTuplesIterable(tuples)) {
     if (cursor.done()) {
       yield t.map(entryToTuple);
       continue;
     }
 
-    let results: (Entry | Tuple)[] = [];
-    for (const tuple of t) {
-      const lastBucket = cursor.currentBucket();
-      await cursor.nextTuple(tuple, 0);
+    // do this without copying in the future
+    t = t.slice();
 
-      // would be nice if results could be yielded before the next tuple is fetched
-      if (cursor.currentBucket() !== lastBucket && results.length > 0) {
+    while (t.length > 0) {
+      await cursor.nextTuple(t[0]!, 0);
+
+      const currentBucket = cursor.currentBucket();
+      const tuples = t.splice(
+        0,
+        cursor.isAtHead()
+          ? t.length
+          : exclusiveMax(t, getBucketBoundary(currentBucket)!, compareTuples),
+      );
+
+      for (const [tuple, entry] of pairwiseTraversal(
+        tuples,
+        currentBucket.entries,
+        compareTuples,
+      )) {
+        if (tuple == null) {
+          continue;
+        } else {
+          if (entry == null) {
+            results.push(entryToTuple(tuple));
+          } else {
+            results.push(entry);
+          }
+        }
+      }
+
+      if (results.length > 0) {
         yield results;
         results = [];
       }
-
-      if (compareTuples(tuple, cursor.current()) === 0) {
-        results.push(cursor.current());
-      } else {
-        results.push(entryToTuple(tuple));
-      }
-    }
-
-    if (results.length > 0) {
-      yield results;
     }
   }
 }

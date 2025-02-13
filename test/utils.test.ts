@@ -55,8 +55,33 @@ describe("utils", () => {
   });
 
   describe("createReusableAwaitIterable", () => {
-    it("returns a reusable await iterable", async () => {
+    it("returns a reusable await iterable (sync)", async () => {
       const iterable = createReusableAwaitIterable([1, 2, 3]);
+
+      for await (const n of iterable) {
+        expect(n).to.equal(1);
+        break;
+      }
+
+      for await (const n of iterable) {
+        expect(n).to.equal(2);
+        break;
+      }
+
+      for await (const n of iterable) {
+        expect(n).to.equal(3);
+        break;
+      }
+    });
+
+    it("returns a reusable await iterable (async)", async () => {
+      const iterable = createReusableAwaitIterable(
+        (async function* (): AsyncIterable<number> {
+          yield 1;
+          yield 2;
+          yield 3;
+        })(),
+      );
 
       for await (const n of iterable) {
         expect(n).to.equal(1);

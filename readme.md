@@ -4,7 +4,6 @@ A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) im
 
 ## Features
 
-- **Async-iterable mutator** - changes can be applied as a stream :o
 - **Efficient diff** - yields entry and bucket diffs!
 - **Powerful cursor api** - climb 🌳s like a pro
 - **Structural validation** - codec is aware of tree context

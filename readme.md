@@ -10,6 +10,8 @@ A modded [Prolly-tree](https://www.dolthub.com/blog/2024-03-03-prolly-trees/) im
 
 ## Project Status
 
+Investigating a bug that has to do with async iterable updates given to mutate function.
+
 It's in a decent state but have not done performance analysis. API breaks will result in major version change.
 
 I haven't tested with non-local blockstores. Things may not work well with networked blockstores.

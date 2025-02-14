@@ -74,7 +74,6 @@ export class Prollipop {
     const tuple = { seq: 0, key: new TextEncoder().encode(key) };
 
     for await (const [entry] of search(this.blockstore, tree, [[tuple]])) {
-      debugger;
       if (entry != null && "val" in entry && entry.val instanceof Uint8Array) {
         return new TextDecoder().decode(entry.val);
       }

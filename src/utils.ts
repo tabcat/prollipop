@@ -32,7 +32,9 @@ export function createReusableAwaitIterable<T>(
     const iterator = it[Symbol.iterator]();
     return {
       [Symbol.iterator]() {
-        return iterator;
+        return {
+          next: () => iterator.next(),
+        };
       },
     };
   }
@@ -41,12 +43,14 @@ export function createReusableAwaitIterable<T>(
     const iterator = it[Symbol.asyncIterator]();
     return {
       [Symbol.asyncIterator]() {
-        return iterator;
+        return {
+          next: () => iterator.next(),
+        };
       },
     };
   }
 
-  throw new Error("Iterable does not support iterator methods.");
+  throw new Error("Provided iterable does not support iterator methods.");
 }
 
 export async function* ensureSortedTuplesIterable(

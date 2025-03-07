@@ -24,7 +24,7 @@ import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
 import {
   AwaitIterable,
   createBucket,
-  createReusableAwaitIterable,
+  createSharedAwaitIterable,
   ensureSortedTuplesIterable,
   entryToTuple,
   exclusiveMax,
@@ -461,7 +461,7 @@ export async function* mutate(
   updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
   let updts: Updts = {
-    user: createReusableAwaitIterable(ensureSortedTuplesIterable(updates)),
+    user: createSharedAwaitIterable(ensureSortedTuplesIterable(updates)),
     current: [],
     next: [],
   };

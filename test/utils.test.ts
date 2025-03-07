@@ -9,7 +9,7 @@ import {
   bucketToPrefix,
   createBucket,
   createEmptyBucket,
-  createReusableAwaitIterable,
+  createSharedAwaitIterable,
   ensureSortedTuplesIterable,
   entryToTuple,
   exclusiveMax,
@@ -54,9 +54,9 @@ describe("utils", () => {
     });
   });
 
-  describe("createReusableAwaitIterable", () => {
+  describe("createSharedAwaitIterable", () => {
     it("returns a reusable await iterable (sync)", async () => {
-      const iterable = createReusableAwaitIterable([1, 2, 3]);
+      const iterable = createSharedAwaitIterable([1, 2, 3]);
 
       for await (const n of iterable) {
         expect(n).to.equal(1);
@@ -75,7 +75,7 @@ describe("utils", () => {
     });
 
     it("returns a reusable await iterable (async)", async () => {
-      const iterable = createReusableAwaitIterable(
+      const iterable = createSharedAwaitIterable(
         (async function* (): AsyncIterable<number> {
           yield 1;
           yield 2;

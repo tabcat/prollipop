@@ -17,7 +17,7 @@ import {
   segmentEntries,
 } from "../src/mutate.js";
 import {
-  createReusableAwaitIterable,
+  createSharedAwaitIterable,
   entryToTuple,
   loadBucket,
 } from "../src/utils.js";
@@ -101,7 +101,7 @@ describe("mutate", () => {
 
   describe("getUserUpdateTuple", () => {
     it("returns a tuple from updts.user", async () => {
-      const updates = createReusableAwaitIterable([[tuple]]);
+      const updates = createSharedAwaitIterable([[tuple]]);
 
       const level = 0;
       const updts: Updts = {
@@ -129,7 +129,7 @@ describe("mutate", () => {
     });
 
     it("returns null if level > 0", async () => {
-      const updates = createReusableAwaitIterable([[tuple]]);
+      const updates = createSharedAwaitIterable([[tuple]]);
 
       const level = 1;
       const updts: Updts = {

@@ -24,7 +24,7 @@ export const exclusiveMax = <T>(
   return index === -1 ? array.length : index;
 };
 
-export function createReusableAwaitIterable<T>(
+export function createSharedAwaitIterable<T>(
   it: AwaitIterable<T>,
 ): AwaitIterable<T> {
   // prefer sync iterator

@@ -1,5 +1,9 @@
 import { CID } from "multiformats/cid";
 
+export type Await<T> = Promise<T> | T;
+
+export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
+
 export interface Tuple {
   /**
    * Sequence number. Can be used to attach order to the key.

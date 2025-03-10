@@ -10,10 +10,6 @@ import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import { Bucket, Context, Entry, Prefix, Tuple } from "./interface.js";
 
-export type Await<T> = Promise<T> | T;
-
-export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
-
 export const exclusiveMax = <T>(
   array: T[],
   boundary: T,

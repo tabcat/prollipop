@@ -1,8 +1,14 @@
 import type { Blockstore } from "interface-blockstore";
-import { TupleRange } from "./codec.js";
 import { compareBytes, compareTuples } from "./compare.js";
 import { MIN_TUPLE } from "./constants.js";
-import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
+import {
+  Bucket,
+  Cursor,
+  Entry,
+  ProllyTree,
+  Tuple,
+  TupleRange,
+} from "./interface.js";
 import { loadBucket } from "./utils.js";
 
 /**

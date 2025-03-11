@@ -12,6 +12,11 @@ export interface Tuple {
   readonly key: Uint8Array;
 }
 
+export interface TupleRange {
+  0: Tuple;
+  1: Tuple;
+}
+
 export interface Entry extends Tuple {
   readonly val: Uint8Array;
 }

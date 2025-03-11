@@ -22,7 +22,7 @@ import {
   Context,
   Entry,
   Prefix,
-  Tuple,
+  TupleRange,
 } from "./interface.js";
 
 export type EncodedEntry = [number, Entry["key"], Entry["val"]];
@@ -253,18 +253,6 @@ export function decodeEntries(
 export interface Expected {
   prefix?: Prefix;
   range?: TupleRange;
-}
-
-export interface TupleRange {
-  /**
-   * Exclusive lower bound.
-   */
-  0: Tuple;
-
-  /**
-   * Inclusive upper bound.
-   */
-  1: Tuple;
 }
 
 /**

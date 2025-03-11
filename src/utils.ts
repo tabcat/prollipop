@@ -4,11 +4,19 @@ import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
-import { decodeBucket, encodeBucket, Expected, TupleRange } from "./codec.js";
+import { decodeBucket, encodeBucket, Expected } from "./codec.js";
 import { compareTuples } from "./compare.js";
 import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
-import { Bucket, Context, Entry, Prefix, Tuple } from "./interface.js";
+import {
+  AwaitIterable,
+  Bucket,
+  Context,
+  Entry,
+  Prefix,
+  Tuple,
+  TupleRange,
+} from "./interface.js";
 
 export const exclusiveMax = <T>(
   array: T[],

@@ -1,5 +1,4 @@
 import { code as cborCode } from "@ipld/dag-cbor";
-import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
@@ -9,7 +8,6 @@ import { compareTuples } from "./compare.js";
 import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
-  AwaitIterable,
   Bucket,
   Context,
   Entry,
@@ -17,72 +15,6 @@ import {
   Tuple,
   TupleRange,
 } from "./interface.js";
-
-export const exclusiveMax = <T>(
-  array: T[],
-  boundary: T,
-  compare: (a: T, b: T) => number,
-) => {
-  const index = array.findIndex((x) => compare(x, boundary) > 0);
-
-  return index === -1 ? array.length : index;
-};
-
-export function createSharedAwaitIterable<T>(
-  it: AwaitIterable<T>,
-): AwaitIterable<T> {
-  // prefer sync iterator
-  if (Symbol.iterator in it) {
-    const iterator = it[Symbol.iterator]();
-    return {
-      [Symbol.iterator]() {
-        return {
-          next: () => iterator.next(),
-        };
-      },
-    };
-  }
-
-  if (Symbol.asyncIterator in it) {
-    const iterator = it[Symbol.asyncIterator]();
-    return {
-      [Symbol.asyncIterator]() {
-        return {
-          next: () => iterator.next(),
-        };
-      },
-    };
-  }
-
-  throw new Error("Provided iterable does not support iterator methods.");
-}
-
-export async function* ensureSortedTuplesIterable(
-  tuples: AwaitIterable<Tuple[]>,
-) {
-  let previous: Tuple | null = null;
-
-  for await (const t of tuples) {
-    if (t.length === 0) continue;
-
-    try {
-      for (const _ of ensureSortedSet(t, compareTuples));
-    } catch (e) {
-      throw new Error("tuples are unsorted or duplicate.", { cause: e });
-    }
-
-    if (
-      t[0] != null &&
-      previous != null &&
-      compareTuples(previous, t[0]) >= 0
-    ) {
-      throw new Error("tuples are unsorted or duplicate.");
-    }
-    previous = t[t.length - 1]!;
-
-    yield t;
-  }
-}
 
 /**
  * Returns the CID for a given bucket digest.

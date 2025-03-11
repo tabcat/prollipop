@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js"; // for the mock
+import { createSharedAwaitIterable } from "../src/common.js";
 import { MIN_TUPLE } from "../src/constants.js";
 import { createCursor } from "../src/cursor.js";
 import { EntryDiff, ProllyTreeDiff } from "../src/diff.js";
@@ -16,11 +17,7 @@ import {
   rebuildLevel,
   segmentEntries,
 } from "../src/mutate.js";
-import {
-  createSharedAwaitIterable,
-  entryToTuple,
-  loadBucket,
-} from "../src/utils.js";
+import { entryToTuple, loadBucket } from "../src/utils.js";
 import {
   average,
   blockstore,

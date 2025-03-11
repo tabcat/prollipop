@@ -9,11 +9,8 @@ import {
   bucketToPrefix,
   createBucket,
   createEmptyBucket,
-  createSharedAwaitIterable,
   doRangesIntersect,
-  ensureSortedTuplesIterable,
   entryToTuple,
-  exclusiveMax,
   getBucketBoundary,
   getBucketEntry,
   getEntryRange,
@@ -37,93 +34,6 @@ import { oddTree, oddTreeState } from "./helpers/odd-tree.js";
 vi.mock("../src/boundary.js");
 
 describe("utils", () => {
-  describe("exclusiveMax", () => {
-    const compareNums = (a: number, b: number) => a - b;
-    const array = [1, 2, 3];
-
-    it("returns 0 if boundary is lower than first element", () => {
-      expect(exclusiveMax(array, 0, compareNums)).to.equal(0);
-    });
-
-    it("returns array length if boundary is higher than first element", () => {
-      expect(exclusiveMax(array, 4, compareNums)).to.equal(array.length);
-    });
-
-    it("returns index of first element to fail", () => {
-      expect(exclusiveMax(array, 2, compareNums)).to.equal(2);
-    });
-  });
-
-  describe("createSharedAwaitIterable", () => {
-    it("returns a reusable await iterable (sync)", async () => {
-      const iterable = createSharedAwaitIterable([1, 2, 3]);
-
-      for await (const n of iterable) {
-        expect(n).to.equal(1);
-        break;
-      }
-
-      for await (const n of iterable) {
-        expect(n).to.equal(2);
-        break;
-      }
-
-      for await (const n of iterable) {
-        expect(n).to.equal(3);
-        break;
-      }
-    });
-
-    it("returns a reusable await iterable (async)", async () => {
-      const iterable = createSharedAwaitIterable(
-        (async function* (): AsyncIterable<number> {
-          yield 1;
-          yield 2;
-          yield 3;
-        })(),
-      );
-
-      for await (const n of iterable) {
-        expect(n).to.equal(1);
-        break;
-      }
-
-      for await (const n of iterable) {
-        expect(n).to.equal(2);
-        break;
-      }
-
-      for await (const n of iterable) {
-        expect(n).to.equal(3);
-        break;
-      }
-    });
-  });
-
-  describe("ensureSortedTuplesIterable", () => {
-    it("yields tuples and entries", async () => {
-      const it = ensureSortedTuplesIterable([[tuple], [createEntry(1)]]);
-
-      expect(await it.next()).to.deep.equal({ value: [tuple], done: false });
-      expect(await it.next()).to.deep.equal({
-        value: [createEntry(1)],
-        done: false,
-      });
-    });
-
-    it("throws if tuples are not sorted or duplicate", async () => {
-      const it1 = ensureSortedTuplesIterable([[tuple, tuple]]);
-
-      expect(it1.next()).to.rejects.toThrow();
-
-      const it2 = ensureSortedTuplesIterable([[tuple], [tuple]]);
-
-      await it2.next();
-
-      expect(it2.next()).to.rejects.toThrow();
-    });
-  });
-
   describe("bucketDigestToCid", () => {
     it("returns the cid for a given bucket hash", () => {
       const { digest } = bucket.getAddressed();

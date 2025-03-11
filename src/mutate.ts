@@ -4,6 +4,11 @@ import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import {
+  createSharedAwaitIterable,
+  ensureSortedTuplesIterable,
+  findDomainIndexFast,
+} from "./common.js";
+import {
   compareBoundaries,
   compareBucketDigests,
   compareBuckets,
@@ -20,14 +25,17 @@ import {
   createProllyTreeDiff,
 } from "./diff.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
-import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
 import {
   AwaitIterable,
+  Bucket,
+  Cursor,
+  Entry,
+  ProllyTree,
+  Tuple,
+} from "./interface.js";
+import {
   createBucket,
-  createSharedAwaitIterable,
-  ensureSortedTuplesIterable,
   entryToTuple,
-  exclusiveMax,
   getBucketBoundary,
   getBucketEntry,
 } from "./utils.js";
@@ -329,7 +337,7 @@ export async function* rebuildLevel(
       0,
       isHead
         ? updts.current.length
-        : exclusiveMax(updts.current, boundary!, compareTuples),
+        : findDomainIndexFast(updts.current, boundary!, compareTuples),
     );
 
     const [entrySegments, diffSegments, leftovers] = segmentEntries(

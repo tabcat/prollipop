@@ -1,22 +1,19 @@
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
+import { ensureSortedTuplesIterable, findDomainIndexFast } from "./common.js";
 import { compareTuples } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Entry, ProllyTree, Tuple } from "./interface.js";
+import { Await, AwaitIterable, Entry, ProllyTree, Tuple } from "./interface.js";
 import { mutate } from "./mutate.js";
 import {
-  Await,
-  AwaitIterable,
   bucketCidToDigest,
   bucketDigestToCid,
   createEmptyBucket,
-  ensureSortedTuplesIterable,
   entryToTuple,
-  exclusiveMax,
   getBucketBoundary,
   loadBucket,
 } from "./utils.js";
@@ -101,7 +98,11 @@ export async function* search(
         0,
         cursor.isAtHead()
           ? t.length
-          : exclusiveMax(t, getBucketBoundary(currentBucket)!, compareTuples),
+          : findDomainIndexFast(
+              t,
+              getBucketBoundary(currentBucket)!,
+              compareTuples,
+            ),
       );
 
       for (const [tuple, entry] of pairwiseTraversal(

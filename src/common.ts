@@ -2,6 +2,17 @@ import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { compareTuples } from "./compare.js";
 import { AwaitIterable, Tuple } from "./interface.js";
 
+/**
+ * Finds the index of the target using binary search.
+ * Returns -1 if the target is not found.
+ * Returns the array length if the target is greater than all elements.
+ * Returns 0 if the target is less than all elements.
+ *
+ * @param arr
+ * @param target
+ * @param compare
+ * @returns
+ */
 export function findIndexFast<T>(
   arr: T[],
   target: T,
@@ -22,9 +33,19 @@ export function findIndexFast<T>(
   return -1;
 }
 
+/**
+ * Finds the index of the first element to be greater than the target.
+ * Returns the array length if the target is greater than all elements.
+ * Returns 0 if the target is less than all elements.
+ *
+ * @param arr
+ * @param target
+ * @param compare
+ * @returns
+ */
 export function findDomainIndexFast<T>(
   arr: T[],
-  boundary: T,
+  target: T,
   compare: (a: T, b: T) => number,
 ) {
   let low = 0;
@@ -32,7 +53,7 @@ export function findDomainIndexFast<T>(
 
   while (low <= high) {
     const mid = (low + high) >>> 1;
-    const cmp = compare(arr[mid]!, boundary);
+    const cmp = compare(arr[mid]!, target);
 
     if (cmp <= 0) low = mid + 1;
     else high = mid - 1;
@@ -41,6 +62,24 @@ export function findDomainIndexFast<T>(
   return low;
 }
 
+/**
+ * Creates an [async] iterable that can be continued from the same point by separate consumers.
+ *
+ * @example
+ * const iterable = createSharedAwaitIterable([1, 2]);
+ *
+ * for await (const n of iterable) {
+ *   console.log(n); // 1
+ *   break;
+ * }
+ *
+ * for await (const n of iterable) {
+ *   console.log(n); // 2
+ * }
+ *
+ * @param it
+ * @returns
+ */
 export function createSharedAwaitIterable<T>(
   it: AwaitIterable<T>,
 ): AwaitIterable<T> {
@@ -70,6 +109,12 @@ export function createSharedAwaitIterable<T>(
   throw new Error("Provided iterable does not support iterator methods.");
 }
 
+/**
+ * Ensures that the tuples are sorted and duplicate free.
+ *
+ * @param tuples
+ * @returns
+ */
 export async function* ensureSortedTuplesIterable(
   tuples: AwaitIterable<Tuple[]>,
 ) {

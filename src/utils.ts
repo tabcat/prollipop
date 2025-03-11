@@ -119,12 +119,9 @@ export const getBucketEntry = (bucket: Bucket): Entry | null => {
 };
 
 export function getEntryRange(entries: Entry[]): TupleRange {
-  const min = entries[0]!;
-  const max = entries[entries.length - 1];
-
-  return min == null || max == null
+  return entries.length === 0
     ? [MIN_TUPLE, MAX_TUPLE]
-    : [entryToTuple(min), entryToTuple(max)];
+    : [entryToTuple(entries[0]!), entryToTuple(entries[entries.length - 1]!)];
 }
 
 export function doRangesIntersect(

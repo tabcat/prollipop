@@ -10,13 +10,13 @@ import {
   createBucket,
   createEmptyBucket,
   createSharedAwaitIterable,
+  doRangesIntersect,
   ensureSortedTuplesIterable,
   entryToTuple,
   exclusiveMax,
   getBucketBoundary,
   getBucketEntry,
   getEntryRange,
-  hasIntersect,
   loadBucket,
 } from "../src/utils.js";
 import {
@@ -180,17 +180,26 @@ describe("utils", () => {
   describe("hasIntersect", () => {
     it("returns true if the ranges intersect", () => {
       expect(
-        hasIntersect([tuple, createTuple(3)], [createTuple(1), createTuple(2)]),
+        doRangesIntersect(
+          [tuple, createTuple(3)],
+          [createTuple(1), createTuple(2)],
+        ),
       ).to.equal(true);
       expect(
-        hasIntersect([tuple, createTuple(1)], [createTuple(1), createTuple(2)]),
+        doRangesIntersect(
+          [tuple, createTuple(1)],
+          [createTuple(1), createTuple(2)],
+        ),
       ).to.equal(true);
-      expect(hasIntersect([tuple, tuple], [tuple, tuple])).to.equal(true);
+      expect(doRangesIntersect([tuple, tuple], [tuple, tuple])).to.equal(true);
     });
 
     it("returns false if ranges do not intersect", () => {
       expect(
-        hasIntersect([tuple, createTuple(3)], [createTuple(4), createTuple(5)]),
+        doRangesIntersect(
+          [tuple, createTuple(3)],
+          [createTuple(4), createTuple(5)],
+        ),
       ).to.equal(false);
     });
   });

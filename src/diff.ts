@@ -23,7 +23,11 @@ import {
 import { MAX_TUPLE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
-import { getBucketBoundary, getEntryRange, hasIntersect } from "./utils.js";
+import {
+  doRangesIntersect,
+  getBucketBoundary,
+  getEntryRange,
+} from "./utils.js";
 
 export type EntryDiff = Diff<Entry>;
 export type BucketDiff = ExclusiveDiff<Bucket>;
@@ -188,7 +192,7 @@ export async function* diff(
 
     const lesser: Bucket = bucketComparison < 0 ? lb : rb;
 
-    const intersect = hasIntersect(
+    const intersect = doRangesIntersect(
       getEntryRange(lb.entries),
       getEntryRange(rb.entries),
     );

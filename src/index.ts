@@ -1,7 +1,7 @@
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
-import { ensureSortedTuplesIterable, findDomainIndexFast } from "./common.js";
+import { ensureSortedTuplesIterable, findUpperBound } from "./common.js";
 import { compareTuples } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
@@ -98,11 +98,7 @@ export async function* search(
         0,
         cursor.isAtHead()
           ? t.length
-          : findDomainIndexFast(
-              t,
-              getBucketBoundary(currentBucket)!,
-              compareTuples,
-            ),
+          : findUpperBound(t, getBucketBoundary(currentBucket)!, compareTuples),
       );
 
       for (const [tuple, entry] of pairwiseTraversal(

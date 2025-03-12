@@ -43,7 +43,7 @@ export function findIndexFast<T>(
  * @param compare
  * @returns
  */
-export function findDomainIndexFast<T>(
+export function findUpperBound<T>(
   arr: T[],
   target: T,
   compare: (a: T, b: T) => number,

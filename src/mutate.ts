@@ -6,7 +6,7 @@ import { IsBoundary, createIsBoundary } from "./boundary.js";
 import {
   createSharedAwaitIterable,
   ensureSortedTuplesIterable,
-  findDomainIndexFast,
+  findUpperBound,
 } from "./common.js";
 import {
   compareBoundaries,
@@ -337,7 +337,7 @@ export async function* rebuildLevel(
       0,
       isHead
         ? updts.current.length
-        : findDomainIndexFast(updts.current, boundary!, compareTuples),
+        : findUpperBound(updts.current, boundary!, compareTuples),
     );
 
     const [entrySegments, diffSegments, leftovers] = segmentEntries(

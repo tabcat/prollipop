@@ -4,7 +4,6 @@
  * @see {@link https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114|okra-js implementation}
  */
 
-import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { MAX_UINT32 } from "./constants.js";
 import type { Entry, Tuple } from "./interface.js";
@@ -35,7 +34,20 @@ export const createIsBoundary: CreateIsBoundary = (
   const limit = Number(MAX_UINT32 / BigInt(average));
 
   return ({ seq, key }: Tuple) => {
-    const digest = sha256(encode([level, seq, key]));
+    // 1 byte for level, 8 bytes for seq, key.length bytes for key
+    const bytes = new Uint8Array(9 + key.length);
+
+    bytes[0] = level;
+
+    for (let i = 8; i > 0; i--) {
+      bytes[i] = seq & 0xff;
+      seq = seq >>> 8;
+    }
+
+    bytes.set(key, 9);
+
+    const digest = sha256(bytes);
+
     return (
       new DataView(digest.buffer, digest.byteOffset, 4).getUint32(0) < limit
     );

@@ -8,7 +8,6 @@ const average = 2;
 const level = 0;
 const limit = MAX_UINT32 / BigInt(average);
 const empty = new Uint8Array(4);
-const filled = new Uint8Array(4).fill(255);
 
 describe("boundary", () => {
   describe("createIsBoundary", () => {
@@ -31,12 +30,12 @@ describe("boundary", () => {
       });
 
       it("returns true when the entry is a boundary", () => {
-        const digest = sha256(encode([level, 1, filled]));
+        const digest = sha256(encode([level, 2, empty]));
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
         expect(
-          isBoundary({ seq: 1, key: filled, val: new Uint8Array() }),
+          isBoundary({ seq: 2, key: empty, val: new Uint8Array() }),
         ).to.equal(passed);
         expect(passed).to.equal(true);
       });

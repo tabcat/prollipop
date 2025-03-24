@@ -32,7 +32,7 @@ export interface EncodedBucket extends Prefix {
 }
 
 const isPositiveInteger = (n: unknown): n is number =>
-  typeof n === "number" && n >= 0 && Number.isInteger(n);
+  typeof n === "number" && n >= 0 && Number.isSafeInteger(n);
 
 export const isEntry = (e: any): e is Entry =>
   typeof e === "object" &&

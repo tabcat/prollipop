@@ -233,6 +233,8 @@ export function segmentEntries(
   let entries = lastEntries;
   let diffs: EntryDiff[] = lastDiffs;
 
+  const lastOfCurrent = currentEntries[currentEntries.length - 1]!;
+
   let leftovers = false;
 
   if (
@@ -256,7 +258,8 @@ export function segmentEntries(
 
     if (entry != null) {
       entries.push(entry);
-      if (isBoundary(entry)) {
+      // only check isBoundary if entry was added or entry is the last of the current entries
+      if ((entryDiff || entry === lastOfCurrent) && isBoundary(entry)) {
         entrySegments.push(entries);
         diffSegments.push(diffs);
         entries = [];

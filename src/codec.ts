@@ -238,11 +238,7 @@ export function decodeEntries(
 
     const entry = new DefaultEntry(seq, key, val);
 
-    try {
-      validateEntryRelation(entry, next, isHead, isBoundary, range);
-    } catch (e) {
-      throw e;
-    }
+    validateEntryRelation(entry, next, isHead, isBoundary, range);
 
     entries[i] = entry;
   }

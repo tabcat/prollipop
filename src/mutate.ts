@@ -233,7 +233,7 @@ export function segmentEntries(
   let entries = lastEntries;
   let diffs: EntryDiff[] = lastDiffs;
 
-  const lastOfCurrent = currentEntries[currentEntries.length - 1]!;
+  const lastOfCurrent = currentEntries[currentEntries.length - 1];
 
   let leftovers = false;
 
@@ -284,7 +284,7 @@ export function segmentEntries(
   return [entrySegments, diffSegments, leftovers];
 }
 
-/**
+/**s
  * Rebuilds a level of the tree.
  *
  * Only yields diffs when the level is changed.

@@ -125,17 +125,19 @@ export const preWrite = async (
   Object.assign(state, stateClone);
 };
 
+const moveToDoneEndOfRoot = async (_: number, state: CursorState) => {
+  state.currentBuckets = [state.currentBuckets[0]!];
+  state.currentIndex = state.currentBuckets[0]!.entries.length - 1;
+  state.isDone = true;
+};
+
 export const preMove = (
   level: number,
   state: CursorState,
   mover: (level: number, state: CursorState) => Promise<void>,
 ) => {
   if (level > rootLevelOf(state)) {
-    mover = async (_, state) => {
-      state.currentBuckets = [state.currentBuckets[0]!];
-      state.currentIndex = state.currentBuckets[0]!.entries.length - 1;
-      state.isDone = true;
-    };
+    mover = moveToDoneEndOfRoot;
   }
 
   return preWrite(level, state, mover);
@@ -199,9 +201,7 @@ export const moveUp = (
 
   guide = guide ?? guideByTuple(entryOf(state));
 
-  const difference = levelOf(state) - level;
-
-  state.currentBuckets.splice(difference, -difference);
+  state.currentBuckets.length -= level - levelOf(state);
   state.currentIndex = guide(bucketOf(state).entries);
 };
 

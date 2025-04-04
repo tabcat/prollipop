@@ -359,8 +359,8 @@ export async function* rebuildLevel(
     );
 
     if (nextUpdatee != null) {
-      lastEntries = entrySegments.splice(-1)[0]!;
-      lastDiffs = diffSegments.splice(-1)[0]!;
+      lastEntries = entrySegments.pop()!;
+      lastDiffs = diffSegments.pop()!;
     }
 
     if (level === 0) {

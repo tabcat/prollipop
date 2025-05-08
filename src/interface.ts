@@ -1,3 +1,4 @@
+import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 
 export type Await<T> = Promise<T> | T;
@@ -78,6 +79,11 @@ export interface Context {
 export interface ProllyTree {
   root: Bucket;
 }
+
+/**
+ * A subset of the Blockstore interface for the cursor to fetch blocks.
+ */
+export type Blockgetter = Pick<Blockstore, "get">;
 
 /**
  * A cursor enables ordered traversal of a prolly-tree.

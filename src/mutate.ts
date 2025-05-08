@@ -1,6 +1,5 @@
 import { union } from "@tabcat/sorted-sets/union";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
-import { Blockstore } from "interface-blockstore";
 import { compare as compareBytes } from "uint8arrays";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import {
@@ -27,6 +26,7 @@ import {
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
   AwaitIterable,
+  Blockgetter,
   Bucket,
   Cursor,
   Entry,
@@ -467,7 +467,7 @@ export async function* rebuildLevel(
 }
 
 export async function* mutate(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   tree: ProllyTree,
   updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {

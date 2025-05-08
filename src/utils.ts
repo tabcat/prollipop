@@ -1,5 +1,4 @@
 import { code as cborCode } from "@ipld/dag-cbor";
-import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
@@ -8,6 +7,7 @@ import { compareTuples } from "./compare.js";
 import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
+  Blockgetter,
   Bucket,
   Context,
   Entry,
@@ -114,7 +114,7 @@ export const createEmptyBucket = (average: number): Bucket => {
  * @returns
  */
 export async function loadBucket(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   digest: Uint8Array,
   context: Context,
   expected?: Expected,

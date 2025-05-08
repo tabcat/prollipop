@@ -1,7 +1,7 @@
-import type { Blockstore } from "interface-blockstore";
 import { compareBytes, compareTuples } from "./compare.js";
 import { MIN_TUPLE } from "./constants.js";
 import {
+  Blockgetter,
   Bucket,
   Cursor,
   Entry,
@@ -20,13 +20,16 @@ import { loadBucket } from "./utils.js";
  * @param tree
  * @returns
  */
-export function createCursor(blockstore: Blockstore, tree: ProllyTree): Cursor {
+export function createCursor(
+  blockstore: Blockgetter,
+  tree: ProllyTree,
+): Cursor {
   const state = createCursorState(blockstore, tree);
   return createCursorFromState(state);
 }
 
 export interface CursorState {
-  blockstore: Blockstore;
+  blockstore: Blockgetter;
   currentBuckets: Bucket[];
   currentIndex: number;
   isDone: boolean;
@@ -34,7 +37,7 @@ export interface CursorState {
 }
 
 export const createCursorState = (
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   tree: ProllyTree,
 ): CursorState => {
   const currentBuckets = [tree.root];

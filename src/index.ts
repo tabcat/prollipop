@@ -7,7 +7,14 @@ import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
-import { Await, AwaitIterable, Entry, ProllyTree, Tuple } from "./interface.js";
+import {
+  Await,
+  AwaitIterable,
+  Blockgetter,
+  Entry,
+  ProllyTree,
+  Tuple,
+} from "./interface.js";
 import { mutate } from "./mutate.js";
 import {
   bucketCidToDigest,
@@ -40,7 +47,7 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
  * @returns
  */
 export async function loadTree(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   cid: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
@@ -74,7 +81,7 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
  * @returns Associated Entry if found, otherwise returns Tuple
  */
 export async function* search(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   tree: ProllyTree,
   tuples: AwaitIterable<Tuple[]>,
 ): AsyncIterable<(Entry | Tuple)[]> {
@@ -138,10 +145,10 @@ export async function* search(
  * @param choose - Chooses between two entries. Must return one of the provided entry instances.
  */
 export async function* merge(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   target: ProllyTree,
   source: ProllyTree,
-  remoteBlockstore?: Blockstore,
+  remoteBlockstore?: Blockgetter,
   choose?: (a: Entry, b: Entry) => Entry,
 ): AsyncIterable<ProllyTreeDiff> {
   if (target.root.average !== source.root.average) {

@@ -13,7 +13,6 @@ import {
   diff as orderedDiff,
 } from "@tabcat/sorted-sets/difference";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
-import { Blockstore } from "interface-blockstore";
 import {
   compareBucketDigests,
   compareBuckets,
@@ -22,7 +21,14 @@ import {
 } from "./compare.js";
 import { MAX_TUPLE } from "./constants.js";
 import { createCursor } from "./cursor.js";
-import { Bucket, Cursor, Entry, ProllyTree, Tuple } from "./interface.js";
+import {
+  Blockgetter,
+  Bucket,
+  Cursor,
+  Entry,
+  ProllyTree,
+  Tuple,
+} from "./interface.js";
 import {
   doRangesIntersect,
   getBucketBoundary,
@@ -144,10 +150,10 @@ export function* getDifferentBuckets(
 }
 
 export async function* diff(
-  blockstore: Blockstore,
+  blockstore: Blockgetter,
   left: ProllyTree,
   right: ProllyTree,
-  rightBlockstore?: Blockstore,
+  rightBlockstore?: Blockgetter,
 ): AsyncIterable<ProllyTreeDiff> {
   rightBlockstore = rightBlockstore ?? blockstore;
 

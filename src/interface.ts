@@ -5,20 +5,13 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
-export interface Tuple {
-  /**
-   * Sequence number. Can be used to attach order to the key.
-   */
-  readonly seq: number;
+export interface KeyRange {
+  0: Uint8Array;
+  1: Uint8Array;
+}
+
+export interface Entry {
   readonly key: Uint8Array;
-}
-
-export interface TupleRange {
-  0: Tuple;
-  1: Tuple;
-}
-
-export interface Entry extends Tuple {
   readonly val: Uint8Array;
 }
 
@@ -33,17 +26,11 @@ export interface Prefix {
    * Leaves are always level 0.
    */
   readonly level: number;
-
-  /**
-   * Base number for delta encoding.
-   * Set to boundary seq, 0 if the bucket is empty.
-   */
-  readonly base: number;
 }
 
 export interface Bucket extends Prefix {
   /**
-   * Array of Entry that is sorted and non-duplicate by Tuple.
+   * Array of Entry that is sorted and non-duplicate by key.
    */
   readonly entries: Entry[];
 
@@ -117,7 +104,7 @@ export interface Cursor {
   currentBucket(): Bucket;
 
   /**
-   * Moves the cursor to the next tuple on the current level.
+   * Moves the cursor to the next entry on the current level.
    */
   next(level?: number): Promise<void>;
 
@@ -127,15 +114,15 @@ export interface Cursor {
   nextBucket(level?: number): Promise<void>;
 
   /**
-   * Moves the cursor to the next tuple on the current level.
-   * If the supplied tuple is less than or equal to the current tuple, the cursor will not be moved.
+   * Moves the cursor to the next entry on the current level.
+   * If the supplied key is less than or equal to the current key, the cursor will not be moved.
    */
-  nextTuple(tuple: Tuple, level?: number): Promise<void>;
+  nextKey(key: Uint8Array, level?: number): Promise<void>;
 
   /**
-   * Jumps the cursor from root to the tuple or parent tuple at level. This is not a move operation.
+   * Jumps the cursor from root to the entry or parent entry at level. This is not a move operation.
    */
-  jumpTo(tuple: Tuple, level?: number): Promise<void>;
+  jumpTo(key: Uint8Array, level?: number): Promise<void>;
 
   /**
    * Returns true or false depending on whether the cursor is at the tail bucket for the level.

@@ -207,13 +207,9 @@ export function decodeEntries(
       throw new TypeError("invalid encoded entry.");
     }
 
-    const [key, val] = encodedEntry;
+    const entry = new DefaultEntry(...encodedEntry);
 
-    const next = entries[i + 1]!;
-
-    const entry = new DefaultEntry(key, val);
-
-    validateEntryRelation(entry, next, isHead, isBoundary, range);
+    validateEntryRelation(entry, entries[i + 1], isHead, isBoundary, range);
 
     entries[i] = entry;
   }

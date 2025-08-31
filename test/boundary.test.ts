@@ -2,7 +2,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import { createIsBoundary } from "../src/boundary.js";
 import { MAX_UINT32 } from "../src/constants.js";
-import { createEntry, numberToBytes } from "./helpers/constants.js";
+import { createEntry, numberToBytes } from "./helpers/utils.js";
 
 const average = 2;
 const level = 0;

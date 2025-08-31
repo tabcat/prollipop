@@ -21,13 +21,12 @@ import {
   average,
   blockstore,
   bucket,
-  bytesToNumber,
-  createEntry,
   emptyBucket,
   emptyTree,
   key,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
+import { bytesToNumber, createEntry } from "./helpers/utils.js";
 
 vi.mock("../src/boundary.js");
 

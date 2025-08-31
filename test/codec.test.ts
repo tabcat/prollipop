@@ -22,9 +22,6 @@ import {
   average,
   bucket,
   context,
-  createBoundaryEntry,
-  createEncodedEntry,
-  createEntry,
   emptyAddressed,
   emptyBucket,
   encodedBucket,
@@ -36,6 +33,11 @@ import {
   level,
   noBytes,
 } from "./helpers/constants.js";
+import {
+  createBoundaryEntry,
+  createEncodedEntry,
+  createEntry,
+} from "./helpers/utils.js";
 
 describe("codec", () => {
   describe("isEntry", () => {

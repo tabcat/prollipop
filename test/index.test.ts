@@ -14,13 +14,13 @@ import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
-  createKey,
   entry,
   key,
   level,
   tree,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries, oddTreeState } from "./helpers/odd-tree.js";
+import { createKey } from "./helpers/utils.js";
 
 vi.mock("../src/boundary.js");
 

@@ -5,7 +5,8 @@ import {
   findIndexFast,
   findUpperBound,
 } from "../src/common.js";
-import { createEntry, key } from "./helpers/constants.js";
+import { key } from "./helpers/constants.js";
+import { createEntry } from "./helpers/utils.js";
 
 describe("common", () => {
   describe("findIndexFast", () => {

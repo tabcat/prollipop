@@ -8,7 +8,8 @@ import {
   composeComparators,
 } from "../src/compare.js";
 import { Bucket, Entry } from "../src/interface.js";
-import { createEntry, entry, noBytes } from "./helpers/constants.js";
+import { entry, noBytes } from "./helpers/constants.js";
+import { createEntry } from "./helpers/utils.js";
 
 describe("compare", () => {
   describe("composeComparators", () => {

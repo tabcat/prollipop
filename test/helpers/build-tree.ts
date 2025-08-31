@@ -9,7 +9,7 @@ import {
   createEmptyBucket,
   getBucketEntry,
 } from "../../src/utils.js";
-import { numberToBytes } from "./constants.js";
+import { numberToBytes } from "./utils.js";
 
 const levelOfBuckets = (
   average: number,

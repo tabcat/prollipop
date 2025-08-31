@@ -20,8 +20,6 @@ import {
   blockstore,
   bucket,
   cid,
-  createEntry,
-  createKey,
   emptyBucket,
   entry,
   key,
@@ -29,6 +27,7 @@ import {
   prefix,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeState } from "./helpers/odd-tree.js";
+import { createEntry, createKey } from "./helpers/utils.js";
 
 vi.mock("../src/boundary.js");
 

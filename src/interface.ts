@@ -5,19 +5,21 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
-export type ComparableKey = Uint8Array | "MIN_KEY" | "MAX_KEY";
+export type Key = Uint8Array;
+export type Val = Uint8Array;
+
+export interface Entry {
+  readonly key: Key;
+  readonly val: Val;
+}
+
+export type KeyLike = Entry | Key;
+
+export type ComparableKey = Key | "MIN_KEY" | "MAX_KEY";
 
 export interface KeyRange {
   0: ComparableKey;
   1: ComparableKey;
-}
-
-export interface KeyRecord {
-  key: Uint8Array;
-}
-
-export interface Entry extends KeyRecord {
-  readonly val: Uint8Array;
 }
 
 export interface Prefix {
@@ -127,7 +129,7 @@ export interface Cursor {
   /**
    * Jumps the cursor from root to the entry or parent entry at level. This is not a move operation.
    */
-  jumpTo(key: Uint8Array, level?: number): Promise<void>;
+  jumpTo(key: Key, level?: number): Promise<void>;
 
   /**
    * Returns true or false depending on whether the cursor is at the tail bucket for the level.

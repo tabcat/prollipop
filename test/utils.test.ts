@@ -104,9 +104,13 @@ describe("utils", () => {
     });
   });
 
-  describe("entryToKeyRecord", () => {
-    it("returns a new key record from an entry", () => {
+  describe("toKey", () => {
+    it("returns a key from an entry", () => {
       expect(toKey(entry)).to.deep.equal(key);
+    });
+
+    it("returns a key from a key", () => {
+      expect(toKey(key)).to.deep.equal(key);
     });
   });
 

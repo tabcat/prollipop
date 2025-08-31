@@ -6,7 +6,7 @@
  *
  * Properties that must be satisfied:
  * - Bucket shape is valid.
- * - Bucket entries have minimum length 0/1/2 for root (level 0)/non-root/root (level > 0).
+ * - Bucket entries have minimum length 0/1/2 for root (level 0)/non-root/root (level > 0), respectively.
  * - Entries are valid, sorted and non-duplicative.
  */
 
@@ -31,9 +31,6 @@ export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
 }
 
-const isPositiveInteger = (n: unknown): n is number =>
-  typeof n === "number" && n >= 0 && Number.isSafeInteger(n);
-
 export const isEntry = (e: any): e is Entry =>
   typeof e === "object" &&
   e !== null &&
@@ -54,7 +51,8 @@ export const isBucket = (b: any): b is EncodedBucket =>
   Number.isInteger(b.average) &&
   b.average > 1 &&
   b.average < Number(MAX_UINT32) &&
-  isPositiveInteger(b.level) &&
+  Number.isInteger(b.level) &&
+  b.level >= 0 &&
   b.level <= MAX_TREE_LEVEL &&
   Array.isArray(b.entries); // check that entries are valid later
 

@@ -96,8 +96,8 @@ describe("mutate", () => {
     });
   });
 
-  describe("getUserUpdateTuple", () => {
-    it("returns a tuple from updts.user", async () => {
+  describe("getUserUpdateKey", () => {
+    it("returns a key from updts.user", async () => {
       const updates = createSharedAwaitIterable([[key]]);
 
       const level = 0;
@@ -107,9 +107,9 @@ describe("mutate", () => {
         next: [],
       };
 
-      const currentTuple = await getUserUpdateKey(updts, level);
+      const currentKey = await getUserUpdateKey(updts, level);
 
-      expect(currentTuple).to.deep.equal(key);
+      expect(currentKey).to.deep.equal(key);
       expect(updts.current.length).to.equal(1);
     });
 
@@ -120,9 +120,9 @@ describe("mutate", () => {
         user: [],
         next: [],
       };
-      const currentTuple = await getUserUpdateKey(updts, level);
+      const currentKey = await getUserUpdateKey(updts, level);
 
-      expect(currentTuple).to.equal(null);
+      expect(currentKey).to.equal(null);
     });
 
     it("returns null if level > 0", async () => {
@@ -135,9 +135,9 @@ describe("mutate", () => {
         next: [],
       };
 
-      const currentTuple = await getUserUpdateKey(updts, level);
+      const currentKey = await getUserUpdateKey(updts, level);
 
-      expect(currentTuple).to.equal(null);
+      expect(currentKey).to.equal(null);
       expect(updts.current.length).to.equal(0);
     });
   });
@@ -158,7 +158,7 @@ describe("mutate", () => {
       expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
 
-    it("returns next tuple if level has not changed", async () => {
+    it("returns next key if level has not changed", async () => {
       const cursor: Cursor = {
         nextKey: vi.fn(),
         isAtHead: () => false,
@@ -174,7 +174,7 @@ describe("mutate", () => {
       expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
 
-    it("returns jump to tuple if level has changed", async () => {
+    it("returns jump to key if level has changed", async () => {
       const cursor: Cursor = {
         nextKey: vi.fn(),
         isAtHead: () => false,

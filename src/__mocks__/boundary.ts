@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import { Entry } from "../interface.js";
 
 // mock for boundary.js
-// exports a createIsBoundary function that returns true if the seq is odd and level is 0
+// exports a createIsBoundary function that returns true if the key is odd and level is 0
 export const createIsBoundary = vi.fn((_: number, level: number) => {
   return ({ key }: Entry) => {
     return (

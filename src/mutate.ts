@@ -79,7 +79,7 @@ export interface State {
 }
 
 /**
- * Takes an entry and update of equal tuples and returns whether a change must be made.
+ * Takes an entry and update of equal keys and returns whether a change must be made.
  *
  * @param entry
  * @param update

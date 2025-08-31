@@ -20,7 +20,7 @@ This package implements a modded prolly-tree in Typescript. Most relevant code i
 
 mods:
 
-- (number, uint8array) tuples for keys
+<!-- - (number, uint8array) tuples for keys -->
 - right-side backbone
 - key-defined boundaries instead of rolling-hash
 
@@ -69,9 +69,10 @@ As you can see from the list below, a lot of ideas have been stolen from the [Do
   - implementation: [dolt](https://github.com/dolthub/dolt)
   - relevance: only consider keys for chunk boundary, not keys + values
 
-- [Range-Based Set Reconciliation](https://logperiodic.com/rbsr.html)
+<!-- I undid this change, keys are just bytes now. -->
+<!-- - [Range-Based Set Reconciliation](https://logperiodic.com/rbsr.html)
   - author: [Doug Hoyte](https://hoytech.com/about)
-  - relevance: Negantrophy section uses [number, hash] tuples as keys
+  - relevance: Negantrophy section uses [number, hash] tuples as keys -->
 
 ### Additional Resources:
 

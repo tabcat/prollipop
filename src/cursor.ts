@@ -340,7 +340,7 @@ export const nextKeyAtLevel = async (
   }
 
   const guide = guideByKey(key);
-  const tupleIsGreatest = (state: CursorState) =>
+  const keyIsGreatest = (state: CursorState) =>
     compareKeys(
       key,
       bucketOf(state).entries[bucketOf(state).entries.length - 1]!.key,
@@ -348,10 +348,10 @@ export const nextKeyAtLevel = async (
 
   await moveRight(
     state,
-    tupleIsGreatest,
+    keyIsGreatest,
     (state) => {
       state.currentIndex = guide(bucketOf(state).entries);
-      state.isDone = tupleIsGreatest(state);
+      state.isDone = keyIsGreatest(state);
     },
     guide,
   );
@@ -368,7 +368,7 @@ export const jumpToKeyAtLevel = async (
 
   const cache = state.currentBuckets;
 
-  // set to root at index matching tuple
+  // set to root at index matching key
   state.currentBuckets = [state.currentBuckets[0]!];
   state.currentIndex = guideByKey(key)(bucketOf(state).entries);
 

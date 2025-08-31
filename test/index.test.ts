@@ -70,19 +70,19 @@ describe("index", () => {
       }
     });
 
-    it("rejects if tuples is unordered or contains duplicates", async () => {
-      const unorderedTuples = createProllyTreeEntries([1, 0]);
+    it("rejects if keys is unordered or contains duplicates", async () => {
+      const unorderedkeys = createProllyTreeEntries([1, 0]);
       const unorderedSearch = search(blockstore, tree, [
-        unorderedTuples,
+        unorderedkeys,
       ]) as AsyncGenerator;
 
       expect(unorderedSearch.next()).rejects.toThrow(
         "keys are unsorted or duplicate.",
       );
 
-      const repeatingTuples = createProllyTreeEntries([1, 1]);
+      const repeatingkeys = createProllyTreeEntries([1, 1]);
       const repeatingSearch = search(blockstore, tree, [
-        repeatingTuples,
+        repeatingkeys,
       ]) as AsyncGenerator;
 
       expect(repeatingSearch.next()).rejects.toThrow(

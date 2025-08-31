@@ -343,7 +343,7 @@ describe("codec", () => {
       );
     });
 
-    it("throws when max tuple range not equal to last entry", () => {
+    it("throws when max key range not equal to last entry", () => {
       expect(() =>
         decodeBucket(addressed, context, {
           range: ["MIN_KEY", "MIN_KEY"],
@@ -351,7 +351,7 @@ describe("codec", () => {
       ).toThrow("Last entry must equal max key range.");
     });
 
-    it("throws when min tuple range less than all entries", () => {
+    it("throws when min key range less than all entries", () => {
       expect(() =>
         decodeBucket(addressed, context, {
           range: [key, key],

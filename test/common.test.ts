@@ -85,7 +85,7 @@ describe("common", () => {
   });
 
   describe("ensureSortedKeysIterable", () => {
-    it("yields tuples and entries", async () => {
+    it("yields keys and entries", async () => {
       const it = ensureSortedKeysIterable([[key], [createEntry(1)]]);
 
       expect(await it.next()).to.deep.equal({ value: [key], done: false });
@@ -95,7 +95,7 @@ describe("common", () => {
       });
     });
 
-    it("throws if tuples are not sorted or duplicate", async () => {
+    it("throws if keys are not sorted or duplicate", async () => {
       const it1 = ensureSortedKeysIterable([[key, key]]);
 
       expect(it1.next()).to.rejects.toThrow();

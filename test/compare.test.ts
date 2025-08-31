@@ -85,7 +85,7 @@ describe("compare", () => {
         ).to.equal(1);
       });
 
-      it("returns the order of the vals if the tuples are identical", () => {
+      it("returns the order of the vals if the keys are identical", () => {
         expect(
           compareEntries(
             {
@@ -200,7 +200,7 @@ describe("compare", () => {
         expect(compareBoundaries(bucket2, bucket1)).to.equal(1);
       });
 
-      it("returns the order of the tuples if the boundaries are not null", () => {
+      it("returns the order of the keys if the boundaries are not null", () => {
         expect(compareBoundaries(bucket2, bucket3)).to.equal(-1);
         expect(compareBoundaries(bucket3, bucket2)).to.equal(1);
       });

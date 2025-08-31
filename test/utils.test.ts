@@ -81,7 +81,7 @@ describe("utils", () => {
       ]);
     });
 
-    it("returns min and max tuple if entries are empty", () => {
+    it("returns min and max key if entries are empty", () => {
       expect(getEntryRange([])).to.deep.equal(["MIN_KEY", "MAX_KEY"]);
     });
   });

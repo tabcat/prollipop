@@ -34,7 +34,7 @@ export const createIsBoundary: CreateIsBoundary = (
   const limit = Number(MAX_UINT32 / BigInt(average));
 
   return ({ key }: Pick<Entry, "key">) => {
-    // 1 byte for level, 8 bytes for seq, key.length bytes for key
+    // 1 byte for level, key.length bytes for key
     const bytes = new Uint8Array(1 + key.length);
 
     bytes[0] = level;

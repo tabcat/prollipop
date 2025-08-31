@@ -44,30 +44,31 @@ describe("usage", () => {
     const blockstore = new MemoryBlockstore();
 
     /**
-     * Tuples are made up of a seq and a hash. These are used like keys in a key/value store.
+     * Keys are bytes.
      */
     const key = new TextEncoder().encode("hello");
 
     /**
-     * Entries are made up of a seq, hash, and val.
-     * The seq and key are the key, while the val is the value.
-     * The seq and key give entries a sort, entries are stored in this order in the tree.
+     * So are values.
      */
-    const entry: Entry = new DefaultEntry(
-      key,
-      new TextEncoder().encode("world"),
-    );
+    const val = new TextEncoder().encode("world");
 
     /**
-     * To add a entry to a tree the mutate function is used. It takes an AwaitIterable of Entries or Tuples.
-     * If a entry is supplied it will be added to the tree. If a tuple is supplied, the matching entry (if existing in the tree) will be removed.
+     * Entries are made up of a key and val.
+     * Entries are stored by lexicographic sort of the keys in the tree.
+     */
+    const entry: Entry = new DefaultEntry(key, val);
+
+    /**
+     * To add a entry to a tree the mutate function is used. It takes an AwaitIterable of Entries or Keys.
+     * If a entry is supplied it will be added to the tree. If a key is supplied, the matching entry (if existing in the tree) will be removed.
      *
-     * THE ORDER THE NODES AND TUPLES ARE SUPPLIED IS CRITICAL.
-     * THERE CAN BE NO DUPLICATE NODES OR TUPLES PER TUPLE SUPPLIED TO THE SAME MUTATE CALL.
+     * THE ORDER THE NODES AND KEYS ARE SUPPLIED IS CRITICAL.
+     * THERE CAN BE NO DUPLICATE NODES OR KEYS PER KEY SUPPLIED TO THE SAME MUTATE CALL.
      * VIOLATING EITHER OF THESE WILL RESULT IN AN ERROR.
      *
-     * The AwaitIterable supplying Entries and Tuples MUST be an ordered set where each element is unique per Tuple.
-     * Utility functions for maintaining order can be found in `prollipop/compare`, specifically `compareTuples` which can compare tuples and entries.
+     * The AwaitIterable supplying Entries and Keys MUST be an ordered set where each element is unique per Key.
+     * Utility functions for maintaining order can be found in `prollipop/compare`.
      */
     for await (const diff of mutate(blockstore, tree, [[entry]])) {
       for (const [removed, added] of diff.entries) {
@@ -122,7 +123,7 @@ describe("usage", () => {
       for (const entry of entries) {
         if ("val" in entry) {
           /**
-           * If an entry is yieled then the key tuple exists in the tree.
+           * If an entry is yielded then the key exists in the tree.
            */
           found.push(entry);
           console.log(new TextDecoder().decode(entry.key));
@@ -130,7 +131,7 @@ describe("usage", () => {
         } else {
           console.log(entry);
           /**
-           * If a tuple is yielded then the key does not exist in the tree
+           * If a key is yielded then the key does not exist in the tree
            */
         }
       }
@@ -186,7 +187,7 @@ describe("usage", () => {
     expect(tree).to.deep.equal(clone2!);
 
     /**
-     * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the tuple (aka the key).
+     * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the key.
      */
     for await (const _ of mutate(blockstore, tree, [[toKey(entry)]])) {
       /**

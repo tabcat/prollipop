@@ -242,7 +242,7 @@ describe("cursor", () => {
       });
 
       describe("nextKey", () => {
-        it("sets the cursor to done if tuple exceeds max tuple of tree", async () => {
+        it("sets the cursor to done if key exceeds max key of tree", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
           expect(cursor.index()).to.equal(0);
@@ -298,7 +298,7 @@ describe("cursor", () => {
       });
 
       describe("jumpTo", () => {
-        it("jumps to the domain of the tuple at the requested level", async () => {
+        it("jumps to the domain of the key at the requested level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
           await cursor.next();

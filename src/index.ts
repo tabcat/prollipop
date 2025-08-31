@@ -137,7 +137,7 @@ export async function* search(
 /**
  * Merge a source prolly-tree into target.
  * If a key does not exist in target then it is added from source into target.
- * If both trees have an entry at the same tuple and a `choose` function was provided,
+ * If both trees have an entry at the same key and a `choose` function was provided,
  * then the entry from the source tree may also be added to target.
  *
  * @param blockstore - target blockstore

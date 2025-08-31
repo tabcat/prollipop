@@ -47,7 +47,7 @@ export const compareKeys = (a: ComparableKey, b: ComparableKey): number => {
 };
 
 /**
- * Compare two entries. seq > key > val
+ * Compare two entries. key > val
  *
  * @param a
  * @param b

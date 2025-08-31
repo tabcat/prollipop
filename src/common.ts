@@ -1,4 +1,3 @@
-import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { compareBytes } from "./compare.js";
 import { AwaitIterable, KeyLike } from "./interface.js";
 import { toKey } from "./utils.js";
@@ -110,11 +109,9 @@ export function createSharedAwaitIterable<T>(
   throw new Error("Provided iterable does not support iterator methods.");
 }
 
-const unsortedError = (options?: ErrorOptions) =>
-  new Error("keys are unsorted or duplicate.", options);
-
 /**
  * Ensures that keys is sorted and duplicate free.
+ * Handles empty KeyLike arrays.
  *
  * @param keys
  * @returns
@@ -124,26 +121,18 @@ export async function* ensureSortedKeysIterable(
 ) {
   let previous: Uint8Array | null = null;
 
-  for await (const k of keys) {
-    if (k.length === 0) continue;
+  for await (const _keys of keys) {
+    if (_keys.length === 0) continue;
 
-    try {
-      for (const _ of ensureSortedSet(k, (a, b) =>
-        compareBytes(toKey(a), toKey(b)),
-      ));
-    } catch (e) {
-      throw unsortedError({ cause: e });
+    for (let k of _keys) {
+      const key = toKey(k);
+      if (previous != null && compareBytes(previous, key) >= 0) {
+        throw new Error("keys are unsorted or duplicate.");
+      }
+
+      previous = key;
     }
 
-    if (
-      k[0] != null &&
-      previous != null &&
-      compareBytes(previous, toKey(k[0])) >= 0
-    ) {
-      throw unsortedError();
-    }
-    previous = toKey(k[k.length - 1]!);
-
-    yield k;
+    yield _keys;
   }
 }

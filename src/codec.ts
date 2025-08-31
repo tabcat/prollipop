@@ -50,7 +50,7 @@ export const isBucket = (b: any): b is EncodedBucket =>
   Object.keys(b).length === 3 &&
   Number.isInteger(b.average) &&
   b.average > 1 &&
-  b.average < Number(MAX_UINT32) &&
+  b.average < MAX_UINT32 &&
   Number.isInteger(b.level) &&
   b.level >= 0 &&
   b.level <= MAX_TREE_LEVEL &&

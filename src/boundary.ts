@@ -31,7 +31,7 @@ export const createIsBoundary: CreateIsBoundary = (
   average: number,
   level: number,
 ): IsBoundary => {
-  const limit = Number(MAX_UINT32 / BigInt(average));
+  const limit = Number(MAX_UINT32 / average);
 
   return ({ key }: Pick<Entry, "key">) => {
     // 1 byte for level, key.length bytes for key

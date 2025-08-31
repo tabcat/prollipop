@@ -6,7 +6,7 @@ import { MAX_UINT32 } from "../src/constants.js";
 
 const average = 2;
 const level = 0;
-const limit = MAX_UINT32 / BigInt(average);
+const limit = MAX_UINT32 / average;
 const empty = new Uint8Array(4);
 
 describe("boundary", () => {

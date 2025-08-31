@@ -1,13 +1,12 @@
-import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
 import { createIsBoundary } from "../src/boundary.js";
 import { MAX_UINT32 } from "../src/constants.js";
+import { createEntry, numberToBytes } from "./helpers/constants.js";
 
 const average = 2;
 const level = 0;
 const limit = MAX_UINT32 / average;
-const empty = new Uint8Array(4);
 
 describe("boundary", () => {
   describe("createIsBoundary", () => {
@@ -19,22 +18,20 @@ describe("boundary", () => {
       const isBoundary = createIsBoundary(average, 0);
 
       it("returns false when the entry is not a boundary", () => {
-        const digest = sha256(encode([level, 1, empty]));
+        const digest = sha256(new Uint8Array([level, ...numberToBytes(0)]));
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
-        expect(isBoundary({ key: empty })).to.equal(passed);
+        expect(isBoundary(createEntry(0))).to.equal(passed);
         expect(passed).to.equal(false);
       });
 
       it("returns true when the entry is a boundary", () => {
-        const digest = sha256(encode([level, 2, empty]));
+        const digest = sha256(new Uint8Array([level, ...numberToBytes(1)]));
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
-        expect(isBoundary({ key: new Uint8Array([0, 0, 0, 1]) })).to.equal(
-          passed,
-        );
+        expect(isBoundary(createEntry(1))).to.equal(passed);
         expect(passed).to.equal(true);
       });
     });

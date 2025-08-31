@@ -1,6 +1,4 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import "../src/boundary.js";
-import { MIN_TUPLE } from "../src/constants.js";
 import {
   cloneCursorState,
   createCursor,
@@ -15,6 +13,7 @@ import {
   average,
   blockstore,
   bucket,
+  createKey,
   emptyBucket,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries, oddTreeIds } from "./helpers/odd-tree.js";
@@ -242,58 +241,56 @@ describe("cursor", () => {
         });
       });
 
-      describe("nextTuple", () => {
-        const highTuple = { seq: Infinity, key: new Uint8Array() };
-
+      describe("nextKey", () => {
         it("sets the cursor to done if tuple exceeds max tuple of tree", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.done()).to.equal(false);
 
-          await cursor.nextTuple(highTuple);
+          await cursor.nextKey("MAX_KEY");
 
           expect(cursor.index()).to.equal(oddTree.root.entries.length - 1);
           expect(cursor.done()).to.equal(true);
         });
 
-        it("moves cursor to tuple on same level", async () => {
+        it("moves cursor to key on same level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.level()).to.equal(1);
           expect(cursor.done()).to.equal(false);
 
-          await cursor.nextTuple({ seq: 3, key: new Uint8Array() });
+          await cursor.nextKey(createKey(3));
 
           expect(cursor.index()).to.equal(1);
           expect(cursor.level()).to.equal(1);
           expect(cursor.done()).to.equal(false);
         });
 
-        it("moves cursor to tuple when moving to higher level", async () => {
+        it("moves cursor to key when moving to higher level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await cursor.nextTuple(MIN_TUPLE, 0);
+          await cursor.nextKey("MIN_KEY", 0);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.level()).to.equal(0);
 
-          await cursor.nextTuple({ seq: 3, key: new Uint8Array() }, 1);
+          await cursor.nextKey(createKey(3), 1);
 
           expect(cursor.index()).to.equal(1);
           expect(cursor.level()).to.equal(1);
         });
 
-        it("moves cursor to tuple when moving to a lower level", async () => {
+        it("moves cursor to key when moving to a lower level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await cursor.nextTuple(MIN_TUPLE, 0);
+          await cursor.nextKey("MIN_KEY", 0);
 
           expect(cursor.index()).to.equal(0);
           expect(cursor.level()).to.equal(0);
 
-          await cursor.nextTuple({ seq: 3, key: new Uint8Array() });
+          await cursor.nextKey(createKey(3));
 
           expect(cursor.index()).to.equal(1);
           expect(cursor.level()).to.equal(0);
@@ -309,7 +306,7 @@ describe("cursor", () => {
           expect(cursor.level()).to.equal(1);
           expect(cursor.index()).to.equal(1);
 
-          await cursor.jumpTo({ seq: 0, key: new Uint8Array() }, 0);
+          await cursor.jumpTo(new Uint8Array(), 0);
 
           expect(cursor.level()).to.equal(0);
           expect(cursor.index()).to.equal(0);
@@ -319,10 +316,7 @@ describe("cursor", () => {
           const cursor = createCursor(blockstore, oddTree);
 
           expect(
-            cursor.jumpTo(
-              { seq: 0, key: new Uint8Array() },
-              cursor.rootLevel() + 1,
-            ),
+            cursor.jumpTo(new Uint8Array(), cursor.rootLevel() + 1),
           ).rejects.toThrow("Cannot jump to level higher than root.");
         });
       });

@@ -1,6 +1,6 @@
 import { ensureSortedSet } from "@tabcat/sorted-sets/util";
-import { compareTuples } from "./compare.js";
-import { AwaitIterable, Tuple } from "./interface.js";
+import { compareBytes } from "./compare.js";
+import { AwaitIterable, KeyRecord } from "./interface.js";
 
 /**
  * Finds the index of the target using binary search.
@@ -43,10 +43,10 @@ export function findIndexFast<T>(
  * @param compare
  * @returns
  */
-export function findUpperBound<T>(
+export function findUpperBound<T, U>(
   arr: T[],
-  target: T,
-  compare: (a: T, b: T) => number,
+  target: U,
+  compare: (a: T, b: U) => number,
 ) {
   let low = 0;
   let high = arr.length - 1;
@@ -109,35 +109,38 @@ export function createSharedAwaitIterable<T>(
   throw new Error("Provided iterable does not support iterator methods.");
 }
 
+const unsortedError = (options?: ErrorOptions) =>
+  new Error("keys are unsorted or duplicate.", options);
+
 /**
- * Ensures that the tuples are sorted and duplicate free.
+ * Ensures that keys is sorted and duplicate free.
  *
- * @param tuples
+ * @param keys
  * @returns
  */
-export async function* ensureSortedTuplesIterable(
-  tuples: AwaitIterable<Tuple[]>,
+export async function* ensureSortedKeysIterable(
+  keys: AwaitIterable<KeyRecord[]>,
 ) {
-  let previous: Tuple | null = null;
+  let previous: KeyRecord | null = null;
 
-  for await (const t of tuples) {
-    if (t.length === 0) continue;
+  for await (const k of keys) {
+    if (k.length === 0) continue;
 
     try {
-      for (const _ of ensureSortedSet(t, compareTuples));
+      for (const _ of ensureSortedSet(k, (a, b) => compareBytes(a.key, b.key)));
     } catch (e) {
-      throw new Error("tuples are unsorted or duplicate.", { cause: e });
+      throw unsortedError({ cause: e });
     }
 
     if (
-      t[0] != null &&
+      k[0] != null &&
       previous != null &&
-      compareTuples(previous, t[0]) >= 0
+      compareBytes(previous.key, k[0].key) >= 0
     ) {
-      throw new Error("tuples are unsorted or duplicate.");
+      throw unsortedError();
     }
-    previous = t[t.length - 1]!;
+    previous = k[k.length - 1]!;
 
-    yield t;
+    yield k;
   }
 }

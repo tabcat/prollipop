@@ -1,8 +1,8 @@
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
-import { ensureSortedTuplesIterable, findUpperBound } from "./common.js";
-import { compareTuples } from "./compare.js";
+import { ensureSortedKeysIterable, findUpperBound } from "./common.js";
+import { compareBytes } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
@@ -12,15 +12,15 @@ import {
   AwaitIterable,
   Blockgetter,
   Entry,
+  KeyRecord,
   ProllyTree,
-  Tuple,
 } from "./interface.js";
 import { mutate } from "./mutate.js";
 import {
   bucketCidToDigest,
   bucketDigestToCid,
   createEmptyBucket,
-  entryToTuple,
+  entryToKeyRecord,
   getBucketBoundary,
   loadBucket,
 } from "./utils.js";
@@ -76,48 +76,50 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
  *
  * @param blockstore - blockstore to use to fetch buckets
  * @param tree - ProllyTree to search
- * @param tuples - Tuple used to search for associated value
+ * @param keyRecords - Tuple used to search for associated value
  *
  * @returns Associated Entry if found, otherwise returns Tuple
  */
 export async function* search(
   blockstore: Blockgetter,
   tree: ProllyTree,
-  tuples: AwaitIterable<Tuple[]>,
-): AsyncIterable<(Entry | Tuple)[]> {
+  keyRecords: AwaitIterable<KeyRecord[]>,
+): AsyncIterable<(Entry | KeyRecord)[]> {
   const cursor = createCursor(blockstore, tree);
-  let results: (Entry | Tuple)[] = [];
+  let results: (Entry | KeyRecord)[] = [];
 
-  for await (let t of ensureSortedTuplesIterable(tuples)) {
+  for await (let kr of ensureSortedKeysIterable(keyRecords)) {
     if (cursor.done()) {
-      yield t.map(entryToTuple);
+      yield kr.map(entryToKeyRecord);
       continue;
     }
 
     // do this without copying in the future
-    t = t.slice();
+    kr = kr.slice();
 
-    while (t.length > 0) {
-      await cursor.nextTuple(t[0]!, 0);
+    while (kr.length > 0) {
+      await cursor.nextKey(kr[0]!.key, 0);
 
       const currentBucket = cursor.currentBucket();
-      const tuples = t.splice(
+      const keyRecords = kr.splice(
         0,
         cursor.isAtHead()
-          ? t.length
-          : findUpperBound(t, getBucketBoundary(currentBucket)!, compareTuples),
+          ? kr.length
+          : findUpperBound(kr, getBucketBoundary(currentBucket)!, (a, b) =>
+              compareBytes(a.key, b.key),
+            ),
       );
 
-      for (const [tuple, entry] of pairwiseTraversal(
-        tuples,
+      for (const [keyRecord, entry] of pairwiseTraversal(
+        keyRecords,
         currentBucket.entries,
-        compareTuples,
+        (a, b) => compareBytes(a.key, b.key),
       )) {
-        if (tuple == null) {
+        if (keyRecord == null) {
           continue;
         } else {
           if (entry == null) {
-            results.push(entryToTuple(tuple));
+            results.push(entryToKeyRecord(keyRecord));
           } else {
             results.push(entry);
           }

@@ -16,18 +16,18 @@ import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import {
   compareBucketDigests,
   compareBuckets,
+  compareBytes,
   compareEntries,
-  compareTuples,
+  compareKeys,
 } from "./compare.js";
-import { MAX_TUPLE } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import {
   Blockgetter,
   Bucket,
+  ComparableKey,
   Cursor,
   Entry,
   ProllyTree,
-  Tuple,
 } from "./interface.js";
 import {
   doRangesIntersect,
@@ -106,14 +106,16 @@ export async function unequalizeBuckets(lc: Cursor, rc: Cursor) {
 export function writeEntryDiffs(
   lEntries: Entry[],
   rEntries: Entry[],
-  cutoff: Tuple,
+  cutoff: ComparableKey,
   d: ProllyTreeDiff,
 ): [Entry[], Entry[]] {
   const lLeftovers: Entry[] = [];
   const rLeftovers: Entry[] = [];
 
-  for (const [le, re] of pairwiseTraversal(lEntries, rEntries, compareTuples)) {
-    if (compareTuples(le ?? re, cutoff) <= 0) {
+  for (const [le, re] of pairwiseTraversal(lEntries, rEntries, (a, b) =>
+    compareBytes(a.key, b.key),
+  )) {
+    if (compareKeys(le?.key ?? (re?.key as Uint8Array), cutoff) <= 0) {
       if (le == null || re == null || compareEntries(le, re) !== 0) {
         d.entries.push([le, re] as EntryDiff);
       }
@@ -219,7 +221,7 @@ export async function* diff(
     [lLeftovers, rLeftovers] = writeEntryDiffs(
       intersect || lesser === lb ? [...lLeftovers, ...lb.entries] : lLeftovers,
       intersect || lesser === rb ? [...rLeftovers, ...rb.entries] : rLeftovers,
-      lc.done() && rc.done() ? MAX_TUPLE : getBucketBoundary(lesser)!,
+      lc.done() && rc.done() ? "MAX_KEY" : getBucketBoundary(lesser)!.key,
       d,
     );
 
@@ -244,7 +246,7 @@ export async function* diff(
     [lLeftovers, rLeftovers] = writeEntryDiffs(
       [...lLeftovers, ...lb.entries],
       rLeftovers,
-      lc.done() ? MAX_TUPLE : getBucketBoundary(lb)!,
+      lc.done() ? "MAX_KEY" : getBucketBoundary(lb)!.key,
       d,
     );
 
@@ -269,7 +271,7 @@ export async function* diff(
     [lLeftovers, rLeftovers] = writeEntryDiffs(
       lLeftovers,
       [...rLeftovers, ...rb.entries],
-      rc.done() ? MAX_TUPLE : getBucketBoundary(rb)!,
+      rc.done() ? "MAX_KEY" : getBucketBoundary(rb)!.key,
       d,
     );
 

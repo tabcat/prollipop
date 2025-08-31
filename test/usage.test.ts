@@ -4,7 +4,7 @@ import { diff } from "../src/diff.js";
 import { DefaultEntry } from "../src/impls.js";
 import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
 import { Bucket, Entry, ProllyTree } from "../src/interface.js";
-import { entryToTuple } from "../src/utils.js";
+import { entryToKeyRecord } from "../src/utils.js";
 
 /**
  * !!!
@@ -57,7 +57,6 @@ describe("usage", () => {
      * The seq and key give entries a sort, entries are stored in this order in the tree.
      */
     const entry: Entry = new DefaultEntry(
-      tuple.seq,
       tuple.key,
       new TextEncoder().encode("world"),
     );
@@ -192,7 +191,9 @@ describe("usage", () => {
     /**
      * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the tuple (aka the key).
      */
-    for await (const _ of mutate(blockstore, tree, [[entryToTuple(entry)]])) {
+    for await (const _ of mutate(blockstore, tree, [
+      [entryToKeyRecord(entry)],
+    ])) {
       /**
        * Like before any buckets that were added should be added to the blockstore.
        * Any buckets that were removed could be removed safely if not used by other trees.

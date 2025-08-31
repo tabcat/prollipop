@@ -48,7 +48,6 @@ export class Prollipop {
   async put(key: string, value: string): Promise<void> {
     const tree = await loadTree(this.blockstore, this.root);
     const entry: Entry = {
-      seq: 0,
       key: new TextEncoder().encode(key),
       val: new TextEncoder().encode(value),
     };
@@ -71,9 +70,10 @@ export class Prollipop {
 
   async get(key: string): Promise<string | undefined> {
     const tree = await loadTree(this.blockstore, this.root);
-    const tuple = { seq: 0, key: new TextEncoder().encode(key) };
 
-    for await (const [entry] of search(this.blockstore, tree, [[tuple]])) {
+    for await (const [entry] of search(this.blockstore, tree, [
+      [{ key: new TextEncoder().encode(key) }],
+    ])) {
       if (entry != null && "val" in entry && entry.val instanceof Uint8Array) {
         return new TextDecoder().decode(entry.val);
       }

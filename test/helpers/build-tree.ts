@@ -1,5 +1,4 @@
 import { encode } from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
 import { Blockstore } from "interface-blockstore";
 import { createIsBoundary } from "../../src/boundary.js";
 import { encodeBucket } from "../../src/codec.js";
@@ -10,6 +9,7 @@ import {
   createEmptyBucket,
   getBucketEntry,
 } from "../../src/utils.js";
+import { numberToBytes } from "./constants.js";
 
 const levelOfBuckets = (
   average: number,
@@ -98,10 +98,10 @@ export const createProllyTreeEntry = (
   _: number,
   ids: number[],
 ): Entry => {
-  const key = sha256(new Uint8Array(Array(id).fill(id)));
+  const key = numberToBytes(id);
   // make val unique to tree
   const val = encode(id + -ids[0]! + ids[ids.length - 1]!);
-  return new DefaultEntry(id, key, val);
+  return new DefaultEntry(key, val);
 };
 
 export const createProllyTreeEntries = (ids: number[]): Entry[] =>

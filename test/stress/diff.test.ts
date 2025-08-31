@@ -1,11 +1,7 @@
 import { diff as orderedDiff } from "@tabcat/sorted-sets/difference";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { describe, expect, it } from "vitest";
-import {
-  compareBuckets,
-  compareBytes,
-  compareTuples,
-} from "../../src/compare.js";
+import { compareBuckets, compareBytes } from "../../src/compare.js";
 import { BucketDiff, EntryDiff, diff } from "../../src/diff.js";
 import { Entry } from "../../src/interface.js";
 import { blockstore } from "../helpers/constants.js";
@@ -38,7 +34,7 @@ export async function checkDiffs(
     orderedDiff(
       states1.entries,
       states2.entries,
-      compareTuples,
+      (a: Entry, b: Entry) => compareBytes(a.key, b.key),
       (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );

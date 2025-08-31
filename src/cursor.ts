@@ -1,13 +1,11 @@
-import { compareBytes, compareTuples } from "./compare.js";
-import { MIN_TUPLE } from "./constants.js";
+import { compareBytes, compareKeys } from "./compare.js";
 import {
   Blockgetter,
   Bucket,
   Cursor,
   Entry,
+  KeyRange,
   ProllyTree,
-  Tuple,
-  TupleRange,
 } from "./interface.js";
 import { loadBucket } from "./utils.js";
 
@@ -83,19 +81,19 @@ export function createCursorFromState(state: CursorState): Cursor {
         nextAtLevel.bind(null, true),
       );
     },
-    nextTuple(tuple: Tuple, level?: number) {
+    nextKey(key: Uint8Array, level?: number) {
       return preMove(
         level ?? levelOf(state),
         state,
-        nextTupleAtLevel.bind(null, tuple),
+        nextKeyAtLevel.bind(null, key),
       );
     },
 
-    jumpTo(tuple: Tuple, level?: number) {
+    jumpTo(key: Uint8Array, level?: number) {
       return preWrite(
         level ?? levelOf(state),
         state,
-        jumpToTupleAtLevel.bind(null, tuple),
+        jumpToKeyAtLevel.bind(null, key),
       );
     },
 
@@ -167,10 +165,10 @@ const levelOf = (state: CursorState): number => bucketOf(state).level;
 const rootLevelOf = (state: CursorState): number =>
   state.currentBuckets[0]!.level;
 
-export const guideByTuple =
-  (target: Tuple) =>
+export const guideByKey =
+  (target: Uint8Array) =>
   (entries: Entry[]): number => {
-    const index = entries.findIndex((n) => compareTuples(target, n) <= 0);
+    const index = entries.findIndex((n) => compareKeys(target, n.key) <= 0);
 
     return index === -1 ? entries.length - 1 : index;
   };
@@ -202,21 +200,21 @@ export const moveUp = (
     throw new Error("Cannot move higher than root level.");
   }
 
-  guide = guide ?? guideByTuple(entryOf(state));
+  guide = guide ?? guideByKey(entryOf(state).key);
 
   state.currentBuckets.length -= level - levelOf(state);
   state.currentIndex = guide(bucketOf(state).entries);
 };
 
-export const getRange = (state: CursorState): TupleRange => {
+export const getRange = (state: CursorState): KeyRange => {
   const clone = cloneCursorState(state);
   while (underflows(clone) && levelOf(clone) < rootLevelOf(clone)) {
     moveUp(clone, levelOf(clone) + 1);
   }
 
-  const min = bucketOf(clone).entries[clone.currentIndex - 1];
+  const min = bucketOf(clone).entries[clone.currentIndex - 1]?.key;
 
-  return [min ?? MIN_TUPLE, entryOf(state)];
+  return [min ?? "MIN_KEY", entryOf(state).key];
 };
 
 export const moveDown = async (
@@ -232,7 +230,7 @@ export const moveDown = async (
   guide = guide ?? (() => 0);
 
   while (level < levelOf(state)) {
-    const { seq, val } = entryOf(state);
+    const { val } = entryOf(state);
     const bucket = bucketOf(state);
 
     const cached = cache?.[bucket.level - 1];
@@ -246,7 +244,6 @@ export const moveDown = async (
         prefix: {
           average: bucket.average,
           level: bucket.level - 1,
-          base: seq,
         },
         range: getRange(state),
       };
@@ -328,25 +325,25 @@ export const nextAtLevel = async (
   }
 };
 
-export const nextTupleAtLevel = async (
-  tuple: Tuple,
+export const nextKeyAtLevel = async (
+  key: Uint8Array,
   level: number,
   state: CursorState,
 ): Promise<void> => {
   // ensure that cursor does not move backwards
-  if (compareTuples(tuple, entryOf(state)) <= 0 && level >= levelOf(state)) {
-    tuple = entryOf(state);
+  if (compareKeys(key, entryOf(state).key) <= 0 && level >= levelOf(state)) {
+    key = entryOf(state).key;
   }
 
   if (level !== levelOf(state)) {
-    await moveLevel(state, level, guideByTuple(tuple));
+    await moveLevel(state, level, guideByKey(key));
   }
 
-  const guide = guideByTuple(tuple);
+  const guide = guideByKey(key);
   const tupleIsGreatest = (state: CursorState) =>
-    compareTuples(
-      tuple,
-      bucketOf(state).entries[bucketOf(state).entries.length - 1]!,
+    compareKeys(
+      key,
+      bucketOf(state).entries[bucketOf(state).entries.length - 1]!.key,
     ) > 0;
 
   await moveRight(
@@ -360,8 +357,8 @@ export const nextTupleAtLevel = async (
   );
 };
 
-export const jumpToTupleAtLevel = async (
-  tuple: Tuple,
+export const jumpToKeyAtLevel = async (
+  key: Uint8Array,
   level: number,
   state: CursorState,
 ): Promise<void> => {
@@ -373,10 +370,10 @@ export const jumpToTupleAtLevel = async (
 
   // set to root at index matching tuple
   state.currentBuckets = [state.currentBuckets[0]!];
-  state.currentIndex = guideByTuple(tuple)(bucketOf(state).entries);
+  state.currentIndex = guideByKey(key)(bucketOf(state).entries);
 
   // move to level if needed
   if (level < levelOf(state)) {
-    await moveDown(state, level, guideByTuple(tuple), cache);
+    await moveDown(state, level, guideByKey(key), cache);
   }
 };

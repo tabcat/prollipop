@@ -1,7 +1,6 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it, vi } from "vitest";
 import "../src/boundary.js";
-import { MAX_TUPLE, MIN_TUPLE } from "../src/constants.js";
 import { DefaultEntry } from "../src/impls.js";
 import {
   bucketCidToDigest,
@@ -10,7 +9,7 @@ import {
   createBucket,
   createEmptyBucket,
   doRangesIntersect,
-  entryToTuple,
+  entryToKeyRecord,
   getBucketBoundary,
   getBucketEntry,
   getEntryRange,
@@ -22,12 +21,12 @@ import {
   bucket,
   cid,
   createEntry,
-  createTuple,
+  createKey,
   emptyBucket,
   entry,
+  key,
   level,
   prefix,
-  tuple,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeState } from "./helpers/odd-tree.js";
 
@@ -61,7 +60,7 @@ describe("utils", () => {
   describe("getBucketEntry", () => {
     it("returns the entry for a given bucket", () => {
       expect(getBucketEntry(bucket)).to.deep.equal(
-        new DefaultEntry(entry.seq, entry.key, bucket.getAddressed().digest),
+        new DefaultEntry(entry.key, bucket.getAddressed().digest),
       );
     });
 
@@ -72,51 +71,42 @@ describe("utils", () => {
 
   describe("getEntryRange", () => {
     it("returns a range for a given entry", () => {
-      expect(getEntryRange([entry])).to.deep.equal([tuple, tuple]);
+      expect(getEntryRange([entry])).to.deep.equal([key, key]);
     });
 
     it("returns a range for given entries", () => {
       expect(getEntryRange([createEntry(1), createEntry(3)])).to.deep.equal([
-        createTuple(1),
-        createTuple(3),
+        createKey(1),
+        createKey(3),
       ]);
     });
 
     it("returns min and max tuple if entries are empty", () => {
-      expect(getEntryRange([])).to.deep.equal([MIN_TUPLE, MAX_TUPLE]);
+      expect(getEntryRange([])).to.deep.equal(["MIN_KEY", "MAX_KEY"]);
     });
   });
 
   describe("hasIntersect", () => {
     it("returns true if the ranges intersect", () => {
       expect(
-        doRangesIntersect(
-          [tuple, createTuple(3)],
-          [createTuple(1), createTuple(2)],
-        ),
+        doRangesIntersect([key, createKey(3)], [createKey(1), createKey(2)]),
       ).to.equal(true);
       expect(
-        doRangesIntersect(
-          [tuple, createTuple(1)],
-          [createTuple(1), createTuple(2)],
-        ),
+        doRangesIntersect([key, createKey(1)], [createKey(1), createKey(2)]),
       ).to.equal(true);
-      expect(doRangesIntersect([tuple, tuple], [tuple, tuple])).to.equal(true);
+      expect(doRangesIntersect([key, key], [key, key])).to.equal(true);
     });
 
     it("returns false if ranges do not intersect", () => {
       expect(
-        doRangesIntersect(
-          [tuple, createTuple(3)],
-          [createTuple(4), createTuple(5)],
-        ),
+        doRangesIntersect([key, createKey(3)], [createKey(4), createKey(5)]),
       ).to.equal(false);
     });
   });
 
-  describe("entryToTuple", () => {
-    it("returns a new tuple from a entry", () => {
-      expect(entryToTuple(entry)).to.deep.equal(tuple);
+  describe("entryToKeyRecord", () => {
+    it("returns a new key record from an entry", () => {
+      expect(entryToKeyRecord(entry)).to.deep.equal({ key });
     });
   });
 

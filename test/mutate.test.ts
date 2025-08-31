@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import "../src/boundary.js"; // for the mock
+import { IsBoundary } from "../src/boundary.js";
 import { createSharedAwaitIterable } from "../src/common.js";
-import { MIN_TUPLE } from "../src/constants.js";
 import { createCursor } from "../src/cursor.js";
 import { EntryDiff, ProllyTreeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
@@ -17,15 +16,16 @@ import {
   rebuildLevel,
   segmentEntries,
 } from "../src/mutate.js";
-import { entryToTuple, loadBucket } from "../src/utils.js";
+import { entryToKeyRecord, loadBucket } from "../src/utils.js";
 import {
   average,
   blockstore,
   bucket,
+  bytesToNumber,
   createEntry,
   emptyBucket,
   emptyTree,
-  tuple,
+  key,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
 
@@ -84,7 +84,7 @@ describe("mutate", () => {
     });
 
     describe("removal", () => {
-      const update = entryToTuple({ ...entry });
+      const update = entryToKeyRecord({ ...entry });
 
       it("returns [null, null] if entry does not exist", () => {
         expect(applyUpdate(null, update)).to.deep.equal([null, null]);
@@ -98,7 +98,7 @@ describe("mutate", () => {
 
   describe("getUserUpdateTuple", () => {
     it("returns a tuple from updts.user", async () => {
-      const updates = createSharedAwaitIterable([[tuple]]);
+      const updates = createSharedAwaitIterable([[{ key }]]);
 
       const level = 0;
       const updts: Updts = {
@@ -109,7 +109,7 @@ describe("mutate", () => {
 
       const currentTuple = await getUserUpdateTuple(updts, level);
 
-      expect(currentTuple).to.equal(tuple);
+      expect(currentTuple).to.deep.equal({ key });
       expect(updts.current.length).to.equal(1);
     });
 
@@ -126,7 +126,7 @@ describe("mutate", () => {
     });
 
     it("returns null if level > 0", async () => {
-      const updates = createSharedAwaitIterable([[tuple]]);
+      const updates = createSharedAwaitIterable([[{ key }]]);
 
       const level = 1;
       const updts: Updts = {
@@ -145,7 +145,7 @@ describe("mutate", () => {
   describe("getUpdatee", () => {
     it("returns next bucket if leftovers is not empty", async () => {
       const cursor = {
-        nextTuple: vi.fn(),
+        nextKey: vi.fn(),
         currentBucket: () => bucket,
         isAtHead: () => false,
         rootLevel: () => 0,
@@ -153,14 +153,14 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(tuple, false);
+      await getUpdatee({ key }, false);
 
-      expect(cursor.nextTuple).toHaveBeenCalledOnce();
+      expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
 
     it("returns next tuple if level has not changed", async () => {
       const cursor: Cursor = {
-        nextTuple: vi.fn(),
+        nextKey: vi.fn(),
         isAtHead: () => false,
         isAtTail: () => false,
         currentBucket: () => bucket,
@@ -169,14 +169,14 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(tuple, false);
+      await getUpdatee({ key }, false);
 
-      expect(cursor.nextTuple).toHaveBeenCalledOnce();
+      expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
 
     it("returns jump to tuple if level has changed", async () => {
       const cursor: Cursor = {
-        nextTuple: vi.fn(),
+        nextKey: vi.fn(),
         isAtHead: () => false,
         isAtTail: () => false,
         currentBucket: () => bucket,
@@ -185,9 +185,9 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee(tuple, false);
+      await getUpdatee({ key }, false);
 
-      expect(cursor.nextTuple).toHaveBeenCalledOnce();
+      expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
 
     it("returns empty bucket on level if leftovers is empty and level > root level", async () => {
@@ -199,7 +199,7 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      const updatee = await getUpdatee(tuple, false);
+      const updatee = await getUpdatee({ key }, false);
 
       expect(updatee).to.not.equal(null);
 
@@ -212,7 +212,7 @@ describe("mutate", () => {
   });
 
   describe("collectUpdates", () => {
-    const entries = [0, 1, 2, 3].map(createEntry);
+    const entries = [0, 1, 2, 3].map((n) => createEntry(n));
 
     it("does not collect updates if last of updts.current = boundary", async () => {
       const boundary = entries[0]!;
@@ -264,7 +264,9 @@ describe("mutate", () => {
       await collectUpdates(boundary, updts, false);
 
       expect(updts.current).to.deep.equal(
-        entries.filter((e) => e.seq !== 1 && e.seq !== 3),
+        entries.filter(
+          (e) => bytesToNumber(e.key) !== 1 && bytesToNumber(e.key) !== 3,
+        ),
       );
     });
 
@@ -283,7 +285,7 @@ describe("mutate", () => {
   });
 
   describe("segmentEntries", () => {
-    const isBoundary = (e: Entry) => e.seq % 2 === 1;
+    const isBoundary: IsBoundary = (e) => bytesToNumber(e.key) % 2 === 1;
 
     describe("basic operations", () => {
       it("returns original segment and empty diff when no changes needed", () => {
@@ -339,7 +341,7 @@ describe("mutate", () => {
 
       it("handles remove updates", () => {
         const currentEntries = [createEntry(0), createEntry(1)];
-        const updates = [entryToTuple(currentEntries[0]!)];
+        const updates = [entryToKeyRecord(currentEntries[0]!)];
 
         const [entrySegments, diffSegments, leftovers] = segmentEntries(
           currentEntries,
@@ -413,7 +415,7 @@ describe("mutate", () => {
 
       it("handles complete removal of entries", () => {
         const currentEntries = [createEntry(0), createEntry(1)];
-        const updates = currentEntries.map(entryToTuple);
+        const updates = currentEntries.map(entryToKeyRecord);
 
         const [entrySegments, diffSegments, leftovers] = segmentEntries(
           currentEntries,
@@ -490,7 +492,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
+                  range: ["MIN_KEY", oddTree.root.entries[0]!.key],
                 },
               ),
             ],
@@ -505,8 +507,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[0]!),
-                    entryToTuple(oddTree.root.entries[1]!),
+                    oddTree.root.entries[0]!.key,
+                    oddTree.root.entries[1]!.key,
                   ],
                 },
               ),
@@ -522,8 +524,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[1]!),
-                    entryToTuple(oddTree.root.entries[2]!),
+                    oddTree.root.entries[1]!.key,
+                    oddTree.root.entries[2]!.key,
                   ],
                 },
               ),
@@ -553,7 +555,7 @@ describe("mutate", () => {
     it("rebuilds a multi-bucket level into a single bucket level", async () => {
       const cursor = createCursor(blockstore, oddTree);
       const updts: Updts = {
-        current: oddTreeEntries.map(entryToTuple),
+        current: oddTreeEntries.map(entryToKeyRecord),
         user: [],
         next: [],
       };
@@ -577,7 +579,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
+                  range: ["MIN_KEY", oddTree.root.entries[0]!.key],
                 },
               ),
               null,
@@ -592,8 +594,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[0]!),
-                    entryToTuple(oddTree.root.entries[1]!),
+                    oddTree.root.entries[0]!.key,
+                    oddTree.root.entries[1]!.key,
                   ],
                 },
               ),
@@ -609,8 +611,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[1]!),
-                    entryToTuple(oddTree.root.entries[2]!),
+                    oddTree.root.entries[1]!.key,
+                    oddTree.root.entries[2]!.key,
                   ],
                 },
               ),
@@ -669,7 +671,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
+                  range: ["MIN_KEY", oddTree.root.entries[0]!.key],
                 },
               ),
             ],
@@ -684,8 +686,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[0]!),
-                    entryToTuple(oddTree.root.entries[1]!),
+                    oddTree.root.entries[0]!.key,
+                    oddTree.root.entries[1]!.key,
                   ],
                 },
               ),
@@ -701,8 +703,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[1]!),
-                    entryToTuple(oddTree.root.entries[2]!),
+                    oddTree.root.entries[1]!.key,
+                    oddTree.root.entries[2]!.key,
                   ],
                 },
               ),
@@ -731,7 +733,7 @@ describe("mutate", () => {
 
     it("removes all entries from a tree", async () => {
       const oddTreeCopy = cloneTree(oddTree);
-      const updates = [oddTreeEntries.map(entryToTuple)];
+      const updates = [oddTreeEntries.map(entryToKeyRecord)];
 
       const expected: ProllyTreeDiff[] = [
         {
@@ -747,7 +749,7 @@ describe("mutate", () => {
                   isHead: false,
                 },
                 {
-                  range: [MIN_TUPLE, entryToTuple(oddTree.root.entries[0]!)],
+                  range: ["MIN_KEY", oddTree.root.entries[0]!.key],
                 },
               ),
               null,
@@ -762,8 +764,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[0]!),
-                    entryToTuple(oddTree.root.entries[1]!),
+                    oddTree.root.entries[0]!.key,
+                    oddTree.root.entries[1]!.key,
                   ],
                 },
               ),
@@ -779,8 +781,8 @@ describe("mutate", () => {
                 },
                 {
                   range: [
-                    entryToTuple(oddTree.root.entries[1]!),
-                    entryToTuple(oddTree.root.entries[2]!),
+                    oddTree.root.entries[1]!.key,
+                    oddTree.root.entries[2]!.key,
                   ],
                 },
               ),

@@ -1,9 +1,9 @@
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { describe, expect, it } from "vitest";
-import { compareTuples } from "../../src/compare.js";
+import { compareBytes } from "../../src/compare.js";
 import { search } from "../../src/index.js";
-import { Entry, Tuple } from "../../src/interface.js";
-import { entryToTuple } from "../../src/utils.js";
+import { Entry, KeyRecord } from "../../src/interface.js";
+import { entryToKeyRecord } from "../../src/utils.js";
 import { blockstore } from "../helpers/constants.js";
 import { trees } from "./trees.js";
 
@@ -16,23 +16,23 @@ const checkSearch = async (
 
   const tree1 = states1.tree;
 
-  const result: (Entry | Tuple)[] = [];
+  const result: (Entry | KeyRecord)[] = [];
 
   for await (const entry of search(blockstore, tree1, [states2.entries])) {
     result.push(...entry);
   }
 
-  let expectedResult: (Entry | Tuple)[] = [];
+  let expectedResult: (Entry | KeyRecord)[] = [];
   for (const [entry1, entry2] of pairwiseTraversal(
     states1.entries,
     states2.entries,
-    compareTuples,
+    (a, b) => compareBytes(a.key, b.key),
   )) {
     if (entry2 != null) {
       if (entry1 != null) {
         expectedResult.push(entry1);
       } else {
-        expectedResult.push(entryToTuple(entry2));
+        expectedResult.push(entryToKeyRecord(entry2));
       }
     }
   }
@@ -43,7 +43,7 @@ const checkSearch = async (
 describe("search", () => {
   for (const tree1Name of trees.keys()) {
     for (const tree2Name of trees.keys()) {
-      it(`yields diff of ${tree1Name} and ${tree2Name} trees`, async () => {
+      it(`yields search of ${tree1Name} and ${tree2Name} trees`, async () => {
         try {
           await checkSearch(tree1Name, tree2Name);
         } catch (e) {

@@ -1,19 +1,18 @@
 /**
- * Comparison functions for bytes, tuples, entries, buckets, and bucket diffs.
+ * Comparison functions for bytes, entries, buckets, and bucket diffs.
  *
  * Entries are sorted by:
- * 1. seq (sequence number)
- * 2. key
- * 3. val (value)
+ * 1. key
+ * 2. val (value)
  *
  * Buckets are sorted by:
  * 1. level (depth in the tree)
- * 2. boundary (tuple)
+ * 2. boundary (key)
  * 3. digest (bucket hash)
  */
 
 import { compare as compareBytes } from "uint8arrays";
-import { Bucket, Entry, Tuple } from "./interface.js";
+import { Bucket, ComparableKey, Entry } from "./interface.js";
 import { getBucketBoundary } from "./utils.js";
 
 export { compareBytes };
@@ -35,18 +34,17 @@ export const composeComparators = <T>(
   };
 };
 
-/**
- * Compare two tuples. seq > key
- *
- * @param a
- * @param b
- * @returns
- */
-export const compareTuples = (a: Tuple, b: Tuple): number =>
-  composeComparators<Tuple>(
-    (a, b) => a.seq - b.seq,
-    (a, b) => compareBytes(a.key, b.key),
-  )(a, b);
+export const compareKeys = (a: ComparableKey, b: ComparableKey): number => {
+  if (a === b) return 0;
+
+  if (a === "MIN_KEY") return -1;
+  if (b === "MIN_KEY") return 1;
+
+  if (a === "MAX_KEY") return 1;
+  if (b === "MAX_KEY") return -1;
+
+  return compareBytes(a, b);
+};
 
 /**
  * Compare two entries. seq > key > val
@@ -56,8 +54,9 @@ export const compareTuples = (a: Tuple, b: Tuple): number =>
  * @returns
  */
 export const compareEntries = (a: Entry, b: Entry): number =>
-  composeComparators<Entry>(compareTuples, (a, b) =>
-    compareBytes(a.val, b.val),
+  composeComparators<Entry>(
+    (a, b) => compareBytes(a.key, b.key),
+    (a, b) => compareBytes(a.val, b.val),
   )(a, b);
 
 /**
@@ -96,7 +95,7 @@ export const compareBoundaries = (a: Bucket, b: Bucket): number => {
     return 1;
   }
 
-  return compareTuples(aBoundary, bBoundary);
+  return compareBytes(aBoundary.key, bBoundary.key);
 };
 
 /**

@@ -23,9 +23,7 @@ describe("boundary", () => {
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
-        expect(
-          isBoundary({ seq: 1, key: empty, val: new Uint8Array() }),
-        ).to.equal(passed);
+        expect(isBoundary({ key: empty })).to.equal(passed);
         expect(passed).to.equal(false);
       });
 
@@ -34,9 +32,9 @@ describe("boundary", () => {
         const passed =
           new DataView(digest.buffer, digest.byteOffset).getUint32(0) < limit;
 
-        expect(
-          isBoundary({ seq: 2, key: empty, val: new Uint8Array() }),
-        ).to.equal(passed);
+        expect(isBoundary({ key: new Uint8Array([0, 0, 0, 1]) })).to.equal(
+          passed,
+        );
         expect(passed).to.equal(true);
       });
     });

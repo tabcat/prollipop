@@ -3,12 +3,12 @@ import {
   compareBoundaries,
   compareBucketDigests,
   compareEntries,
+  compareKeys,
   compareLevels,
-  compareTuples,
   composeComparators,
 } from "../src/compare.js";
 import { Bucket, Entry } from "../src/interface.js";
-import { createEntry, entry } from "./helpers/constants.js";
+import { createEntry, entry, noBytes } from "./helpers/constants.js";
 
 describe("compare", () => {
   describe("composeComparators", () => {
@@ -34,79 +34,38 @@ describe("compare", () => {
   });
 
   describe("entries", () => {
-    describe("compareTuples", () => {
-      it("returns the difference of the seq if they do not match", () => {
-        expect(
-          compareTuples(
-            { seq: 1, key: new Uint8Array() },
-            { seq: 2, key: new Uint8Array() },
-          ),
-        ).to.equal(-1);
-        expect(
-          compareTuples(
-            { seq: 2, key: new Uint8Array() },
-            { seq: 1, key: new Uint8Array() },
-          ),
-        ).to.equal(1);
+    describe("compareKeys", () => {
+      it("returns 0 if a and b are equal", () => {
+        expect(compareKeys("MIN_KEY", "MIN_KEY")).to.equal(0);
+        expect(compareKeys(new Uint8Array(), new Uint8Array())).to.equal(0);
+        expect(compareKeys(noBytes, noBytes)).to.equal(0);
+        expect(compareKeys("MAX_KEY", "MAX_KEY")).to.equal(0);
       });
 
-      it("returns the order of the hashes if they do not match", () => {
-        expect(
-          compareTuples(
-            { seq: 1, key: new Uint8Array([1]) },
-            { seq: 1, key: new Uint8Array([2]) },
-          ),
-        ).to.equal(-1);
-        expect(
-          compareTuples(
-            { seq: 1, key: new Uint8Array([2]) },
-            { seq: 1, key: new Uint8Array([1]) },
-          ),
-        ).to.equal(1);
+      it("returns -1 if a is less than b", () => {
+        expect(compareKeys("MIN_KEY", "MAX_KEY")).to.equal(-1);
+        expect(compareKeys(new Uint8Array(), new Uint8Array([123]))).to.equal(
+          -1,
+        );
       });
 
-      it("returns 0 if the tuples are identical", () => {
-        expect(
-          compareTuples(
-            { seq: 1, key: new Uint8Array([1]) },
-            { seq: 1, key: new Uint8Array([1]) },
-          ),
-        ).to.equal(0);
-        expect(
-          compareTuples(
-            { seq: 2, key: new Uint8Array([2]) },
-            { seq: 2, key: new Uint8Array([2]) },
-          ),
-        ).to.equal(0);
+      it("returns 1 if a is greater than b", () => {
+        expect(compareKeys("MAX_KEY", "MIN_KEY")).to.equal(1);
+        expect(compareKeys(new Uint8Array([123]), new Uint8Array())).to.equal(
+          1,
+        );
       });
     });
 
     describe("compareEntries", () => {
-      it("returns the difference of the seq if they do not match", () => {
-        expect(
-          compareEntries(
-            { seq: 1, key: new Uint8Array(), val: new Uint8Array() },
-            { seq: 2, key: new Uint8Array(), val: new Uint8Array() },
-          ),
-        ).to.equal(-1);
-        expect(
-          compareEntries(
-            { seq: 2, key: new Uint8Array(), val: new Uint8Array() },
-            { seq: 1, key: new Uint8Array(), val: new Uint8Array() },
-          ),
-        ).to.equal(1);
-      });
-
       it("returns the order of the key if they do not match", () => {
         expect(
           compareEntries(
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(1),
             },
             {
-              seq: 1,
               key: new Uint8Array([2]),
               val: new Uint8Array(),
             },
@@ -115,12 +74,10 @@ describe("compare", () => {
         expect(
           compareEntries(
             {
-              seq: 1,
               key: new Uint8Array([2]),
               val: new Uint8Array(2),
             },
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(),
             },
@@ -132,12 +89,10 @@ describe("compare", () => {
         expect(
           compareEntries(
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(1),
             },
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(2),
             },
@@ -146,12 +101,10 @@ describe("compare", () => {
         expect(
           compareEntries(
             {
-              seq: 2,
               key: new Uint8Array([2]),
               val: new Uint8Array(2),
             },
             {
-              seq: 2,
               key: new Uint8Array([2]),
               val: new Uint8Array(1),
             },
@@ -163,12 +116,10 @@ describe("compare", () => {
         expect(
           compareEntries(
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(1),
             },
             {
-              seq: 1,
               key: new Uint8Array([1]),
               val: new Uint8Array(1),
             },
@@ -177,12 +128,10 @@ describe("compare", () => {
         expect(
           compareEntries(
             {
-              seq: 2,
               key: new Uint8Array([2]),
               val: new Uint8Array(2),
             },
             {
-              seq: 2,
               key: new Uint8Array([2]),
               val: new Uint8Array(2),
             },

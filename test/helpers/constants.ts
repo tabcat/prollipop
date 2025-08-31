@@ -4,37 +4,59 @@ import { MemoryBlockstore } from "blockstore-core/memory";
 import { CID } from "multiformats";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
+import { IsBoundary } from "../../src/boundary.js";
 import { EncodedEntry } from "../../src/codec.js";
 import {
   DefaultBucket,
   DefaultEntry,
   DefaultProllyTree,
 } from "../../src/impls.js";
-import { entryToTuple } from "../../src/utils.js";
+import { Entry } from "../../src/interface.js";
 
 export const blockstore = new MemoryBlockstore();
 
-export const createEntry = (seq: number) => new DefaultEntry(seq, bytes, bytes);
-export const createTuple = (seq: number) => entryToTuple(createEntry(seq));
-export const createEncodedEntry = (delta: number): EncodedEntry => [
-  delta,
-  bytes,
-  bytes,
+export const numberToBytes = (n: number): Uint8Array => {
+  const buf = new ArrayBuffer(4);
+  new DataView(buf).setUint32(0, n, false);
+  return new Uint8Array(buf);
+};
+export const bytesToNumber = (bytes: Uint8Array): number => {
+  return new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0);
+};
+
+export const createKey = (n: number) => numberToBytes(n);
+export const createEntry = (n: number, val: Uint8Array = noBytes) =>
+  new DefaultEntry(createKey(n), val);
+export const createEncodedEntry = (n: number): EncodedEntry => [
+  numberToBytes(n),
+  noBytes,
 ];
+export const createBoundaryEntry = (
+  i: number,
+  isBoundary: IsBoundary,
+): Entry => {
+  let entry = createEntry(i);
 
-export const bytes = new Uint8Array();
+  while (!isBoundary(entry)) {
+    i++;
+    entry = createEntry(i);
+  }
 
-export const seq = 0;
-export const key = bytes;
-export const val = bytes;
-export const tuple = { seq, key };
-export const entry = createEntry(seq);
-export const encodedEntry = createEncodedEntry(seq);
+  return entry;
+};
+
+export const noBytes = new Uint8Array();
+
+export const key = createKey(0);
+export const val = noBytes;
+export const entry = createEntry(0);
+export const encodedEntry = createEncodedEntry(0);
+
+export const keyRecord = { key };
 
 export const average = 32;
 export const level = 0;
-export const base = 0;
-export const prefix = { average, level, base };
+export const prefix = { average, level };
 
 export const entries = [entry];
 export const encodedEntries: EncodedEntry[] = [encodedEntry];
@@ -42,7 +64,6 @@ export const encodedEntries: EncodedEntry[] = [encodedEntry];
 export const encodedBucket = {
   average,
   level,
-  base,
   entries: encodedEntries,
 };
 export const bucketBytes = encode(encodedBucket);
@@ -73,7 +94,6 @@ export const context = {
 export const encodedEmptyBucket = {
   average,
   level,
-  base: 0,
   entries: [],
 };
 export const emptyBucketBytes = encode(encodedEmptyBucket);

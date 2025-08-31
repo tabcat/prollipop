@@ -1,6 +1,5 @@
 import { MemoryBlockstore } from "blockstore-core";
 import { describe, expect, it, vi } from "vitest";
-import "../src/boundary.js";
 import { DefaultEntry, DefaultProllyTree } from "../src/impls.js";
 import {
   cloneTree,
@@ -15,11 +14,10 @@ import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
   blockstore,
-  bytes,
+  createKey,
   entry,
   key,
   level,
-  seq,
   tree,
 } from "./helpers/constants.js";
 import { oddTree, oddTreeEntries, oddTreeState } from "./helpers/odd-tree.js";
@@ -65,10 +63,10 @@ describe("index", () => {
       }
     });
 
-    it("yields tuples for entries not found in a tree", async () => {
-      const tuple = { seq: 10, key: bytes };
-      for await (const [entry] of search(blockstore, oddTree, [[tuple]])) {
-        expect(entry).to.deep.equal(tuple);
+    it("yields key records for entries not found in a tree", async () => {
+      const key = createKey(10);
+      for await (const [entry] of search(blockstore, oddTree, [[{ key }]])) {
+        expect(entry).to.deep.equal({ key });
       }
     });
 
@@ -79,7 +77,7 @@ describe("index", () => {
       ]) as AsyncGenerator;
 
       expect(unorderedSearch.next()).rejects.toThrow(
-        "tuples are unsorted or duplicate.",
+        "keys are unsorted or duplicate.",
       );
 
       const repeatingTuples = createProllyTreeEntries([1, 1]);
@@ -88,7 +86,7 @@ describe("index", () => {
       ]) as AsyncGenerator;
 
       expect(repeatingSearch.next()).rejects.toThrow(
-        "tuples are unsorted or duplicate.",
+        "keys are unsorted or duplicate.",
       );
     });
   });
@@ -109,7 +107,7 @@ describe("index", () => {
     });
 
     it("accepts a choose function for handling key conflicts", async () => {
-      const entry2 = new DefaultEntry(seq, key, new Uint8Array(32));
+      const entry2 = new DefaultEntry(key, new Uint8Array(32));
       const tree2 = new DefaultProllyTree(
         createBucket(average, level, [entry2], { isTail: true, isHead: true }),
       );

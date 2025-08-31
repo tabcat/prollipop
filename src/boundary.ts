@@ -6,13 +6,13 @@
 
 import { sha256 } from "@noble/hashes/sha256";
 import { MAX_UINT32 } from "./constants.js";
-import type { Entry, Tuple } from "./interface.js";
+import type { Entry } from "./interface.js";
 
 export interface CreateIsBoundary {
   (average: number, level: number): IsBoundary;
 }
 export interface IsBoundary {
-  (entry: Entry): boolean;
+  (entry: Pick<Entry, "key">): boolean;
 }
 
 /**
@@ -21,7 +21,7 @@ export interface IsBoundary {
  * Expects average to be a positive integer between 1 and 2^32 - 1;
  * more realistically around 30 as it represents the desired number of keys per bucket.
  * The average is used to calculate the limit as MAX_UINT32 / average.
- * The boundary is determined by hashing the level and tuple and then checking if the first four bytes fall below the limit.
+ * The boundary is determined by hashing the level and key and then checking if the first four bytes fall below the limit.
  *
  * @param average
  * @param level
@@ -33,18 +33,13 @@ export const createIsBoundary: CreateIsBoundary = (
 ): IsBoundary => {
   const limit = Number(MAX_UINT32 / BigInt(average));
 
-  return ({ seq, key }: Tuple) => {
+  return ({ key }: Pick<Entry, "key">) => {
     // 1 byte for level, 8 bytes for seq, key.length bytes for key
-    const bytes = new Uint8Array(9 + key.length);
+    const bytes = new Uint8Array(1 + key.length);
 
     bytes[0] = level;
 
-    for (let i = 8; i > 0; i--) {
-      bytes[i] = seq & 0xff;
-      seq = seq >>> 8;
-    }
-
-    bytes.set(key, 9);
+    bytes.set(key, 1);
 
     const digest = sha256(bytes);
 

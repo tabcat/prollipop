@@ -3,17 +3,16 @@ import { CID } from "multiformats/cid";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";
 import * as sha2 from "multiformats/hashes/sha2";
 import { decodeBucket, encodeBucket, Expected } from "./codec.js";
-import { compareTuples } from "./compare.js";
-import { MAX_TUPLE, MIN_TUPLE } from "./constants.js";
+import { compareKeys } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
   Blockgetter,
   Bucket,
   Context,
   Entry,
+  KeyRange,
+  KeyRecord,
   Prefix,
-  Tuple,
-  TupleRange,
 } from "./interface.js";
 
 /**
@@ -43,26 +42,19 @@ export const getBucketEntry = (bucket: Bucket): Entry | null => {
     return null;
   }
 
-  return new DefaultEntry(
-    boundary.seq,
-    boundary.key,
-    bucket.getAddressed().digest,
-  );
+  return new DefaultEntry(boundary.key, bucket.getAddressed().digest);
 };
 
-export function getEntryRange(entries: Entry[]): TupleRange {
+export function getEntryRange(entries: Entry[]): KeyRange {
   return entries.length === 0
-    ? [MIN_TUPLE, MAX_TUPLE]
-    : [entryToTuple(entries[0]!), entryToTuple(entries[entries.length - 1]!)];
+    ? ["MIN_KEY", "MAX_KEY"]
+    : [entries[0]!.key, entries[entries.length - 1]!.key];
 }
 
-export function doRangesIntersect(
-  range1: TupleRange,
-  range2: TupleRange,
-): boolean {
+export function doRangesIntersect(range1: KeyRange, range2: KeyRange): boolean {
   return (
-    compareTuples(range1[0], range2[1]) <= 0 &&
-    compareTuples(range2[0], range1[1]) <= 0
+    compareKeys(range1[0], range2[1]) <= 0 &&
+    compareKeys(range2[0], range1[1]) <= 0
   );
 }
 
@@ -72,8 +64,7 @@ export function doRangesIntersect(
  * @param entry
  * @returns
  */
-export const entryToTuple = ({ seq, key }: Tuple): Tuple => ({
-  seq,
+export const entryToKeyRecord = ({ key }: KeyRecord): KeyRecord => ({
   key,
 });
 
@@ -83,10 +74,9 @@ export const entryToTuple = ({ seq, key }: Tuple): Tuple => ({
  * @param prefix
  * @returns
  */
-export const bucketToPrefix = ({ average, level, base }: Prefix): Prefix => ({
+export const bucketToPrefix = ({ average, level }: Prefix): Prefix => ({
   average,
   level,
-  base,
 });
 
 export const createBucket = (

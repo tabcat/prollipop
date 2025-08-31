@@ -13,19 +13,19 @@
 import { decode, encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
-import { compareTuples } from "./compare.js";
-import { MAX_LEVEL, MAX_UINT32 } from "./constants.js";
+import { compareBytes, compareKeys } from "./compare.js";
+import { MAX_TREE_LEVEL, MAX_UINT32 } from "./constants.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
-import {
+import type {
   Addressed,
   Bucket,
   Context,
   Entry,
+  KeyRange,
   Prefix,
-  TupleRange,
 } from "./interface.js";
 
-export type EncodedEntry = [number, Entry["key"], Entry["val"]];
+export type EncodedEntry = [Entry["key"], Entry["val"]];
 
 export interface EncodedBucket extends Prefix {
   entries: EncodedEntry[];
@@ -37,34 +37,31 @@ const isPositiveInteger = (n: unknown): n is number =>
 export const isEntry = (e: any): e is Entry =>
   typeof e === "object" &&
   e !== null &&
-  Object.keys(e).length === 3 &&
-  isPositiveInteger(e.seq) &&
+  Object.keys(e).length === 2 &&
   e.key instanceof Uint8Array &&
   e.val instanceof Uint8Array;
 
 export const isEncodedEntry = (e: any): e is EncodedEntry =>
   Array.isArray(e) &&
-  e.length === 3 &&
-  isPositiveInteger(e[0]) &&
-  e[1] instanceof Uint8Array &&
-  e[2] instanceof Uint8Array;
+  e.length === 2 &&
+  e[0] instanceof Uint8Array &&
+  e[1] instanceof Uint8Array;
 
 export const isBucket = (b: any): b is EncodedBucket =>
   typeof b === "object" &&
   b !== null &&
-  Object.keys(b).length === 4 &&
+  Object.keys(b).length === 3 &&
   Number.isInteger(b.average) &&
   b.average > 1 &&
   b.average < Number(MAX_UINT32) &&
   isPositiveInteger(b.level) &&
-  b.level <= MAX_LEVEL &&
-  isPositiveInteger(b.base) &&
+  b.level <= MAX_TREE_LEVEL &&
   Array.isArray(b.entries); // check that entries are valid later
 
 /**
  * Throws if the relation between the entry and the next entry is invalid.
  *
- * Ensures that entry is less than next by tuple sort.
+ * Ensures that entry is less than next by key sort.
  * Ensures that entry is only a boundary if it is the last entry in the bucket.
  * Optionally ensures that entry is within the range.
  *
@@ -79,7 +76,7 @@ export const validateEntryRelation = (
   next: Entry | undefined,
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
+  range?: KeyRange,
 ): void => {
   if (next == null) {
     // entry is last entry of bucket
@@ -90,13 +87,13 @@ export const validateEntryRelation = (
       );
     }
 
-    if (range != null && compareTuples(entry, range[1]) !== 0) {
-      throw new TypeError("Last entry must equal max tuple range.");
+    if (range != null && compareKeys(entry.key, range[1]) !== 0) {
+      throw new TypeError("Last entry must equal max key range.");
     }
   } else {
     // entry is not last entry of bucket
 
-    if (compareTuples(entry, next) >= 0) {
+    if (compareBytes(entry.key, next.key) >= 0) {
       throw new TypeError("Entries must be sorted and non-duplicative.");
     }
 
@@ -105,8 +102,8 @@ export const validateEntryRelation = (
     }
   }
 
-  if (range != null && compareTuples(entry, range[0]) <= 0) {
-    throw new TypeError("Entry must be greater than min tuple range.");
+  if (range != null && compareKeys(entry.key, range[0]) <= 0) {
+    throw new TypeError("Entry must be greater than min key range.");
   }
 };
 
@@ -120,11 +117,7 @@ export const validatePrefixExpected = (
   prefix: Prefix,
   expected: Prefix,
 ): void => {
-  if (
-    prefix.average !== expected.average ||
-    prefix.level !== expected.level ||
-    prefix.base !== expected.base
-  ) {
+  if (prefix.average !== expected.average || prefix.level !== expected.level) {
     throw new TypeError("prefix mismatch.");
   }
 };
@@ -155,8 +148,7 @@ export const validateEntriesLength = (
 };
 
 /**
- * Encodes entries and delta encodes their seq value.
- * Validates entry shape and relation.
+ * Encodes entries and validates entry shape and relation.
  *
  * @param entries
  * @param isHead
@@ -167,9 +159,8 @@ export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-): [EncodedEntry[], number] {
+): EncodedEntry[] {
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
-  let base = 0;
 
   let i = entries.length;
   while (i > 0) {
@@ -181,38 +172,30 @@ export function encodeEntries(
       throw new TypeError("invalid entry.");
     }
 
-    if (i === entries.length - 1) base = entry.seq;
-
     const next = entries[i + 1];
 
     validateEntryRelation(entry, next, isHead, isBoundary);
 
-    // entry seq is delta encoded
-    const delta = (next?.seq ?? base) - entry.seq;
-
-    encodedEntries[i] = [delta, entry.key, entry.val];
+    encodedEntries[i] = [entry.key, entry.val];
   }
 
-  return [encodedEntries, base];
+  return encodedEntries;
 }
 
 /**
- * Decodes entries and replaces their delta encoded seq with the original value.
- * Validates entry shape, relation, and optionally range.
+ * Decodes entries and validates entry shape, relation, and optionally range.
  *
  * @param encodedEntries
- * @param base
  * @param isHead
  * @param isBoundary
  * @param range
  * @returns
  */
 export function decodeEntries(
-  base: number,
   encodedEntries: EncodedEntry[],
   isHead: boolean,
   isBoundary: IsBoundary,
-  range?: TupleRange,
+  range?: KeyRange,
 ): Entry[] {
   const entries: Entry[] = new Array(encodedEntries.length);
 
@@ -226,17 +209,11 @@ export function decodeEntries(
       throw new TypeError("invalid encoded entry.");
     }
 
-    const [delta, key, val] = encodedEntry;
+    const [key, val] = encodedEntry;
 
     const next = entries[i + 1]!;
 
-    const seq = (next?.seq ?? base) - delta;
-
-    if (seq < 0) {
-      throw new TypeError("Entry seq must be greater than 0.");
-    }
-
-    const entry = new DefaultEntry(seq, key, val);
+    const entry = new DefaultEntry(key, val);
 
     validateEntryRelation(entry, next, isHead, isBoundary, range);
 
@@ -248,12 +225,11 @@ export function decodeEntries(
 
 export interface Expected {
   prefix?: Prefix;
-  range?: TupleRange;
+  range?: KeyRange;
 }
 
 /**
- * Encodes bucket to CBOR.
- * Validates entries length based on context.
+ * Encodes bucket and validates entries length based on context.
  *
  * @param average
  * @param level
@@ -273,7 +249,7 @@ export function encodeBucket(
     context.isTail && context.isHead,
   );
 
-  const [encodedEntries, base] = encodeEntries(
+  const encodedEntries = encodeEntries(
     entries,
     context.isHead,
     createIsBoundary(average, level),
@@ -282,7 +258,6 @@ export function encodeBucket(
   const encodedBucket: EncodedBucket = {
     average,
     level,
-    base,
     entries: encodedEntries,
   };
 
@@ -299,8 +274,7 @@ export function encodeBucket(
 }
 
 /**
- * Decodes a bucket from CBOR.
- * Validates bucket shape and entries length based on context.
+ * Decodes a bucket and validates bucket shape and entries length based on context.
  * Optionally compares prefix to an expected prefix and entries to an expected range.
  *
  * @param addressed
@@ -319,7 +293,7 @@ export function decodeBucket(
     throw new TypeError("invalid bucket.");
   }
 
-  if (decoded.level > MAX_LEVEL) {
+  if (decoded.level > MAX_TREE_LEVEL) {
     throw new Error("bucket level exceeds maximum allowed level.");
   }
 
@@ -336,7 +310,6 @@ export function decodeBucket(
   let entries: Entry[];
   try {
     entries = decodeEntries(
-      decoded.base,
       decoded.entries,
       context.isHead,
       createIsBoundary(decoded.average, decoded.level),

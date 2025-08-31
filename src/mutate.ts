@@ -1,21 +1,20 @@
 import { union } from "@tabcat/sorted-sets/union";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
-import { compare as compareBytes } from "uint8arrays";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import {
   createSharedAwaitIterable,
-  ensureSortedTuplesIterable,
+  ensureSortedKeysIterable,
   findUpperBound,
 } from "./common.js";
 import {
   compareBoundaries,
   compareBucketDigests,
   compareBuckets,
+  compareBytes,
   compareLevels,
-  compareTuples,
   composeComparators,
 } from "./compare.js";
-import { MAX_LEVEL } from "./constants.js";
+import { MAX_TREE_LEVEL } from "./constants.js";
 import { createCursor } from "./cursor.js";
 import {
   BucketDiff,
@@ -30,24 +29,24 @@ import {
   Bucket,
   Cursor,
   Entry,
+  KeyRecord,
   ProllyTree,
-  Tuple,
 } from "./interface.js";
 import {
   createBucket,
-  entryToTuple,
+  entryToKeyRecord,
   getBucketBoundary,
   getBucketEntry,
 } from "./utils.js";
 
 /**
  * An update is made of a Tuple, an Entry, or an Entry with a `strict: true` property.
- * Tuples will result in a remove.
+ * Keys will result in a remove.
  * Entries will result in an add.
  * Entries with a `strict: true` property will conditionally result in a remove:
  * if the update.val and the entry.val fields match.
  */
-export type Update = Tuple | Entry | (Entry & { strict: true });
+export type Update = KeyRecord | Entry | (Entry & { strict: true });
 
 export interface Updts {
   /**
@@ -95,7 +94,7 @@ export const applyUpdate = (
 
   if ("val" in update && !("strict" in update)) {
     // add updates
-    const updateEntry = new DefaultEntry(update.seq, update.key, update.val);
+    const updateEntry = new DefaultEntry(update.key, update.val);
 
     if (entry != null) {
       if (compareBytes(entry.val, update.val) !== 0) {
@@ -123,10 +122,11 @@ export const applyUpdate = (
 export async function getUserUpdateTuple(
   updts: Updts,
   level: number,
-): Promise<Tuple | null> {
+): Promise<KeyRecord | null> {
   if (level === 0) {
     for await (const u of updts.user) {
       updts.current.push(...u);
+
       return u[0]!;
     }
   }
@@ -140,7 +140,7 @@ export function createGetUpdatee(
   cursor: Cursor,
 ) {
   return async function getUpdatee(
-    tuple: Tuple | null,
+    keyRecord: KeyRecord | null,
     leftovers: boolean,
   ): Promise<Bucket | null> {
     if (leftovers) {
@@ -148,7 +148,7 @@ export function createGetUpdatee(
       return cursor.currentBucket();
     }
 
-    if (tuple == null) {
+    if (keyRecord == null) {
       return null;
     }
 
@@ -169,9 +169,9 @@ export function createGetUpdatee(
       );
     } else {
       if (level === cursor.level()) {
-        await cursor.nextTuple(tuple);
+        await cursor.nextKey(keyRecord.key);
       } else {
-        await cursor.jumpTo(tuple, level);
+        await cursor.jumpTo(keyRecord.key, level);
       }
 
       return cursor.currentBucket();
@@ -189,7 +189,7 @@ export function createGetUpdatee(
  * @returns
  */
 export async function collectUpdates(
-  boundary: Tuple | null,
+  boundary: Entry | null,
   updts: Updts,
   isHead: boolean,
 ): Promise<void> {
@@ -198,7 +198,8 @@ export async function collectUpdates(
   const stop = () =>
     // boundary only null if empty bucket (isHead === true)
     !isHead &&
-    compareTuples(updts.current[updts.current.length - 1]!, boundary!) >= 0;
+    compareBytes(updts.current[updts.current.length - 1]!.key, boundary!.key) >=
+      0;
 
   if (stop()) {
     // already have enough updates
@@ -247,10 +248,8 @@ export function segmentEntries(
     diffs = [];
   }
 
-  for (const [e, u] of pairwiseTraversal(
-    currentEntries,
-    updates,
-    compareTuples,
+  for (const [e, u] of pairwiseTraversal(currentEntries, updates, (e, u) =>
+    compareBytes(e.key, u.key),
   )) {
     const [entry, entryDiff] = applyUpdate(e, u);
 
@@ -340,7 +339,9 @@ export async function* rebuildLevel(
       0,
       isHead
         ? updts.current.length
-        : findUpperBound(updts.current, boundary!, compareTuples),
+        : findUpperBound(updts.current, boundary!, (a, b) =>
+            compareBytes(a.key, b.key),
+          ),
     );
 
     const [entrySegments, diffSegments, leftovers] = segmentEntries(
@@ -419,7 +420,7 @@ export async function* rebuildLevel(
 
         const bucketEntry = getBucketEntry(removed);
         if (bucketEntry != null) {
-          update = entryToTuple(bucketEntry);
+          update = entryToKeyRecord(bucketEntry);
         }
 
         removesProcessed++;
@@ -472,7 +473,7 @@ export async function* mutate(
   updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {
   let updts: Updts = {
-    user: createSharedAwaitIterable(ensureSortedTuplesIterable(updates)),
+    user: createSharedAwaitIterable(ensureSortedKeysIterable(updates)),
     current: [],
     next: [],
   };
@@ -487,7 +488,7 @@ export async function* mutate(
   const cursor = createCursor(blockstore, tree);
   const { average } = cursor.currentBucket();
 
-  while (state.newRoot == null && level < MAX_LEVEL) {
+  while (state.newRoot == null && level < MAX_TREE_LEVEL) {
     yield* rebuildLevel(cursor, updts, state, average, level);
 
     updts.current = updts.next;

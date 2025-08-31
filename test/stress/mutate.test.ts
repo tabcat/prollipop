@@ -1,16 +1,12 @@
 import { diff as orderedDiff } from "@tabcat/sorted-sets/difference";
 import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { describe, expect, it } from "vitest";
-import {
-  compareBuckets,
-  compareBytes,
-  compareTuples,
-} from "../../src/compare.js";
+import { compareBuckets, compareBytes } from "../../src/compare.js";
 import { BucketDiff, EntryDiff } from "../../src/diff.js";
 import { cloneTree } from "../../src/index.js";
 import { Entry } from "../../src/interface.js";
 import { Update, mutate } from "../../src/mutate.js";
-import { entryToTuple } from "../../src/utils.js";
+import { entryToKeyRecord } from "../../src/utils.js";
 import { blockstore } from "../helpers/constants.js";
 import { trees } from "./trees.js";
 
@@ -28,11 +24,13 @@ const checkMutate = async (
   const entries2 = tree2States.entries;
 
   let updateBatch: Update[] = [];
-  for (const [a, r] of pairwiseTraversal(entries2, entries1, compareTuples)) {
+  for (const [a, r] of pairwiseTraversal(entries2, entries1, (a, b) =>
+    compareBytes(a.key, b.key),
+  )) {
     if (a != null) {
       updateBatch.push(a);
     } else {
-      updateBatch.push(entryToTuple(r));
+      updateBatch.push(entryToKeyRecord(r));
     }
   }
 
@@ -56,7 +54,7 @@ const checkMutate = async (
     orderedDiff(
       tree1States.entries,
       tree2States.entries,
-      compareTuples,
+      (a: Entry, b: Entry) => compareBytes(a.key, b.key),
       (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );
@@ -87,11 +85,13 @@ const checkMutate = async (
   }
 
   updateBatch = [];
-  for (const [a, r] of pairwiseTraversal(entries1, entries2, compareTuples)) {
+  for (const [a, r] of pairwiseTraversal(entries1, entries2, (a, b) =>
+    compareBytes(a.key, b.key),
+  )) {
     if (a != null) {
       updateBatch.push(a);
     } else {
-      updateBatch.push(entryToTuple(r));
+      updateBatch.push(entryToKeyRecord(r));
     }
   }
 
@@ -114,7 +114,7 @@ const checkMutate = async (
     orderedDiff(
       tree2States.entries,
       tree1States.entries,
-      compareTuples,
+      (a: Entry, b: Entry) => compareBytes(a.key, b.key),
       (a: Entry, b: Entry) => compareBytes(a.val, b.val) !== 0,
     ),
   );

@@ -1,6 +1,7 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
+import { createIsBoundary } from "../src/boundary.js";
 import {
   EncodedEntry,
   decodeBucket,
@@ -13,15 +14,15 @@ import {
   validateEntriesLength,
   validateEntryRelation,
 } from "../src/codec.js";
-import { MAX_LEVEL, MIN_TUPLE } from "../src/constants.js";
+import { MAX_TREE_LEVEL } from "../src/constants.js";
 import { DefaultBucket } from "../src/impls.js";
 import { Entry } from "../src/interface.js";
 import {
   addressed,
   average,
   bucket,
-  bytes,
   context,
+  createBoundaryEntry,
   createEncodedEntry,
   createEntry,
   emptyAddressed,
@@ -31,9 +32,9 @@ import {
   encodedEntry,
   entries,
   entry,
+  key,
   level,
-  seq,
-  tuple,
+  noBytes,
 } from "./helpers/constants.js";
 
 describe("codec", () => {
@@ -45,20 +46,20 @@ describe("codec", () => {
     it("returns false for invalid entry", () => {
       expect(isEntry(null)).toBe(false);
       expect(isEntry({})).toBe(false);
-      expect(isEntry(tuple)).toBe(false);
+      expect(isEntry(key)).toBe(false);
       expect(isEntry({ ...entry, oneMore: "field" })).toBe(false);
     });
   });
 
   describe("isEncodedEntry", () => {
     it("returns true for a valid encoded entry", () => {
-      expect(isEncodedEntry([0, bytes, bytes])).toBe(true);
+      expect(isEncodedEntry([noBytes, noBytes])).toBe(true);
     });
 
     it("returns false for invalid encoded entry", () => {
       expect(isEncodedEntry(null)).toBe(false);
       expect(isEncodedEntry([])).toBe(false);
-      expect(isEncodedEntry([0, bytes, bytes, bytes])).toBe(false);
+      expect(isEncodedEntry([noBytes, noBytes, noBytes])).toBe(false);
     });
   });
 
@@ -98,10 +99,10 @@ describe("codec", () => {
       it("throws when range[1] !== entry on last entry", () => {
         expect(() =>
           validateEntryRelation(entry, undefined, false, () => true, [
-            MIN_TUPLE,
-            MIN_TUPLE,
+            "MIN_KEY",
+            "MIN_KEY",
           ]),
-        ).toThrow("Last entry must equal max tuple range.");
+        ).toThrow("Last entry must equal max key range.");
       });
     });
 
@@ -146,25 +147,13 @@ describe("codec", () => {
 
   describe("encodeEntries", () => {
     it("returns encoded entries for a non-head bucket", () => {
-      const [encodedEntries, base] = encodeEntries(entries, false, () => true);
-      expect(encodedEntries).toEqual([createEncodedEntry(seq)]);
-      expect(base).toEqual(0);
+      const encodedEntries = encodeEntries(entries, false, () => true);
+      expect(encodedEntries).toEqual([createEncodedEntry(0)]);
     });
 
     it("returns encoded entries for a head bucket", () => {
-      const [encodedEntries, base] = encodeEntries(entries, true, () => false);
-      expect(encodedEntries).toEqual([createEncodedEntry(seq)]);
-      expect(base).toEqual(0);
-    });
-
-    it("returns delta encoded entry seqs", () => {
-      const [encodedEntries, base] = encodeEntries(
-        [createEntry(1), createEntry(3)],
-        true,
-        () => false,
-      );
-      expect(encodedEntries).toEqual([createEncodedEntry(2), encodedEntry]);
-      expect(base).toEqual(3);
+      const encodedEntries = encodeEntries(entries, true, () => false);
+      expect(encodedEntries).toEqual([createEncodedEntry(0)]);
     });
 
     it("throws when entries[i] is invalid", () => {
@@ -182,75 +171,58 @@ describe("codec", () => {
 
   describe("decodeEntries", () => {
     it("returns decoded entries for a non-head bucket", () => {
-      const decodedEntries = decodeEntries(
-        0,
-        encodedEntries,
-        false,
-        () => true,
-        [MIN_TUPLE, tuple],
-      );
+      const decodedEntries = decodeEntries(encodedEntries, false, () => true, [
+        "MIN_KEY",
+        key,
+      ]);
       expect(decodedEntries).toEqual(entries);
     });
 
     it("returns decoded entries for a head bucket", () => {
-      const decodedEntries = decodeEntries(
-        0,
-        encodedEntries,
-        true,
-        () => false,
-        [MIN_TUPLE, tuple],
-      );
+      const decodedEntries = decodeEntries(encodedEntries, true, () => false, [
+        "MIN_KEY",
+        key,
+      ]);
       expect(decodedEntries).toEqual(entries);
-    });
-
-    it("returns delta decoded entry seqs", () => {
-      const decodedEntries = decodeEntries(
-        3,
-        [createEncodedEntry(2), encodedEntry],
-        true,
-        () => false,
-        [MIN_TUPLE, createEntry(3)],
-      );
-      expect(decodedEntries).toEqual([createEntry(1), createEntry(3)]);
     });
 
     it("throws when first range[0] >= entries[0]", () => {
       expect(() =>
-        decodeEntries(0, [encodedEntry], true, () => false, [entry, entry]),
-      ).toThrow("Entry must be greater than min tuple range.");
+        decodeEntries([encodedEntry], true, () => false, [
+          entry.key,
+          entry.key,
+        ]),
+      ).toThrow("Entry must be greater than min key range.");
     });
 
     it("throws when entries[i] is invalid", () => {
       expect(() =>
-        decodeEntries(0, [null as unknown as EncodedEntry], true, () => false),
+        decodeEntries([null as unknown as EncodedEntry], true, () => false),
       ).toThrow("invalid encoded entry.");
     });
 
     it("throws when entries are not sorted or duplicative", () => {
       expect(() =>
-        decodeEntries(0, [encodedEntry, encodedEntry], true, () => false, [
-          MIN_TUPLE,
-          entry,
+        decodeEntries([encodedEntry, encodedEntry], true, () => false, [
+          "MIN_KEY",
+          entry.key,
         ]),
       ).toThrow("Entries must be sorted and non-duplicative.");
-    });
-
-    it("throws when decoded seq is negative", () => {
-      expect(() =>
-        decodeEntries(0, [[1, bytes, bytes], encodedEntry], true, () => false, [
-          MIN_TUPLE,
-          entry,
-        ]),
-      ).toThrow("Entry seq must be greater than 0.");
     });
   });
 
   describe("encodeBucket", () => {
     it("returns encoded bucket for a bucket", () => {
-      const encodedBucket = encodeBucket(2, level, entries, {
-        isTail: false,
-        isHead: false,
-      });
+      const isBoundary = createIsBoundary(2, level);
+      const encodedBucket = encodeBucket(
+        2,
+        level,
+        [createBoundaryEntry(0, isBoundary)],
+        {
+          isTail: false,
+          isHead: false,
+        },
+      );
       expect(encodedBucket).toEqual(encodedBucket);
     });
 
@@ -280,10 +252,15 @@ describe("codec", () => {
 
     it("throws when level > MAX_LEVEL", () => {
       expect(() =>
-        encodeBucket(average, MAX_LEVEL + 1, [createEntry(1), createEntry(2)], {
-          isTail: true,
-          isHead: true,
-        }),
+        encodeBucket(
+          average,
+          MAX_TREE_LEVEL + 1,
+          [createEntry(1), createEntry(2)],
+          {
+            isTail: true,
+            isHead: true,
+          },
+        ),
       ).toThrow("invalid bucket.");
     });
 
@@ -302,18 +279,19 @@ describe("codec", () => {
 
   describe("decodeBucket", () => {
     it("returns decoded bucket for a bucket", () => {
+      const isBoundary = createIsBoundary(2, level);
       const context = { isTail: false, isHead: false };
-      const addressed = encodeBucket(2, level, entries, context);
+      const boundary = createBoundaryEntry(0, isBoundary);
+      const addressed = encodeBucket(2, level, [boundary], context);
       const decodedBucket = decodeBucket(addressed, context, {
         prefix: {
           average: 2,
           level,
-          base: 0,
         },
-        range: [MIN_TUPLE, tuple],
+        range: ["MIN_KEY", boundary.key],
       });
       expect(decodedBucket).toEqual(
-        new DefaultBucket(2, level, entries, addressed, context),
+        new DefaultBucket(2, level, [boundary], addressed, context),
       );
     });
 
@@ -334,9 +312,8 @@ describe("codec", () => {
     it("throws when level > MAX_LEVEL", () => {
       const bytes = encode({
         average,
-        level: MAX_LEVEL + 1,
+        level: MAX_TREE_LEVEL + 1,
         entries: [createEntry(1), createEntry(2)],
-        base: 2,
       });
       const digest = sha256(bytes);
 
@@ -356,7 +333,7 @@ describe("codec", () => {
     });
 
     it("throws when root bucket level > 0 has less than two entries", () => {
-      const bytes = encode({ average, level: 1, entries: [], base: 0 });
+      const bytes = encode({ average, level: 1, entries: [] });
       const digest = sha256(bytes);
 
       const context = { isTail: true, isHead: true };
@@ -369,17 +346,17 @@ describe("codec", () => {
     it("throws when max tuple range not equal to last entry", () => {
       expect(() =>
         decodeBucket(addressed, context, {
-          range: [MIN_TUPLE, MIN_TUPLE],
+          range: ["MIN_KEY", "MIN_KEY"],
         }),
-      ).toThrow("Last entry must equal max tuple range.");
+      ).toThrow("Last entry must equal max key range.");
     });
 
     it("throws when min tuple range less than all entries", () => {
       expect(() =>
         decodeBucket(addressed, context, {
-          range: [tuple, tuple],
+          range: [key, key],
         }),
-      ).toThrow("Entry must be greater than min tuple range.");
+      ).toThrow("Entry must be greater than min key range.");
     });
 
     it("throws when prefix mismatch", () => {
@@ -388,7 +365,6 @@ describe("codec", () => {
           prefix: {
             average: 1,
             level,
-            base: 0,
           },
         }),
       ).toThrow("prefix mismatch.");

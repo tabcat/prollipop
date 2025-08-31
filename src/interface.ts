@@ -5,13 +5,18 @@ export type Await<T> = Promise<T> | T;
 
 export type AwaitIterable<T> = Iterable<T> | AsyncIterable<T>;
 
+export type ComparableKey = Uint8Array | "MIN_KEY" | "MAX_KEY";
+
 export interface KeyRange {
-  0: Uint8Array;
-  1: Uint8Array;
+  0: ComparableKey;
+  1: ComparableKey;
 }
 
-export interface Entry {
-  readonly key: Uint8Array;
+export interface KeyRecord {
+  key: Uint8Array;
+}
+
+export interface Entry extends KeyRecord {
   readonly val: Uint8Array;
 }
 
@@ -117,7 +122,7 @@ export interface Cursor {
    * Moves the cursor to the next entry on the current level.
    * If the supplied key is less than or equal to the current key, the cursor will not be moved.
    */
-  nextKey(key: Uint8Array, level?: number): Promise<void>;
+  nextKey(key: ComparableKey, level?: number): Promise<void>;
 
   /**
    * Jumps the cursor from root to the entry or parent entry at level. This is not a move operation.

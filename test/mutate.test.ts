@@ -11,12 +11,12 @@ import {
   applyUpdate,
   collectUpdates,
   createGetUpdatee,
-  getUserUpdateTuple,
+  getUserUpdateKey,
   mutate,
   rebuildLevel,
   segmentEntries,
 } from "../src/mutate.js";
-import { entryToKeyRecord, loadBucket } from "../src/utils.js";
+import { loadBucket, toKey } from "../src/utils.js";
 import {
   average,
   blockstore,
@@ -84,7 +84,7 @@ describe("mutate", () => {
     });
 
     describe("removal", () => {
-      const update = entryToKeyRecord({ ...entry });
+      const update = key;
 
       it("returns [null, null] if entry does not exist", () => {
         expect(applyUpdate(null, update)).to.deep.equal([null, null]);
@@ -98,7 +98,7 @@ describe("mutate", () => {
 
   describe("getUserUpdateTuple", () => {
     it("returns a tuple from updts.user", async () => {
-      const updates = createSharedAwaitIterable([[{ key }]]);
+      const updates = createSharedAwaitIterable([[key]]);
 
       const level = 0;
       const updts: Updts = {
@@ -107,9 +107,9 @@ describe("mutate", () => {
         next: [],
       };
 
-      const currentTuple = await getUserUpdateTuple(updts, level);
+      const currentTuple = await getUserUpdateKey(updts, level);
 
-      expect(currentTuple).to.deep.equal({ key });
+      expect(currentTuple).to.deep.equal(key);
       expect(updts.current.length).to.equal(1);
     });
 
@@ -120,13 +120,13 @@ describe("mutate", () => {
         user: [],
         next: [],
       };
-      const currentTuple = await getUserUpdateTuple(updts, level);
+      const currentTuple = await getUserUpdateKey(updts, level);
 
       expect(currentTuple).to.equal(null);
     });
 
     it("returns null if level > 0", async () => {
-      const updates = createSharedAwaitIterable([[{ key }]]);
+      const updates = createSharedAwaitIterable([[key]]);
 
       const level = 1;
       const updts: Updts = {
@@ -135,7 +135,7 @@ describe("mutate", () => {
         next: [],
       };
 
-      const currentTuple = await getUserUpdateTuple(updts, level);
+      const currentTuple = await getUserUpdateKey(updts, level);
 
       expect(currentTuple).to.equal(null);
       expect(updts.current.length).to.equal(0);
@@ -153,7 +153,7 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee({ key }, false);
+      await getUpdatee(key, false);
 
       expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
@@ -169,7 +169,7 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee({ key }, false);
+      await getUpdatee(key, false);
 
       expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
@@ -185,7 +185,7 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      await getUpdatee({ key }, false);
+      await getUpdatee(key, false);
 
       expect(cursor.nextKey).toHaveBeenCalledOnce();
     });
@@ -199,7 +199,7 @@ describe("mutate", () => {
       } as unknown as Cursor;
       const getUpdatee = createGetUpdatee(average, 0, cursor);
 
-      const updatee = await getUpdatee({ key }, false);
+      const updatee = await getUpdatee(key, false);
 
       expect(updatee).to.not.equal(null);
 
@@ -341,7 +341,7 @@ describe("mutate", () => {
 
       it("handles remove updates", () => {
         const currentEntries = [createEntry(0), createEntry(1)];
-        const updates = [entryToKeyRecord(currentEntries[0]!)];
+        const updates = [toKey(currentEntries[0]!)];
 
         const [entrySegments, diffSegments, leftovers] = segmentEntries(
           currentEntries,
@@ -415,7 +415,7 @@ describe("mutate", () => {
 
       it("handles complete removal of entries", () => {
         const currentEntries = [createEntry(0), createEntry(1)];
-        const updates = currentEntries.map(entryToKeyRecord);
+        const updates = currentEntries.map(toKey);
 
         const [entrySegments, diffSegments, leftovers] = segmentEntries(
           currentEntries,
@@ -555,7 +555,7 @@ describe("mutate", () => {
     it("rebuilds a multi-bucket level into a single bucket level", async () => {
       const cursor = createCursor(blockstore, oddTree);
       const updts: Updts = {
-        current: oddTreeEntries.map(entryToKeyRecord),
+        current: oddTreeEntries.map(toKey),
         user: [],
         next: [],
       };
@@ -733,7 +733,7 @@ describe("mutate", () => {
 
     it("removes all entries from a tree", async () => {
       const oddTreeCopy = cloneTree(oddTree);
-      const updates = [oddTreeEntries.map(entryToKeyRecord)];
+      const updates = [oddTreeEntries.map(toKey)];
 
       const expected: ProllyTreeDiff[] = [
         {

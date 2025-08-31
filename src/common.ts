@@ -1,6 +1,7 @@
 import { ensureSortedSet } from "@tabcat/sorted-sets/util";
 import { compareBytes } from "./compare.js";
-import { AwaitIterable, KeyRecord } from "./interface.js";
+import { AwaitIterable, KeyLike } from "./interface.js";
+import { toKey } from "./utils.js";
 
 /**
  * Finds the index of the target using binary search.
@@ -119,15 +120,17 @@ const unsortedError = (options?: ErrorOptions) =>
  * @returns
  */
 export async function* ensureSortedKeysIterable(
-  keys: AwaitIterable<KeyRecord[]>,
+  keys: AwaitIterable<KeyLike[]>,
 ) {
-  let previous: KeyRecord | null = null;
+  let previous: Uint8Array | null = null;
 
   for await (const k of keys) {
     if (k.length === 0) continue;
 
     try {
-      for (const _ of ensureSortedSet(k, (a, b) => compareBytes(a.key, b.key)));
+      for (const _ of ensureSortedSet(k, (a, b) =>
+        compareBytes(toKey(a), toKey(b)),
+      ));
     } catch (e) {
       throw unsortedError({ cause: e });
     }
@@ -135,11 +138,11 @@ export async function* ensureSortedKeysIterable(
     if (
       k[0] != null &&
       previous != null &&
-      compareBytes(previous.key, k[0].key) >= 0
+      compareBytes(previous, toKey(k[0])) >= 0
     ) {
       throw unsortedError();
     }
-    previous = k[k.length - 1]!;
+    previous = toKey(k[k.length - 1]!);
 
     yield k;
   }

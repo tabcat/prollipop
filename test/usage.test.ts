@@ -4,7 +4,7 @@ import { diff } from "../src/diff.js";
 import { DefaultEntry } from "../src/impls.js";
 import { cloneTree, createEmptyTree, mutate, search } from "../src/index.js";
 import { Bucket, Entry, ProllyTree } from "../src/interface.js";
-import { entryToKeyRecord } from "../src/utils.js";
+import { toKey } from "../src/utils.js";
 
 /**
  * !!!
@@ -46,10 +46,7 @@ describe("usage", () => {
     /**
      * Tuples are made up of a seq and a hash. These are used like keys in a key/value store.
      */
-    const tuple = {
-      seq: 0,
-      key: new TextEncoder().encode("hello"),
-    };
+    const key = new TextEncoder().encode("hello");
 
     /**
      * Entries are made up of a seq, hash, and val.
@@ -57,7 +54,7 @@ describe("usage", () => {
      * The seq and key give entries a sort, entries are stored in this order in the tree.
      */
     const entry: Entry = new DefaultEntry(
-      tuple.key,
+      key,
       new TextEncoder().encode("world"),
     );
 
@@ -121,7 +118,7 @@ describe("usage", () => {
      * The search function can be used to read keys from the tree.
      * Again, it is important to provide the keys you want to search sorted.
      */
-    for await (const entries of search(blockstore, tree, [[tuple]])) {
+    for await (const entries of search(blockstore, tree, [[key]])) {
       for (const entry of entries) {
         if ("val" in entry) {
           /**
@@ -191,9 +188,7 @@ describe("usage", () => {
     /**
      * To remove entries from a tree the mutate function is used. But instead of giving it full entries, we give it the tuple (aka the key).
      */
-    for await (const _ of mutate(blockstore, tree, [
-      [entryToKeyRecord(entry)],
-    ])) {
+    for await (const _ of mutate(blockstore, tree, [[toKey(entry)]])) {
       /**
        * Like before any buckets that were added should be added to the blockstore.
        * Any buckets that were removed could be removed safely if not used by other trees.

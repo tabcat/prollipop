@@ -6,7 +6,7 @@ import { BucketDiff, EntryDiff } from "../../src/diff.js";
 import { cloneTree } from "../../src/index.js";
 import { Entry } from "../../src/interface.js";
 import { Update, mutate } from "../../src/mutate.js";
-import { entryToKeyRecord } from "../../src/utils.js";
+import { toKey } from "../../src/utils.js";
 import { blockstore } from "../helpers/constants.js";
 import { trees } from "./trees.js";
 
@@ -30,7 +30,7 @@ const checkMutate = async (
     if (a != null) {
       updateBatch.push(a);
     } else {
-      updateBatch.push(entryToKeyRecord(r));
+      updateBatch.push(toKey(r));
     }
   }
 
@@ -91,7 +91,7 @@ const checkMutate = async (
     if (a != null) {
       updateBatch.push(a);
     } else {
-      updateBatch.push(entryToKeyRecord(r));
+      updateBatch.push(toKey(r));
     }
   }
 

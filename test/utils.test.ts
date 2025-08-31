@@ -9,11 +9,11 @@ import {
   createBucket,
   createEmptyBucket,
   doRangesIntersect,
-  entryToKeyRecord,
   getBucketBoundary,
   getBucketEntry,
   getEntryRange,
   loadBucket,
+  toKey,
 } from "../src/utils.js";
 import {
   average,
@@ -106,7 +106,7 @@ describe("utils", () => {
 
   describe("entryToKeyRecord", () => {
     it("returns a new key record from an entry", () => {
-      expect(entryToKeyRecord(entry)).to.deep.equal({ key });
+      expect(toKey(entry)).to.deep.equal(key);
     });
   });
 

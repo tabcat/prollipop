@@ -29,24 +29,25 @@ import {
   Bucket,
   Cursor,
   Entry,
-  KeyRecord,
+  Key,
+  KeyLike,
   ProllyTree,
 } from "./interface.js";
 import {
   createBucket,
-  entryToKeyRecord,
   getBucketBoundary,
   getBucketEntry,
+  toKey,
 } from "./utils.js";
 
 /**
- * An update is made of a Tuple, an Entry, or an Entry with a `strict: true` property.
+ * An update is made of a Key, an Entry, or an Entry with a `strict: true` property.
  * Keys will result in a remove.
  * Entries will result in an add.
  * Entries with a `strict: true` property will conditionally result in a remove:
  * if the update.val and the entry.val fields match.
  */
-export type Update = KeyRecord | Entry | (Entry & { strict: true });
+export type Update = Uint8Array | Entry | (Entry & { strict: true });
 
 export interface Updts {
   /**
@@ -119,15 +120,15 @@ export const applyUpdate = (
   }
 };
 
-export async function getUserUpdateTuple(
+export async function getUserUpdateKey(
   updts: Updts,
   level: number,
-): Promise<KeyRecord | null> {
+): Promise<Key | null> {
   if (level === 0) {
     for await (const u of updts.user) {
       updts.current.push(...u);
 
-      return u[0]!;
+      return toKey(u[0]!);
     }
   }
 
@@ -140,7 +141,7 @@ export function createGetUpdatee(
   cursor: Cursor,
 ) {
   return async function getUpdatee(
-    keyRecord: KeyRecord | null,
+    key: KeyLike | null,
     leftovers: boolean,
   ): Promise<Bucket | null> {
     if (leftovers) {
@@ -148,7 +149,7 @@ export function createGetUpdatee(
       return cursor.currentBucket();
     }
 
-    if (keyRecord == null) {
+    if (key == null) {
       return null;
     }
 
@@ -169,9 +170,9 @@ export function createGetUpdatee(
       );
     } else {
       if (level === cursor.level()) {
-        await cursor.nextKey(keyRecord.key);
+        await cursor.nextKey(toKey(key));
       } else {
-        await cursor.jumpTo(keyRecord.key, level);
+        await cursor.jumpTo(toKey(key), level);
       }
 
       return cursor.currentBucket();
@@ -198,8 +199,10 @@ export async function collectUpdates(
   const stop = () =>
     // boundary only null if empty bucket (isHead === true)
     !isHead &&
-    compareBytes(updts.current[updts.current.length - 1]!.key, boundary!.key) >=
-      0;
+    compareBytes(
+      toKey(updts.current[updts.current.length - 1]!),
+      boundary!.key,
+    ) >= 0;
 
   if (stop()) {
     // already have enough updates
@@ -249,7 +252,7 @@ export function segmentEntries(
   }
 
   for (const [e, u] of pairwiseTraversal(currentEntries, updates, (e, u) =>
-    compareBytes(e.key, u.key),
+    compareBytes(e.key, toKey(u)),
   )) {
     const [entry, entryDiff] = applyUpdate(e, u);
 
@@ -320,7 +323,7 @@ export async function* rebuildLevel(
   const getUpdatee = createGetUpdatee(average, level, cursor);
 
   let updatee = await getUpdatee(
-    updts.current[0] ?? (await getUserUpdateTuple(updts, level)),
+    updts.current[0] ?? (await getUserUpdateKey(updts, level)),
     false,
   );
 
@@ -340,7 +343,7 @@ export async function* rebuildLevel(
       isHead
         ? updts.current.length
         : findUpperBound(updts.current, boundary!, (a, b) =>
-            compareBytes(a.key, b.key),
+            compareBytes(toKey(a), b.key),
           ),
     );
 
@@ -355,7 +358,7 @@ export async function* rebuildLevel(
     const buckets = cursor.buckets().reverse();
 
     const nextUpdatee = await getUpdatee(
-      updts.current[0] ?? (await getUserUpdateTuple(updts, level)),
+      updts.current[0] ?? (await getUserUpdateKey(updts, level)),
       leftovers && !isHead,
     );
 
@@ -420,7 +423,7 @@ export async function* rebuildLevel(
 
         const bucketEntry = getBucketEntry(removed);
         if (bucketEntry != null) {
-          update = entryToKeyRecord(bucketEntry);
+          update = toKey(bucketEntry);
         }
 
         removesProcessed++;

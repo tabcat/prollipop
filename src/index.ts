@@ -12,7 +12,7 @@ import {
   AwaitIterable,
   Blockgetter,
   Entry,
-  KeyRecord,
+  KeyLike,
   ProllyTree,
 } from "./interface.js";
 import { mutate } from "./mutate.js";
@@ -20,9 +20,9 @@ import {
   bucketCidToDigest,
   bucketDigestToCid,
   createEmptyBucket,
-  entryToKeyRecord,
   getBucketBoundary,
   loadBucket,
+  toKey,
 } from "./utils.js";
 
 export { createCursor, diff, mutate };
@@ -76,50 +76,50 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
  *
  * @param blockstore - blockstore to use to fetch buckets
  * @param tree - ProllyTree to search
- * @param keyRecords - Tuple used to search for associated value
+ * @param keys - Keys used to search for associated value
  *
- * @returns Associated Entry if found, otherwise returns Tuple
+ * @returns Associated Entry if found, otherwise returns a key.
  */
 export async function* search(
   blockstore: Blockgetter,
   tree: ProllyTree,
-  keyRecords: AwaitIterable<KeyRecord[]>,
-): AsyncIterable<(Entry | KeyRecord)[]> {
+  keys: AwaitIterable<KeyLike[]>,
+): AsyncIterable<KeyLike[]> {
   const cursor = createCursor(blockstore, tree);
-  let results: (Entry | KeyRecord)[] = [];
+  let results: KeyLike[] = [];
 
-  for await (let kr of ensureSortedKeysIterable(keyRecords)) {
+  for await (let k of ensureSortedKeysIterable(keys)) {
     if (cursor.done()) {
-      yield kr.map(entryToKeyRecord);
+      yield k.map(toKey);
       continue;
     }
 
     // do this without copying in the future
-    kr = kr.slice();
+    k = k.slice();
 
-    while (kr.length > 0) {
-      await cursor.nextKey(kr[0]!.key, 0);
+    while (k.length > 0) {
+      await cursor.nextKey(toKey(k[0]!), 0);
 
       const currentBucket = cursor.currentBucket();
-      const keyRecords = kr.splice(
+      const keySplice = k.splice(
         0,
         cursor.isAtHead()
-          ? kr.length
-          : findUpperBound(kr, getBucketBoundary(currentBucket)!, (a, b) =>
-              compareBytes(a.key, b.key),
+          ? k.length
+          : findUpperBound(k, getBucketBoundary(currentBucket)!, (a, b) =>
+              compareBytes(toKey(a), b.key),
             ),
       );
 
       for (const [keyRecord, entry] of pairwiseTraversal(
-        keyRecords,
+        keySplice,
         currentBucket.entries,
-        (a, b) => compareBytes(a.key, b.key),
+        (a, b) => compareBytes(toKey(a), b.key),
       )) {
         if (keyRecord == null) {
           continue;
         } else {
           if (entry == null) {
-            results.push(entryToKeyRecord(keyRecord));
+            results.push(toKey(keyRecord));
           } else {
             results.push(entry);
           }

@@ -72,7 +72,7 @@ export class Prollipop {
     const tree = await loadTree(this.blockstore, this.root);
 
     for await (const [entry] of search(this.blockstore, tree, [
-      [{ key: new TextEncoder().encode(key) }],
+      [new TextEncoder().encode(key)],
     ])) {
       if (entry != null && "val" in entry && entry.val instanceof Uint8Array) {
         return new TextDecoder().decode(entry.val);

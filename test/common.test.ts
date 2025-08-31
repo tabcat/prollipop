@@ -5,7 +5,7 @@ import {
   findIndexFast,
   findUpperBound,
 } from "../src/common.js";
-import { createEntry, key, keyRecord } from "./helpers/constants.js";
+import { createEntry, key } from "./helpers/constants.js";
 
 describe("common", () => {
   describe("findIndexFast", () => {
@@ -86,9 +86,9 @@ describe("common", () => {
 
   describe("ensureSortedKeysIterable", () => {
     it("yields tuples and entries", async () => {
-      const it = ensureSortedKeysIterable([[keyRecord], [createEntry(1)]]);
+      const it = ensureSortedKeysIterable([[key], [createEntry(1)]]);
 
-      expect(await it.next()).to.deep.equal({ value: [{ key }], done: false });
+      expect(await it.next()).to.deep.equal({ value: [key], done: false });
       expect(await it.next()).to.deep.equal({
         value: [createEntry(1)],
         done: false,
@@ -96,11 +96,11 @@ describe("common", () => {
     });
 
     it("throws if tuples are not sorted or duplicate", async () => {
-      const it1 = ensureSortedKeysIterable([[keyRecord, keyRecord]]);
+      const it1 = ensureSortedKeysIterable([[key, key]]);
 
       expect(it1.next()).to.rejects.toThrow();
 
-      const it2 = ensureSortedKeysIterable([[keyRecord], [keyRecord]]);
+      const it2 = ensureSortedKeysIterable([[key], [key]]);
 
       await it2.next();
 

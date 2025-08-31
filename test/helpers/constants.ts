@@ -52,7 +52,7 @@ export const val = noBytes;
 export const entry = createEntry(0);
 export const encodedEntry = createEncodedEntry(0);
 
-export const keyRecord = { key };
+export const keyRecord = key;
 
 export const average = 32;
 export const level = 0;

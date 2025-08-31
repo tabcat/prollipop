@@ -10,8 +10,8 @@ import {
   Bucket,
   Context,
   Entry,
+  KeyLike,
   KeyRange,
-  KeyRecord,
   Prefix,
 } from "./interface.js";
 
@@ -58,15 +58,8 @@ export function doRangesIntersect(range1: KeyRange, range2: KeyRange): boolean {
   );
 }
 
-/**
- * Returns a new tuple for the provided entry or tuple.
- *
- * @param entry
- * @returns
- */
-export const entryToKeyRecord = ({ key }: KeyRecord): KeyRecord => ({
-  key,
-});
+export const toKey = (entry: KeyLike): Uint8Array =>
+  entry instanceof Uint8Array ? entry : entry.key;
 
 /**
  * Returns a new prefix for the provided bucket or prefix.

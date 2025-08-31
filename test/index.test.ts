@@ -65,8 +65,8 @@ describe("index", () => {
 
     it("yields key records for entries not found in a tree", async () => {
       const key = createKey(10);
-      for await (const [entry] of search(blockstore, oddTree, [[{ key }]])) {
-        expect(entry).to.deep.equal({ key });
+      for await (const [entry] of search(blockstore, oddTree, [[key]])) {
+        expect(entry).to.deep.equal(key);
       }
     });
 

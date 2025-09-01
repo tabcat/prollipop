@@ -77,7 +77,7 @@ export interface ProllyTree {
 /**
  * A subset of the Blockstore interface for the cursor to fetch blocks.
  */
-export type Blockgetter = Pick<Blockstore, "get">;
+export type Blockfetcher = Pick<Blockstore, "get">;
 
 /**
  * A cursor enables ordered traversal of a prolly-tree.

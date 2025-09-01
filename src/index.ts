@@ -10,7 +10,7 @@ import { DefaultProllyTree } from "./impls.js";
 import {
   Await,
   AwaitIterable,
-  Blockgetter,
+  Blockfetcher,
   Entry,
   KeyLike,
   ProllyTree,
@@ -47,7 +47,7 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
  * @returns
  */
 export async function loadTree(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   cid: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
@@ -81,7 +81,7 @@ export function cloneTree(tree: ProllyTree): ProllyTree {
  * @returns Associated Entry if found, otherwise returns a key.
  */
 export async function* search(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   tree: ProllyTree,
   keys: AwaitIterable<KeyLike[]>,
 ): AsyncIterable<KeyLike[]> {
@@ -147,10 +147,10 @@ export async function* search(
  * @param choose - Chooses between two entries. Must return one of the provided entry instances.
  */
 export async function* merge(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   target: ProllyTree,
   source: ProllyTree,
-  remoteBlockstore?: Blockgetter,
+  remoteBlockstore?: Blockfetcher,
   choose?: (a: Entry, b: Entry) => Entry,
 ): AsyncIterable<ProllyTreeDiff> {
   if (target.root.average !== source.root.average) {

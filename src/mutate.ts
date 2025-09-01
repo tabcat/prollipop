@@ -25,7 +25,7 @@ import {
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
   AwaitIterable,
-  Blockgetter,
+  Blockfetcher,
   Bucket,
   Cursor,
   Entry,
@@ -471,7 +471,7 @@ export async function* rebuildLevel(
 }
 
 export async function* mutate(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   tree: ProllyTree,
   updates: AwaitIterable<Update[]>,
 ): AsyncIterable<ProllyTreeDiff> {

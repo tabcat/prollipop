@@ -22,7 +22,7 @@ import {
 } from "./compare.js";
 import { createCursor } from "./cursor.js";
 import {
-  Blockgetter,
+  Blockfetcher,
   Bucket,
   ComparableKey,
   Cursor,
@@ -152,10 +152,10 @@ export function* getDifferentBuckets(
 }
 
 export async function* diff(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   left: ProllyTree,
   right: ProllyTree,
-  rightBlockstore?: Blockgetter,
+  rightBlockstore?: Blockfetcher,
 ): AsyncIterable<ProllyTreeDiff> {
   rightBlockstore = rightBlockstore ?? blockstore;
 

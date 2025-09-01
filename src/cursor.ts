@@ -1,6 +1,6 @@
 import { compareBytes, compareKeys } from "./compare.js";
 import {
-  Blockgetter,
+  Blockfetcher,
   Bucket,
   Cursor,
   Entry,
@@ -19,7 +19,7 @@ import { loadBucket } from "./utils.js";
  * @returns
  */
 export function createCursor(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   tree: ProllyTree,
 ): Cursor {
   const state = createCursorState(blockstore, tree);
@@ -27,7 +27,7 @@ export function createCursor(
 }
 
 export interface CursorState {
-  blockstore: Blockgetter;
+  blockstore: Blockfetcher;
   currentBuckets: Bucket[];
   currentIndex: number;
   isDone: boolean;
@@ -35,7 +35,7 @@ export interface CursorState {
 }
 
 export const createCursorState = (
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   tree: ProllyTree,
 ): CursorState => {
   const currentBuckets = [tree.root];

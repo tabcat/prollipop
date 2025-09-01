@@ -6,7 +6,7 @@ import { decodeBucket, encodeBucket, Expected } from "./codec.js";
 import { compareKeys } from "./compare.js";
 import { DefaultBucket, DefaultEntry } from "./impls.js";
 import {
-  Blockgetter,
+  Blockfetcher,
   Bucket,
   Context,
   Entry,
@@ -97,7 +97,7 @@ export const createEmptyBucket = (average: number): Bucket => {
  * @returns
  */
 export async function loadBucket(
-  blockstore: Blockgetter,
+  blockstore: Blockfetcher,
   digest: Uint8Array,
   context: Context,
   expected?: Expected,

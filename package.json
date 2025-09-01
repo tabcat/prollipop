@@ -57,7 +57,10 @@
     "deterministic",
     "tree",
     "prolly-tree",
-    "immutable"
+    "immutable",
+    "ipfs",
+    "ipld",
+    "helia"
   ],
   "author": "tabcat",
   "license": "MIT",

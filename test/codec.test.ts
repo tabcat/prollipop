@@ -1,7 +1,6 @@
 import { encode } from "@ipld/dag-cbor";
 import { sha256 } from "@noble/hashes/sha256";
 import { describe, expect, it } from "vitest";
-import { createIsBoundary } from "../src/boundary.js";
 import {
   EncodedEntry,
   decodeBucket,
@@ -215,11 +214,11 @@ describe("codec", () => {
 
   describe("encodeBucket", () => {
     it("returns encoded bucket for a bucket", () => {
-      const isBoundary = createIsBoundary(2, level);
+      const average = 2;
       const encodedBucket = encodeBucket(
         2,
         level,
-        [createBoundaryEntry(0, isBoundary)],
+        [createBoundaryEntry(average, level, 0)[0]],
         {
           isTail: false,
           isHead: false,
@@ -281,9 +280,9 @@ describe("codec", () => {
 
   describe("decodeBucket", () => {
     it("returns decoded bucket for a bucket", () => {
-      const isBoundary = createIsBoundary(2, level);
+      const average = 2;
       const context = { isTail: false, isHead: false };
-      const boundary = createBoundaryEntry(0, isBoundary);
+      const boundary = createBoundaryEntry(average, level, 0)[0];
       const addressed = encodeBucket(2, level, [boundary], context);
       const decodedBucket = decodeBucket(addressed, context, {
         prefix: {

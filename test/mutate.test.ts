@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { IsBoundary } from "../src/boundary.js";
 import { createSharedAwaitIterable } from "../src/common.js";
-import { createCursor } from "../src/cursor.js";
+import { createCursor } from "../src/cursor/index.js";
 import { EntryDiff, ProllyTreeDiff } from "../src/diff.js";
 import { cloneTree } from "../src/index.js";
-import { Cursor, Entry } from "../src/interface.js";
+import { Entry } from "../src/interface.js";
 import {
   State,
   Updts,
@@ -20,13 +20,12 @@ import { loadBucket, toKey } from "../src/utils.js";
 import {
   average,
   blockstore,
-  bucket,
   emptyBucket,
   emptyTree,
   key,
 } from "./helpers/constants.js";
-import { oddTree, oddTreeEntries } from "./helpers/odd-tree.js";
-import { bytesToNumber, createEntry } from "./helpers/utils.js";
+import { oddTree, oddTreeEntries, oddTreeState } from "./helpers/odd-tree.js";
+import { bytesToNumber, createEntry, numberToBytes } from "./helpers/utils.js";
 
 vi.mock("../src/boundary.js");
 
@@ -142,61 +141,68 @@ describe("mutate", () => {
   });
 
   describe("getUpdatee", () => {
+    // const average = 2;
+
+    // const [entry1, id1] = createBoundaryEntry(average, 0, 0);
+    // const [entry2, id2] = createBoundaryEntry(average, 0, id1 + 1);
+    // const [entry3] = createBoundaryEntry(average, 0, id2 + 1);
+
+    // const bucket1 = createBucket(average, 0, [entry1], {
+    //   isHead: true,
+    //   isTail: false,
+    // });
+    // const bucket2 = createBucket(average, 0, [entry2], {
+    //   isHead: false,
+    //   isTail: false,
+    // });
+    // const bucket3 = createBucket(average, 0, [entry3], {
+    //   isHead: false,
+    //   isTail: true,
+    // });
+    // const rootBucket = createBucket(
+    //   average,
+    //   0,
+    //   [
+    //     getBucketEntry(bucket1)!,
+    //     getBucketEntry(bucket2)!,
+    //     getBucketEntry(bucket3)!,
+    //   ],
+    //   {
+    //     isHead: true,
+    //     isTail: false,
+    //   },
+    // );
+
     it("returns next bucket if leftovers is not empty", async () => {
-      const cursor = {
-        nextKey: vi.fn(),
-        currentBucket: () => bucket,
-        isAtHead: () => false,
-        rootLevel: () => 0,
-        level: () => 0,
-      } as unknown as Cursor;
+      const cursor = createCursor(blockstore, oddTree);
+      cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
       const getUpdatee = createGetUpdatee(average, 0, cursor);
+      const updatee = await getUpdatee(key, true);
 
-      await getUpdatee(key, false);
-
-      expect(cursor.nextKey).toHaveBeenCalledOnce();
+      expect(updatee).to.deep.equal(oddTreeState[1]![1]!);
     });
 
     it("returns next key if level has not changed", async () => {
-      const cursor: Cursor = {
-        nextKey: vi.fn(),
-        isAtHead: () => false,
-        isAtTail: () => false,
-        currentBucket: () => bucket,
-        rootLevel: () => 0,
-        level: () => 0,
-      } as unknown as Cursor;
+      const cursor = createCursor(blockstore, oddTree);
+      cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
       const getUpdatee = createGetUpdatee(average, 0, cursor);
+      const updatee = await getUpdatee(numberToBytes(4), false);
 
-      await getUpdatee(key, false);
-
-      expect(cursor.nextKey).toHaveBeenCalledOnce();
+      expect(updatee).to.deep.equal(oddTreeState[1]![2]!);
     });
 
     it("returns jump to key if level has changed", async () => {
-      const cursor: Cursor = {
-        nextKey: vi.fn(),
-        isAtHead: () => false,
-        isAtTail: () => false,
-        currentBucket: () => bucket,
-        rootLevel: () => 1,
-        level: () => 0,
-      } as unknown as Cursor;
-      const getUpdatee = createGetUpdatee(average, 0, cursor);
+      const cursor = createCursor(blockstore, oddTree);
+      cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
+      const getUpdatee = createGetUpdatee(average, 1, cursor);
+      const updatee = await getUpdatee(key, false);
 
-      await getUpdatee(key, false);
-
-      expect(cursor.nextKey).toHaveBeenCalledOnce();
+      expect(updatee).to.deep.equal(oddTreeState[0]![0]!);
     });
 
     it("returns empty bucket on level if leftovers is empty and level > root level", async () => {
-      const cursor = {
-        jumpTo: vi.fn(),
-        currentBucket: () => bucket,
-        rootLevel: () => 0,
-        level: () => 1,
-      } as unknown as Cursor;
-      const getUpdatee = createGetUpdatee(average, 0, cursor);
+      const cursor = createCursor(blockstore, oddTree);
+      const getUpdatee = createGetUpdatee(average, 2, cursor);
 
       const updatee = await getUpdatee(key, false);
 
@@ -206,7 +212,6 @@ describe("mutate", () => {
 
       expect(context.isTail).to.be.true;
       expect(context.isHead).to.be.true;
-      expect(cursor.jumpTo).toHaveBeenCalledOnce();
     });
   });
 

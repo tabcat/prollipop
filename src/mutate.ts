@@ -5,6 +5,7 @@ import {
   createSharedAwaitIterable,
   ensureSortedKeysIterable,
   findUpperBound,
+  toReversed,
 } from "./common.js";
 import {
   compareBoundaries,
@@ -15,7 +16,16 @@ import {
   composeComparators,
 } from "./compare.js";
 import { MAX_TREE_LEVEL } from "./constants.js";
-import { createCursor } from "./cursor.js";
+import {
+  Cursor,
+  createCursor,
+  getCurrentBucket,
+  getCurrentLevel,
+  getRootLevel,
+  jumpTo,
+  nextBucket,
+  nextKey,
+} from "./cursor/index.js";
 import {
   BucketDiff,
   EntryDiff,
@@ -27,7 +37,6 @@ import {
   AwaitIterable,
   Blockfetcher,
   Bucket,
-  Cursor,
   Entry,
   Key,
   KeyLike,
@@ -145,15 +154,15 @@ export function createGetUpdatee(
     leftovers: boolean,
   ): Promise<Bucket | null> {
     if (leftovers) {
-      await cursor.nextBucket();
-      return cursor.currentBucket();
+      await nextBucket(cursor);
+      return getCurrentBucket(cursor);
     }
 
     if (key == null) {
       return null;
     }
 
-    if (level > cursor.rootLevel()) {
+    if (level > getRootLevel(cursor)) {
       // fake root bucket for levels above the root of the original tree
       return new DefaultBucket(
         average,
@@ -169,13 +178,13 @@ export function createGetUpdatee(
         },
       );
     } else {
-      if (level === cursor.level()) {
-        await cursor.nextKey(toKey(key));
+      if (level === getCurrentLevel(cursor)) {
+        await nextKey(cursor, toKey(key));
       } else {
-        await cursor.jumpTo(toKey(key), level);
+        await jumpTo(cursor, toKey(key), level);
       }
 
-      return cursor.currentBucket();
+      return getCurrentBucket(cursor);
     }
   };
 }
@@ -355,7 +364,7 @@ export async function* rebuildLevel(
       isBoundary,
     );
 
-    const buckets = cursor.buckets().reverse();
+    const buckets = toReversed(cursor.currentBuckets);
 
     const nextUpdatee = await getUpdatee(
       updts.current[0] ?? (await getUserUpdateKey(updts, level)),
@@ -451,7 +460,7 @@ export async function* rebuildLevel(
 
   // no updates to level
   if (!updatedLevel) {
-    state.newRoot = cursor.buckets()[0]!;
+    state.newRoot = cursor.currentBuckets[0]!;
     return;
   }
 
@@ -489,7 +498,7 @@ export async function* mutate(
   let level: number = 0;
 
   const cursor = createCursor(blockstore, tree);
-  const { average } = cursor.currentBucket();
+  const { average } = getCurrentBucket(cursor);
 
   while (state.newRoot == null && level < MAX_TREE_LEVEL) {
     yield* rebuildLevel(cursor, updts, state, average, level);

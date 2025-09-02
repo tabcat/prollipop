@@ -4,7 +4,7 @@ import { CID } from "multiformats/cid";
 import { ensureSortedKeysIterable, findUpperBound } from "./common.js";
 import { compareBytes } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
-import { createCursor } from "./cursor.js";
+import { createCursor, getCurrentBucket, nextKey } from "./cursor/index.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import {
@@ -89,7 +89,7 @@ export async function* search(
   let results: KeyLike[] = [];
 
   for await (let k of ensureSortedKeysIterable(keys)) {
-    if (cursor.done()) {
+    if (cursor.isDone) {
       yield k.map(toKey);
       continue;
     }
@@ -98,12 +98,12 @@ export async function* search(
     k = k.slice();
 
     while (k.length > 0) {
-      await cursor.nextKey(toKey(k[0]!), 0);
+      await nextKey(cursor, toKey(k[0]!), 0);
 
-      const currentBucket = cursor.currentBucket();
+      const currentBucket = getCurrentBucket(cursor);
       const keySplice = k.splice(
         0,
-        cursor.isAtHead()
+        currentBucket.getContext().isHead
           ? k.length
           : findUpperBound(k, getBucketBoundary(currentBucket)!, (a, b) =>
               compareBytes(toKey(a), b.key),

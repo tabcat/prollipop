@@ -2,6 +2,15 @@ import { compareBytes } from "./compare.js";
 import { AwaitIterable, KeyLike } from "./interface.js";
 import { toKey } from "./utils.js";
 
+export function* toReversed<T>(arr: T[]): Iterable<T> {
+  let i = arr.length - 1;
+
+  while (i >= 0) {
+    yield arr[i]!;
+    i--;
+  }
+}
+
 /**
  * Finds the index of the target using binary search.
  * Returns -1 if the target is not found.

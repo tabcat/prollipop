@@ -1,6 +1,5 @@
 import { ExclusiveDiff } from "@tabcat/sorted-sets/difference";
 import { describe, expect, it, vi } from "vitest";
-import "../src/boundary.js";
 import { ProllyTreeDiff, diff } from "../src/diff.js";
 import { loadBucket } from "../src/utils.js";
 import { blockstore, emptyBucket } from "./helpers/constants.js";

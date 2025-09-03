@@ -4,11 +4,11 @@ import {
   cloneCursorState,
   createCursorState,
   getCurrentLevel,
-  jumpToKeyAtLevel,
   nextAtLevel,
-  nextKeyAtLevel,
   preMove,
   preWrite,
+  resetToKeyAtLevel,
+  skipToKeyAtLevel,
 } from "./internal.js";
 
 export {
@@ -90,7 +90,7 @@ export const skipToKey = async (
   key: ComparableKey,
   level: number = getCurrentLevel(state),
 ): Promise<void> =>
-  preMove(state, level, (state, level) => nextKeyAtLevel(state, key, level));
+  preMove(state, level, (state, level) => skipToKeyAtLevel(state, key, level));
 
 /**
  * ResetToKey will set the cursor to any node on any level, if the cursor is not done.
@@ -107,4 +107,6 @@ export const resetToKey = async (
   key: ComparableKey,
   level: number = getCurrentLevel(state),
 ): Promise<void> =>
-  preWrite(state, level, (state, level) => jumpToKeyAtLevel(state, key, level));
+  preWrite(state, level, (state, level) =>
+    resetToKeyAtLevel(state, key, level),
+  );

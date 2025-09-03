@@ -272,7 +272,7 @@ export const nextAtLevel = async (
   }
 };
 
-export const nextKeyAtLevel = async (
+export const skipToKeyAtLevel = async (
   state: CursorState,
   key: ComparableKey,
   level: number,
@@ -307,7 +307,7 @@ export const nextKeyAtLevel = async (
   );
 };
 
-export const jumpToKeyAtLevel = async (
+export const resetToKeyAtLevel = async (
   state: CursorState,
   key: ComparableKey,
   level: number,

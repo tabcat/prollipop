@@ -85,7 +85,7 @@ export const nextBucket = async (
  * @param level
  * @returns
  */
-export const nextKey = async (
+export const skipToKey = async (
   state: Cursor,
   key: ComparableKey,
   level: number = getCurrentLevel(state),

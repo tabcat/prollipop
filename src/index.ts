@@ -4,7 +4,7 @@ import { CID } from "multiformats/cid";
 import { ensureSortedKeysIterable, findUpperBound } from "./common.js";
 import { compareBytes } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
-import { createCursor, getCurrentBucket, nextKey } from "./cursor/index.js";
+import { createCursor, getCurrentBucket, skipToKey } from "./cursor/index.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import {
@@ -98,7 +98,7 @@ export async function* search(
     k = k.slice();
 
     while (k.length > 0) {
-      await nextKey(cursor, toKey(k[0]!), 0);
+      await skipToKey(cursor, toKey(k[0]!), 0);
 
       const currentBucket = getCurrentBucket(cursor);
       const keySplice = k.splice(

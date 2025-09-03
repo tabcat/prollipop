@@ -24,7 +24,7 @@ import {
   getRootLevel,
   jumpTo,
   nextBucket,
-  nextKey,
+  skipToKey,
 } from "./cursor/index.js";
 import {
   BucketDiff,
@@ -179,7 +179,7 @@ export function createGetUpdatee(
       );
     } else {
       if (level === getCurrentLevel(cursor)) {
-        await nextKey(cursor, toKey(key));
+        await skipToKey(cursor, toKey(key));
       } else {
         await jumpTo(cursor, toKey(key), level);
       }

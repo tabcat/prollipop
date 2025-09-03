@@ -5,7 +5,7 @@ import {
   jumpTo,
   nextBucket,
   nextEntry,
-  nextKey,
+  skipToKey,
 } from "../src/cursor/index.js";
 import {
   cloneCursorState,
@@ -258,7 +258,7 @@ describe("cursor", () => {
           expect(cursor.currentIndex).to.equal(0);
           expect(cursor.isDone).to.equal(false);
 
-          await nextKey(cursor, "MAX_KEY");
+          await skipToKey(cursor, "MAX_KEY");
 
           expect(cursor.currentIndex).to.equal(oddTree.root.entries.length - 1);
           expect(cursor.isDone).to.equal(true);
@@ -271,7 +271,7 @@ describe("cursor", () => {
           expect(getCurrentLevel(cursor)).to.equal(1);
           expect(cursor.isDone).to.equal(false);
 
-          await nextKey(cursor, createKey(3));
+          await skipToKey(cursor, createKey(3));
 
           expect(cursor.currentIndex).to.equal(1);
           expect(getCurrentLevel(cursor)).to.equal(1);
@@ -281,12 +281,12 @@ describe("cursor", () => {
         it("moves cursor to key when moving to higher level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await nextKey(cursor, "MIN_KEY", 0);
+          await skipToKey(cursor, "MIN_KEY", 0);
 
           expect(cursor.currentIndex).to.equal(0);
           expect(getCurrentLevel(cursor)).to.equal(0);
 
-          await nextKey(cursor, createKey(3), 1);
+          await skipToKey(cursor, createKey(3), 1);
 
           expect(cursor.currentIndex).to.equal(1);
           expect(getCurrentLevel(cursor)).to.equal(1);
@@ -295,12 +295,12 @@ describe("cursor", () => {
         it("moves cursor to key when moving to a lower level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await nextKey(cursor, "MIN_KEY", 0);
+          await skipToKey(cursor, "MIN_KEY", 0);
 
           expect(cursor.currentIndex).to.equal(0);
           expect(getCurrentLevel(cursor)).to.equal(0);
 
-          await nextKey(cursor, createKey(3));
+          await skipToKey(cursor, createKey(3));
 
           expect(cursor.currentIndex).to.equal(1);
           expect(getCurrentLevel(cursor)).to.equal(0);

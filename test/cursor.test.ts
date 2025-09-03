@@ -2,9 +2,9 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   Cursor,
   createCursor,
-  jumpTo,
   nextBucket,
   nextEntry,
+  resetToKey,
   skipToKey,
 } from "../src/cursor/index.js";
 import {
@@ -316,7 +316,7 @@ describe("cursor", () => {
           expect(getCurrentLevel(cursor)).to.equal(1);
           expect(cursor.currentIndex).to.equal(1);
 
-          await jumpTo(cursor, new Uint8Array(), 0);
+          await resetToKey(cursor, new Uint8Array(), 0);
 
           expect(getCurrentLevel(cursor)).to.equal(0);
           expect(cursor.currentIndex).to.equal(0);
@@ -326,7 +326,7 @@ describe("cursor", () => {
           const cursor = createCursor(blockstore, oddTree);
 
           expect(
-            jumpTo(cursor, new Uint8Array(), getRootLevel(cursor) + 1),
+            resetToKey(cursor, new Uint8Array(), getRootLevel(cursor) + 1),
           ).rejects.toThrow("Cannot jump to level higher than root.");
         });
       });

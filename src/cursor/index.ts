@@ -93,16 +93,16 @@ export const skipToKey = async (
   preMove(state, level, (state, level) => nextKeyAtLevel(state, key, level));
 
 /**
- * JumpTo will set the cursor to any node on any level if the cursor is not done.
+ * ResetToKey will set the cursor to any node on any level, if the cursor is not done.
  * This is unlike the other methods which can only move the cursor to the right.
- * This is because JumpTo will set the cursor to root and traverse down.
+ * This is because resetToKey will set the cursor to root first and traverse down.
  *
  * @param state - from createCursor
  * @param key
  * @param level
  * @returns
  */
-export const jumpTo = async (
+export const resetToKey = async (
   state: Cursor,
   key: ComparableKey,
   level: number = getCurrentLevel(state),

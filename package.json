@@ -16,6 +16,10 @@
       "types": "./dist/src/compare.d.ts",
       "import": "./dist/src/compare.js"
     },
+    "./cursor": {
+      "types": "./dist/src/cursor.d.ts",
+      "import": "./dist/src/cursor.js"
+    },
     "./impls": {
       "types": "./dist/src/impls.d.ts",
       "import": "./dist/src/impls.js"

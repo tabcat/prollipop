@@ -25,7 +25,7 @@ import {
   toKey,
 } from "./utils.js";
 
-export { createCursor, diff, mutate };
+export { diff, mutate };
 
 /**
  * Creates an empty prolly-tree.

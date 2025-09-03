@@ -55,7 +55,7 @@ export const cloneCursor = (cursor: Cursor): Cursor => cloneCursorState(cursor);
  * @param level
  * @returns
  */
-export const next = async (
+export const nextEntry = async (
   state: Cursor,
   level: number = getCurrentLevel(state),
 ): Promise<void> =>

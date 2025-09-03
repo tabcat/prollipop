@@ -3,8 +3,8 @@ import {
   Cursor,
   createCursor,
   jumpTo,
-  next,
   nextBucket,
+  nextEntry,
   nextKey,
 } from "../src/cursor/index.js";
 import {
@@ -49,7 +49,7 @@ describe("cursor", () => {
 
       beforeAll(async () => {
         cursor = createCursor(blockstore, oddTree);
-        await next(cursor, 0);
+        await nextEntry(cursor, 0);
       });
 
       describe("level", () => {
@@ -102,9 +102,9 @@ describe("cursor", () => {
       it("wraps cursor writes with check if locked", () => {
         const cursor = createCursor(blockstore, oddTree);
 
-        next(cursor, 0);
+        nextEntry(cursor, 0);
         expect(cursor.isLocked).to.equal(true);
-        expect(next(cursor, 0)).rejects.toThrow(
+        expect(nextEntry(cursor, 0)).rejects.toThrow(
           "Failed to acquire cursor lock.",
         );
       });
@@ -114,7 +114,7 @@ describe("cursor", () => {
 
         expect(cursor.isDone).to.equal(true);
 
-        await next(cursor, 0);
+        await nextEntry(cursor, 0);
 
         expect(cursor.isDone).to.equal(true);
       });
@@ -122,7 +122,7 @@ describe("cursor", () => {
       it("wraps cursor moves with check if mogged", async () => {
         const cursor = createCursor(blockstore, oddTree);
 
-        await next(cursor, getRootLevel(cursor) + 1);
+        await nextEntry(cursor, getRootLevel(cursor) + 1);
         expect(cursor.isDone).to.equal(true);
       });
 
@@ -133,7 +133,7 @@ describe("cursor", () => {
           expect(cursor.currentIndex).to.equal(0);
           expect(cursor.isDone).to.equal(false);
 
-          await next(cursor);
+          await nextEntry(cursor);
 
           expect(cursor.currentIndex).to.equal(0);
           expect(cursor.isDone).to.equal(true);
@@ -145,7 +145,7 @@ describe("cursor", () => {
           expect(cursor.currentIndex).to.equal(0);
           expect(cursor.isDone).to.equal(false);
 
-          await next(cursor);
+          await nextEntry(cursor);
 
           expect(cursor.currentIndex).to.equal(1);
           expect(cursor.isDone).to.equal(false);
@@ -157,7 +157,7 @@ describe("cursor", () => {
           expect(cursor.currentIndex).to.equal(0);
           expect(getCurrentLevel(cursor)).to.equal(1);
 
-          await next(cursor, 0);
+          await nextEntry(cursor, 0);
 
           expect(cursor.currentIndex).to.equal(0);
           expect(getCurrentLevel(cursor)).to.equal(0);
@@ -166,12 +166,12 @@ describe("cursor", () => {
         it("increments cursor index when moving to a higher level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await next(cursor, 0);
+          await nextEntry(cursor, 0);
 
           expect(cursor.currentIndex).to.equal(0);
           expect(getCurrentLevel(cursor)).to.equal(0);
 
-          await next(cursor, 1);
+          await nextEntry(cursor, 1);
 
           expect(cursor.currentIndex).to.equal(1);
           expect(getCurrentLevel(cursor)).to.equal(1);
@@ -311,7 +311,7 @@ describe("cursor", () => {
         it("jumps to the domain of the key at the requested level", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          await next(cursor);
+          await nextEntry(cursor);
 
           expect(getCurrentLevel(cursor)).to.equal(1);
           expect(cursor.currentIndex).to.equal(1);

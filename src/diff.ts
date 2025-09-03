@@ -27,8 +27,8 @@ import {
   getCurrentBucket,
   getCurrentEntry,
   getCurrentLevel,
-  next,
   nextBucket,
+  nextEntry,
 } from "./cursor/index.js";
 import {
   Blockfetcher,
@@ -93,12 +93,12 @@ export async function unequalizeBuckets(lc: Cursor, rc: Cursor) {
 
       // moves across matching buckets when cursors are equal
       await Promise.all([
-        next(lc, matchingBucketsLength + level),
-        next(rc, matchingBucketsLength + level),
+        nextEntry(lc, matchingBucketsLength + level),
+        nextEntry(rc, matchingBucketsLength + level),
       ]);
     } else {
       if (level > 1) {
-        await Promise.all([next(lc, level - 1), next(rc, level - 1)]);
+        await Promise.all([nextEntry(lc, level - 1), nextEntry(rc, level - 1)]);
       } else {
         break;
       }
@@ -106,8 +106,12 @@ export async function unequalizeBuckets(lc: Cursor, rc: Cursor) {
   }
 
   await Promise.all([
-    getCurrentLevel(lc) === 0 || lc.isDone ? Promise.resolve() : next(lc, 0),
-    getCurrentLevel(rc) === 0 || rc.isDone ? Promise.resolve() : next(rc, 0),
+    getCurrentLevel(lc) === 0 || lc.isDone
+      ? Promise.resolve()
+      : nextEntry(lc, 0),
+    getCurrentLevel(rc) === 0 || rc.isDone
+      ? Promise.resolve()
+      : nextEntry(rc, 0),
   ]);
 }
 
@@ -173,10 +177,10 @@ export async function* diff(
 
   // move cursors to the same level
   if (getCurrentLevel(lc) > getCurrentLevel(rc)) {
-    await next(lc, getCurrentLevel(rc));
+    await nextEntry(lc, getCurrentLevel(rc));
   }
   if (getCurrentLevel(rc) > getCurrentLevel(lc)) {
-    await next(rc, getCurrentLevel(lc));
+    await nextEntry(rc, getCurrentLevel(lc));
   }
 
   // handle empty trees

@@ -6,10 +6,11 @@ import {
   createEmptyTree,
   loadTree,
   merge,
+  range,
   search,
   sync,
 } from "../src/index.js";
-import { bucketDigestToCid, createBucket } from "../src/utils.js";
+import { bucketDigestToCid, createBucket, toKey } from "../src/utils.js";
 import { createProllyTreeEntries } from "./helpers/build-tree.js";
 import {
   average,
@@ -88,6 +89,49 @@ describe("index", () => {
       expect(repeatingSearch.next()).rejects.toThrow(
         "keys are unsorted or duplicate.",
       );
+    });
+  });
+
+  describe("range", async () => {
+    it("yields entries from start of key range to right before end of key range", async () => {
+      let count = 0;
+      const results = [
+        [oddTreeEntries[1]],
+        [oddTreeEntries[2], oddTreeEntries[3]],
+        [oddTreeEntries[4]],
+      ];
+      for await (const entries of range(blockstore, oddTree, [
+        toKey(oddTreeEntries[1]!),
+        toKey(oddTreeEntries[5]!),
+      ])) {
+        expect(entries).to.deep.equal(results[count]);
+        count++;
+      }
+    });
+
+    it("yields no entries if start === end of key range", async () => {
+      for await (const _ of range(blockstore, oddTree, [
+        toKey(oddTreeEntries[1]!),
+        toKey(oddTreeEntries[1]!),
+      ])) {
+        expect.fail();
+      }
+    });
+
+    it('yields all entries if start === "MIN_KEY" and end === "MAX_KEY"', async () => {
+      let count = 0;
+      const results = [
+        [oddTreeEntries[0], oddTreeEntries[1]],
+        [oddTreeEntries[2], oddTreeEntries[3]],
+        [oddTreeEntries[4], oddTreeEntries[5]],
+      ];
+      for await (const entries of range(blockstore, oddTree, [
+        "MIN_KEY",
+        "MAX_KEY",
+      ])) {
+        expect(entries).to.deep.equal(results[count]);
+        count++;
+      }
     });
   });
 

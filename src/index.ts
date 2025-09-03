@@ -2,17 +2,25 @@ import { pairwiseTraversal } from "@tabcat/sorted-sets/util";
 import { Blockstore } from "interface-blockstore";
 import { CID } from "multiformats/cid";
 import { ensureSortedKeysIterable, findUpperBound } from "./common.js";
-import { compareBytes } from "./compare.js";
+import { compareBytes, compareKeys } from "./compare.js";
 import { DEFAULT_AVERAGE } from "./constants.js";
-import { createCursor, getCurrentBucket, skipToKey } from "./cursor/index.js";
+import {
+  createCursor,
+  getCurrentBucket,
+  getCurrentEntry,
+  nextBucket,
+  skipToKey,
+} from "./cursor/index.js";
 import { ProllyTreeDiff, diff } from "./diff.js";
 import { DefaultProllyTree } from "./impls.js";
 import {
   Await,
   AwaitIterable,
   Blockfetcher,
+  Bucket,
   Entry,
   KeyLike,
+  KeyRange,
   ProllyTree,
 } from "./interface.js";
 import { mutate } from "./mutate.js";
@@ -131,6 +139,44 @@ export async function* search(
         results = [];
       }
     }
+  }
+}
+
+/**
+ * Read a range of entries from the tree.
+ *
+ * @param blockstore
+ * @param tree
+ * @param range - start (inclusive) and end (exclusive) of key range to read.
+ */
+export async function* range(
+  blockstore: Blockstore,
+  tree: ProllyTree,
+  range: KeyRange,
+): AsyncIterable<Entry[]> {
+  const cursor = createCursor(blockstore, tree);
+  await skipToKey(cursor, range[0], 0);
+
+  let bucket: Bucket;
+  while (
+    !cursor.isDone &&
+    (bucket = getCurrentBucket(cursor)) &&
+    compareKeys(toKey(bucket.entries[0]!), range[1]) < 0
+  ) {
+    const entries: Entry[] = [];
+
+    let entry: Entry;
+    while (
+      bucket.entries.length > cursor.currentIndex &&
+      (entry = getCurrentEntry(cursor)) &&
+      compareKeys(toKey(entry), range[1]) < 0
+    ) {
+      entries.push(entry);
+      cursor.currentIndex++;
+    }
+
+    if (entries.length) yield entries;
+    await nextBucket(cursor);
   }
 }
 

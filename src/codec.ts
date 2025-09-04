@@ -157,6 +157,7 @@ export function encodeEntries(
   entries: Entry[],
   isHead: boolean,
   isBoundary: IsBoundary,
+  range?: KeyRange,
 ): EncodedEntry[] {
   const encodedEntries: EncodedEntry[] = new Array(entries.length);
 
@@ -172,7 +173,7 @@ export function encodeEntries(
 
     const next = entries[i + 1];
 
-    validateEntryRelation(entry, next, isHead, isBoundary);
+    validateEntryRelation(entry, next, isHead, isBoundary, range);
 
     encodedEntries[i] = [entry.key, entry.val];
   }
@@ -236,6 +237,7 @@ export function encodeBucket(
   level: number,
   entries: Entry[],
   context: Context,
+  expected?: Expected,
 ): Addressed {
   validateEntriesLength(
     entries.length,
@@ -243,10 +245,15 @@ export function encodeBucket(
     context.isTail && context.isHead,
   );
 
+  if (expected?.prefix != null) {
+    validatePrefixExpected({ average, level }, expected.prefix);
+  }
+
   const encodedEntries = encodeEntries(
     entries,
     context.isHead,
     createIsBoundary(average, level),
+    expected?.range,
   );
 
   const encodedBucket: EncodedBucket = {
@@ -302,16 +309,12 @@ export function decodeBucket(
   );
 
   let entries: Entry[];
-  try {
-    entries = decodeEntries(
-      decoded.entries,
-      context.isHead,
-      createIsBoundary(decoded.average, decoded.level),
-      expected?.range,
-    );
-  } catch (e) {
-    throw e;
-  }
+  entries = decodeEntries(
+    decoded.entries,
+    context.isHead,
+    createIsBoundary(decoded.average, decoded.level),
+    expected?.range,
+  );
 
   return new DefaultBucket(
     decoded.average,

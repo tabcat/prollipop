@@ -77,8 +77,9 @@ export const createBucket = (
   level: number,
   entries: Entry[],
   context: Context,
+  expected?: Expected,
 ): Bucket => {
-  const addressed = encodeBucket(average, level, entries, context);
+  const addressed = encodeBucket(average, level, entries, context, expected);
   return new DefaultBucket(average, level, entries, addressed, context);
 };
 

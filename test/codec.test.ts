@@ -36,6 +36,7 @@ import {
   createBoundaryEntry,
   createEncodedEntry,
   createEntry,
+  createKey,
 } from "./helpers/utils.js";
 
 describe("codec", () => {
@@ -276,6 +277,51 @@ describe("codec", () => {
         encodeBucket(average, 1, [], { isTail: true, isHead: true }),
       ).toThrow("root bucket on level > 0 must have at least two entries.");
     });
+
+    it("throws when max key range not equal to last entry", () => {
+      expect(() =>
+        encodeBucket(
+          average,
+          level,
+          entries,
+          { isHead: true, isTail: true },
+          {
+            range: ["MIN_KEY", "MAX_KEY"],
+          },
+        ),
+      ).toThrow("Last entry must equal max key range.");
+    });
+
+    it("throws when min key range greater than some entries", () => {
+      expect(() =>
+        encodeBucket(
+          average,
+          level,
+          [createEntry(0), createEntry(1)],
+          { isHead: true, isTail: true },
+          {
+            range: [createKey(1), createKey(1)],
+          },
+        ),
+      ).toThrow("Entry must be greater than min key range.");
+    });
+
+    it("throws when prefix mismatch", () => {
+      expect(() =>
+        encodeBucket(
+          average,
+          level,
+          entries,
+          { isHead: true, isTail: true },
+          {
+            prefix: {
+              average: 55,
+              level,
+            },
+          },
+        ),
+      ).toThrow("prefix mismatch.");
+    });
   });
 
   describe("decodeBucket", () => {
@@ -352,7 +398,7 @@ describe("codec", () => {
       ).toThrow("Last entry must equal max key range.");
     });
 
-    it("throws when min key range less than all entries", () => {
+    it("throws when min key range greater than some entries", () => {
       expect(() =>
         decodeBucket(addressed, context, {
           range: [key, key],

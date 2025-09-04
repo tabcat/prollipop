@@ -21,6 +21,7 @@ import {
   createCursor,
   getCurrentBucket,
   getCurrentLevel,
+  getKeyRange,
   getRootLevel,
   nextBucket,
   resetToKey,
@@ -37,6 +38,7 @@ import {
   AwaitIterable,
   Blockfetcher,
   Bucket,
+  ComparableKey,
   Entry,
   Key,
   KeyLike,
@@ -336,6 +338,10 @@ export async function* rebuildLevel(
     false,
   );
 
+  let minKeyRange = updatee?.getContext().isTail
+    ? "MIN_KEY"
+    : getKeyRange(cursor)[0]; // isTail check handles fake root updatee
+
   while (updatee != null) {
     const { isTail, isHead } = updatee.getContext();
     visitedTail = visitedTail || isTail;
@@ -393,7 +399,13 @@ export async function* rebuildLevel(
         isHead:
           visitedHead && segment === entrySegments[entrySegments.length - 1],
       };
-      const bucket = createBucket(average, level, segment, context);
+      const maxKeyRange: ComparableKey = segment.length
+        ? toKey(segment[segment.length - 1]!)
+        : "MAX_KEY";
+      const bucket = createBucket(average, level, segment, context, {
+        range: [minKeyRange, maxKeyRange],
+      });
+      minKeyRange = maxKeyRange;
 
       if (context.isTail && context.isHead) {
         state.newRoot = bucket;

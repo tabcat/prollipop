@@ -13,6 +13,7 @@ import {
   getCurrentBucket,
   getCurrentEntry,
   getCurrentLevel,
+  getKeyRange,
   getRootLevel,
   preMove,
   preWrite,
@@ -24,8 +25,14 @@ import {
   blockstore,
   bucket,
   emptyBucket,
+  emptyTree,
 } from "./helpers/constants.js";
-import { oddTree, oddTreeEntries, oddTreeIds } from "./helpers/odd-tree.js";
+import {
+  oddTree,
+  oddTreeEntries,
+  oddTreeIds,
+  oddTreeState,
+} from "./helpers/odd-tree.js";
 import { createKey } from "./helpers/utils.js";
 
 vi.mock("../src/boundary.js");
@@ -42,6 +49,41 @@ describe("cursor", () => {
       const cursor = createCursor(blockstore, { root: emptyBucket });
       expect(cursor.currentIndex).to.equal(-1);
       expect(cursor.isDone).to.equal(true);
+    });
+
+    describe("getKeyRange", () => {
+      it("gets the key range for an empty tree", () => {
+        const cursor = createCursor(blockstore, emptyTree);
+        const keyRange = getKeyRange(cursor);
+
+        expect(keyRange).to.deep.equal(["MIN_KEY", "MAX_KEY"]);
+      });
+
+      it("gets the key range for the first entry at root", () => {
+        const cursor = createCursor(blockstore, oddTree);
+        const keyRange = getKeyRange(cursor);
+
+        expect(keyRange).to.deep.equal(["MIN_KEY", createKey(1)]);
+      });
+
+      it("gets the key range for an internal leaf entry", () => {
+        const cursor = createCursor(blockstore, oddTree);
+        cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![1]!];
+        const keyRange = getKeyRange(cursor);
+
+        expect(keyRange).to.deep.equal([
+          oddTreeState[0]![0]!.entries[0]!.key,
+          createKey(2),
+        ]);
+      });
+
+      it("gets the key range for the first leaf entry", () => {
+        const cursor = createCursor(blockstore, oddTree);
+        cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
+        const keyRange = getKeyRange(cursor);
+
+        expect(keyRange).to.deep.equal(["MIN_KEY", createKey(0)]);
+      });
     });
 
     describe("cursor", () => {

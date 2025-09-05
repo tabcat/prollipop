@@ -21,12 +21,12 @@ import {
   createCursor,
   getCurrentBucket,
   getCurrentLevel,
-  getKeyRange,
   getRootLevel,
   nextBucket,
   resetToKey,
   skipToKey,
 } from "./cursor/index.js";
+import { getBucketKeyRange } from "./cursor/internal.js";
 import {
   BucketDiff,
   EntryDiff,
@@ -340,7 +340,7 @@ export async function* rebuildLevel(
 
   let minKeyRange = updatee?.getContext().isTail
     ? "MIN_KEY"
-    : getKeyRange(cursor)[0]; // isTail check handles fake root updatee
+    : getBucketKeyRange(cursor)[0]; // isTail check handles fake root updatee
 
   while (updatee != null) {
     const { isTail, isHead } = updatee.getContext();

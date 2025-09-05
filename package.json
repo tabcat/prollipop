@@ -1,6 +1,6 @@
 {
   "name": "prollipop",
-  "version": "2.1.3",
+  "version": "3.0.0",
   "description": "A modded Prolly-tree implementation in Typescript",
   "type": "module",
   "files": [

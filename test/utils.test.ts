@@ -156,9 +156,9 @@ describe("utils", () => {
       ).to.deep.equal(oddTreeState[1]![2]);
     });
 
-    it("throws if bucket is not found in blockstore", () => {
+    it("throws if bucket is not found in blockstore", async () => {
       const blockstore = new MemoryBlockstore();
-      expect(() =>
+      await expect(() =>
         loadBucket(blockstore, bucket.getAddressed().digest, {
           isTail: true,
           isHead: true,

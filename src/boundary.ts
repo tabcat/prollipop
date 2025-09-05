@@ -4,7 +4,7 @@
  * @see {@link https://github.com/canvasxyz/okra-js/blob/d3490b2c988564af2aca07996fad7b0b859a2ddd/packages/okra/src/Builder.ts#L114|okra-js implementation}
  */
 
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { MAX_UINT32 } from "./constants.js";
 import type { Entry } from "./interface.js";
 

@@ -99,13 +99,13 @@ describe("common", () => {
     it("throws if keys are not sorted or duplicate", async () => {
       const it1 = ensureSortedKeysIterable([[key, key]]);
 
-      expect(it1.next()).to.rejects.toThrow();
+      await expect(it1.next()).to.rejects.toThrow();
 
       const it2 = ensureSortedKeysIterable([[key], [key]]);
 
       await it2.next();
 
-      expect(it2.next()).to.rejects.toThrow();
+      await expect(it2.next()).to.rejects.toThrow();
     });
   });
 });

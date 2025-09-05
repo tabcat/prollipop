@@ -1,5 +1,5 @@
 import { code as cborCode, encode } from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { MemoryBlockstore } from "blockstore-core/memory";
 import { CID } from "multiformats";
 import { create as createMultihashDigest } from "multiformats/hashes/digest";

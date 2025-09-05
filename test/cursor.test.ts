@@ -177,12 +177,12 @@ describe("cursor", () => {
         });
       });
 
-      it("wraps cursor writes with check if locked", () => {
+      it("wraps cursor writes with check if locked", async () => {
         const cursor = createCursor(blockstore, oddTree);
 
         nextEntry(cursor, 0);
         expect(cursor.isLocked).to.equal(true);
-        expect(nextEntry(cursor, 0)).rejects.toThrow(
+        await expect(nextEntry(cursor, 0)).rejects.toThrow(
           "Failed to acquire cursor lock.",
         );
       });
@@ -403,7 +403,7 @@ describe("cursor", () => {
         it("rejects if jumping to level higher than root", async () => {
           const cursor = createCursor(blockstore, oddTree);
 
-          expect(
+          await expect(
             resetToKey(cursor, new Uint8Array(), getRootLevel(cursor) + 1),
           ).rejects.toThrow("Cannot jump to level higher than root.");
         });
@@ -460,7 +460,7 @@ describe("cursor", () => {
     it("rejects if cursor is locked", async () => {
       const state = createCursorState(blockstore, oddTree);
       state.isLocked = true;
-      expect(
+      await expect(
         preWrite(state, 0, async () => {
           expect.fail();
         }),

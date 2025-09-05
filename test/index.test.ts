@@ -77,7 +77,7 @@ describe("index", () => {
         unorderedkeys,
       ]) as AsyncGenerator;
 
-      expect(unorderedSearch.next()).rejects.toThrow(
+      await expect(unorderedSearch.next()).rejects.toThrow(
         "keys are unsorted or duplicate.",
       );
 
@@ -86,7 +86,7 @@ describe("index", () => {
         repeatingkeys,
       ]) as AsyncGenerator;
 
-      expect(repeatingSearch.next()).rejects.toThrow(
+      await expect(repeatingSearch.next()).rejects.toThrow(
         "keys are unsorted or duplicate.",
       );
     });

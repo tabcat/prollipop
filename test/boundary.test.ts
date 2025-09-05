@@ -1,4 +1,4 @@
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { describe, expect, it } from "vitest";
 import { createIsBoundary } from "../src/boundary.js";
 import { MAX_UINT32 } from "../src/constants.js";

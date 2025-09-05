@@ -11,7 +11,7 @@
  */
 
 import { decode, encode } from "@ipld/dag-cbor";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { IsBoundary, createIsBoundary } from "./boundary.js";
 import { compareBytes, compareKeys } from "./compare.js";
 import { MAX_TREE_LEVEL, MAX_UINT32 } from "./constants.js";

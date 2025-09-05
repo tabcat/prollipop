@@ -12,6 +12,7 @@ import {
 } from "./internal.js";
 
 export {
+  getBucketKeyRange,
   getCurrentBucket,
   getCurrentEntry,
   getKeyRange,

@@ -124,6 +124,19 @@ export const getKeyRange = (state: CursorState): KeyRange => {
   return [min ?? "MIN_KEY", entry?.key ?? "MAX_KEY"];
 };
 
+export const getBucketKeyRange = (state: CursorState): KeyRange => {
+  const clone = cloneCursorState(state);
+
+  if (getCurrentLevel(clone) < getRootLevel(clone)) {
+    moveUp(clone, getCurrentLevel(clone) + 1);
+  } else {
+    const root = getCurrentBucket(clone);
+    return ["MIN_KEY", root.entries[root.entries.length - 1]?.key ?? "MAX_KEY"];
+  }
+
+  return getKeyRange(clone);
+};
+
 export const guideByKey =
   (target: ComparableKey) =>
   (entries: Entry[]): number => {

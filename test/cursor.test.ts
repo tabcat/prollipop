@@ -10,6 +10,7 @@ import {
 import {
   cloneCursorState,
   createCursorState,
+  getBucketKeyRange,
   getCurrentBucket,
   getCurrentEntry,
   getCurrentLevel,
@@ -77,7 +78,42 @@ describe("cursor", () => {
         ]);
       });
 
-      it("gets the key range for the first leaf entry", () => {
+      describe("getBucketKeyRange", () => {
+        it("gets the bucket key range for an empty tree", () => {
+          const cursor = createCursor(blockstore, emptyTree);
+          const keyRange = getBucketKeyRange(cursor);
+
+          expect(keyRange).to.deep.equal(["MIN_KEY", "MAX_KEY"]);
+        });
+
+        it("gets the bucket key range for the first entry at root", () => {
+          const cursor = createCursor(blockstore, oddTree);
+          const keyRange = getBucketKeyRange(cursor);
+
+          expect(keyRange).to.deep.equal(["MIN_KEY", createKey(5)]);
+        });
+
+        it("gets the bucket key range for an internal leaf entry", () => {
+          const cursor = createCursor(blockstore, oddTree);
+          cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![1]!];
+          const keyRange = getBucketKeyRange(cursor);
+
+          expect(keyRange).to.deep.equal([
+            oddTreeState[0]![0]!.entries[0]!.key,
+            createKey(3),
+          ]);
+        });
+
+        it("gets the bucket key range for the first leaf entry", () => {
+          const cursor = createCursor(blockstore, oddTree);
+          cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
+          const keyRange = getBucketKeyRange(cursor);
+
+          expect(keyRange).to.deep.equal(["MIN_KEY", createKey(1)]);
+        });
+      });
+
+      it("gets the bucket key range for the first leaf entry", () => {
         const cursor = createCursor(blockstore, oddTree);
         cursor.currentBuckets = [oddTreeState[0]![0]!, oddTreeState[1]![0]!];
         const keyRange = getKeyRange(cursor);

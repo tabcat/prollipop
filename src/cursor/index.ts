@@ -93,7 +93,7 @@ export const skipToKey = async (
   preMove(state, level, (state, level) => skipToKeyAtLevel(state, key, level));
 
 /**
- * ResetToKey will set the cursor to any node on any level, if the cursor is not done.
+ * ResetToKey will set the cursor to any node on any level, and will set cursor.isDone to false.
  * This is unlike the other methods which can only move the cursor to the right.
  * This is because resetToKey will set the cursor to root first and traverse down.
  *

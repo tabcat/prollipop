@@ -23,11 +23,6 @@ export const preWrite = async (
     throw new Error("Failed to acquire cursor lock.");
   }
 
-  if (state.isDone) {
-    writer = (state, level) =>
-      moveUpOrDown(state, level, (entries) => entries.length - 1);
-  }
-
   const stateClone = cloneCursorState(state);
   state.isLocked = true;
 
@@ -47,6 +42,11 @@ export const preMove = (
   level: number,
   mover: CursorWriter,
 ) => {
+  if (state.isDone) {
+    mover = (state, level) =>
+      moveUpOrDown(state, level, (entries) => entries.length - 1);
+  }
+
   if (level > getRootLevel(state)) {
     mover = moveToDoneEndOfRoot;
   }
@@ -312,6 +312,8 @@ export const resetToKeyAtLevel = async (
   key: ComparableKey,
   level: number,
 ): Promise<void> => {
+  state.isDone = false;
+
   if (level > getRootLevel(state)) {
     throw new Error("Cannot jump to level higher than root.");
   }

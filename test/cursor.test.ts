@@ -371,6 +371,15 @@ describe("cursor", () => {
             resetToKey(cursor, new Uint8Array(), getRootLevel(cursor) + 1),
           ).rejects.toThrow("Cannot jump to level higher than root.");
         });
+
+        it("reset cursor.isDone to false", async () => {
+          const cursor = createCursor(blockstore, oddTree);
+          cursor.isDone = true;
+
+          await resetToKey(cursor, "MIN_KEY");
+
+          expect(cursor.isDone).to.equal(false);
+        });
       });
     });
   });

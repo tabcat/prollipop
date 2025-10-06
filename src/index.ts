@@ -51,15 +51,15 @@ export function createEmptyTree(options?: { average: number }): ProllyTree {
  * Loads a prolly-tree from the provided blockstore.
  *
  * @param blockstore
- * @param cid
+ * @param root - the cid of the root bucket of the prolly-tree
  * @returns
  */
 export async function loadTree(
   blockstore: Blockfetcher,
-  cid: CID,
+  root: CID,
 ): Promise<ProllyTree> {
   return new DefaultProllyTree(
-    await loadBucket(blockstore, bucketCidToDigest(cid), {
+    await loadBucket(blockstore, bucketCidToDigest(root), {
       isTail: true,
       isHead: true,
     }),
